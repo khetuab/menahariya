@@ -1,0 +1,255 @@
+// lib/modules/driver/controllers/dashboard_controller.dart
+
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:menahariya/core/constants/api_endpoints.dart';
+import 'package:menahariya/core/constants/app_constants.dart';
+import 'package:menahariya/core/services/api/api_client.dart';
+import 'package:menahariya/core/services/socket/socket_service.dart';
+import 'package:menahariya/data/models/trip/trip_model.dart';
+import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
+import 'package:menahariya/modules/driver/controllers/assigned_trips_controller.dart';
+import 'package:menahariya/modules/driver/controllers/trip_detail_controller.dart';
+import 'package:menahariya/modules/driver/controllers/boarding_controller.dart';
+import 'package:menahariya/modules/driver/controllers/validation_controller.dart';
+import 'package:menahariya/modules/driver/controllers/passenger_list_controller.dart';
+import 'package:menahariya/modules/driver/controllers/cargo_list_controller.dart';
+import 'package:menahariya/modules/driver/controllers/trip_status_controller.dart';
+import 'package:menahariya/modules/driver/controllers/incident_controller.dart';
+import 'package:menahariya/modules/driver/controllers/profile_controller.dart';
+import 'package:menahariya/modules/driver/controllers/notification_controller.dart';
+
+class DriverDashboardController extends GetxController {
+  static DriverDashboardController get instance => Get.find();
+
+  // Core services
+  final ApiClient _apiClient = ApiClient.instance;
+  final SocketService _socketService = SocketService.instance;
+  final AuthController _authController = AuthController.instance;
+
+  // Child controllers (will be lazy loaded)
+  late final AssignedTripsController assignedTripsController;
+  late final DriverTripDetailController tripDetailController;
+  late final BoardingController boardingController;
+  late final ValidationController validationController;
+  late final PassengerListController passengerListController;
+  late final CargoListController cargoListController;
+  late final TripStatusController tripStatusController;
+  late final IncidentController incidentController;
+  late final DriverProfileController profileController;
+  late final DriverNotificationController notificationController;
+
+  // Observables
+  final _currentIndex = 0.obs;
+  final _isLoading = false.obs;
+  final _driverName = ''.obs;
+  final _driverStatus = true.obs; // true = online, false = offline
+  final _todayTrips = 0.obs;
+  final _completedTrips = 0.obs;
+  final _totalPassengers = 0.obs;
+  final _totalCargo = 0.obs;
+  final _currentTrip = Rxn<TripModel>();
+  final _upcomingTrips = <TripModel>[].obs;
+  final _notificationsCount = 0.obs;
+
+  // Getters
+  int get currentIndex => _currentIndex.value;
+  bool get isLoading => _isLoading.value;
+  String get driverName => _driverName.value;
+  bool get isOnline => _driverStatus.value;
+  int get todayTrips => _todayTrips.value;
+  int get completedTrips => _completedTrips.value;
+  int get totalPassengers => _totalPassengers.value;
+  int get totalCargo => _totalCargo.value;
+  TripModel? get currentTrip => _currentTrip.value;
+  List<TripModel> get upcomingTrips => _upcomingTrips;
+  int get notificationsCount => _notificationsCount.value;
+
+  // Screen titles and icons
+  final List<String> screenTitles = const [
+    'Dashboard',
+    'Trips',
+    'Boarding',
+    'Validate',
+    'Profile',
+  ];
+
+  final List<IconData> screenIcons = const [
+    Icons.dashboard_rounded,
+    Icons.route_rounded,
+    Icons.airport_shuttle_rounded,
+    Icons.qr_code_scanner_rounded,
+    Icons.person_rounded,
+  ];
+
+  @override
+  void onInit() {
+    super.onInit();
+    _initializeControllers();
+    _loadDriverData();
+    _setupSocketListeners();
+    updateDriverStatus(true);
+  }
+
+  void _initializeControllers() {
+    assignedTripsController = Get.find<AssignedTripsController>();
+    tripDetailController = Get.find<DriverTripDetailController>();
+    boardingController = Get.find<BoardingController>();
+    validationController = Get.find<ValidationController>();
+    passengerListController = Get.find<PassengerListController>();
+    cargoListController = Get.find<CargoListController>();
+    tripStatusController = Get.find<TripStatusController>();
+    incidentController = Get.find<IncidentController>();
+    profileController = Get.find<DriverProfileController>();
+    notificationController = Get.find<DriverNotificationController>();
+  }
+
+  Future<void> _loadDriverData() async {
+    try {
+      _isLoading.value = true;
+
+      // Set driver name from auth controller
+      _driverName.value = _authController.currentUser?.fullName.split(' ').first ?? 'Driver';
+
+      // Load dashboard statistics
+      await Future.wait([
+        _loadTodayStats(),
+        _loadCurrentTrip(),
+        _loadUpcomingTrips(),
+        _loadNotificationsCount(),
+      ]);
+    } catch (e) {
+      print('Error loading driver data: $e');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  void _setupSocketListeners() {
+    // Listen for real-time updates
+    _socketService.on('trip_assigned', _handleNewTripAssignment);
+    _socketService.on('trip_updated', _handleTripUpdate);
+    _socketService.on('boarding_update', _handleBoardingUpdate);
+  }
+
+  Future<void> _loadTodayStats() async {
+    try {
+      final response = await _apiClient.get(
+        '/driver/today-stats',
+      );
+
+      if (response != null && response['data'] != null) {
+        _todayTrips.value = response['data']['todayTrips'] ?? 0;
+        _completedTrips.value = response['data']['completedTrips'] ?? 0;
+        _totalPassengers.value = response['data']['totalPassengers'] ?? 0;
+        _totalCargo.value = response['data']['totalCargo'] ?? 0;
+      }
+    } catch (e) {
+      print('Error loading today stats: $e');
+    }
+  }
+
+  Future<void> _loadCurrentTrip() async {
+    try {
+      final response = await _apiClient.get(
+        '/driver/current-trip',
+      );
+
+      if (response != null && response['data'] != null) {
+        _currentTrip.value = TripModel.fromJson(response['data']);
+      }
+    } catch (e) {
+      print('Error loading current trip: $e');
+    }
+  }
+
+  Future<void> _loadUpcomingTrips() async {
+    try {
+      final response = await _apiClient.get(
+        ApiEndpoints.driverTrips,
+        queryParameters: {'status': 'scheduled', 'limit': 5},
+      );
+
+      if (response != null && response['data'] != null) {
+        final List<dynamic> trips = response['data'];
+        _upcomingTrips.value = trips.map((t) => TripModel.fromJson(t)).toList();
+      }
+    } catch (e) {
+      print('Error loading upcoming trips: $e');
+    }
+  }
+
+  Future<void> _loadNotificationsCount() async {
+    try {
+      final response = await _apiClient.get(
+        '/driver/notifications/unread-count',
+      );
+
+      if (response != null && response['data'] != null) {
+        _notificationsCount.value = response['data']['count'] ?? 0;
+      }
+    } catch (e) {
+      print('Error loading notifications count: $e');
+    }
+  }
+
+  void _handleNewTripAssignment(dynamic data) {
+    _loadUpcomingTrips();
+    _notificationsCount.value++;
+
+    Get.snackbar(
+      'New Trip Assigned',
+      'You have a new trip assignment',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
+  void _handleTripUpdate(dynamic data) {
+    _loadCurrentTrip();
+    _loadUpcomingTrips();
+  }
+
+  void _handleBoardingUpdate(dynamic data) {
+    // Refresh boarding status
+    boardingController.refreshBoardingStatus();
+  }
+
+  void changeTab(int index) {
+    if (_currentIndex.value == index) return;
+    _currentIndex.value = index;
+  }
+
+  Future<void> updateDriverStatus(bool online) async {
+    try {
+      await _apiClient.post(
+        '/driver/update-status',
+        data: {'status': online ? 'online' : 'offline'},
+      );
+      _driverStatus.value = online;
+
+      Get.snackbar(
+        online ? 'Online' : 'Offline',
+        online ? 'You are now online and available for trips' : 'You are now offline',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      print('Error updating driver status: $e');
+    }
+  }
+
+  Future<void> refreshDashboard() async {
+    _loadDriverData();
+  }
+
+  void markNotificationsAsRead() {
+    _notificationsCount.value = 0;
+  }
+
+  @override
+  void onClose() {
+    _socketService.off('trip_assigned', _handleNewTripAssignment);
+    _socketService.off('trip_updated', _handleTripUpdate);
+    _socketService.off('boarding_update', _handleBoardingUpdate);
+    super.onClose();
+  }
+}

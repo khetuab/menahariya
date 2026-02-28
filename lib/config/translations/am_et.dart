@@ -1,0 +1,142 @@
+// lib/config/translations/am_et.dart
+
+class AmEt {
+  static const Map<String, String> translations = {
+    // Common
+    'appName': 'መናህሪያ ስማርት',
+    'loading': 'በመጫን ላይ...',
+    'error': 'ስህተት',
+    'success': 'ስኬት',
+    'warning': 'ማስጠንቀቂያ',
+    'info': 'መረጃ',
+    'confirm': 'አረጋግጥ',
+    'cancel': 'ሰርዝ',
+    'ok': 'እሺ',
+    'yes': 'አዎ',
+    'no': 'አይ',
+    'save': 'አስቀምጥ',
+    'update': 'አዘምን',
+    'delete': 'ሰርዝ',
+    'edit': 'አርትዕ',
+    'back': 'ተመለስ',
+    'next': 'ቀጣይ',
+    'done': 'ተጠናቋል',
+    'retry': 'እንደገና ሞክር',
+    'tryAgain': 'እንደገና ሞክር',
+    'networkError': 'የኔትወርክ ችግር አለ። እባክዎ ኢንተርኔትዎን ያረጋግጡ።',
+    'serverError': 'የሰርቨር ችግር አለ። እባክዎ ቆይተው ይሞክሩ።',
+    'unknownError': 'ያልታወቀ ስህተት ተከስቷል።',
+
+    // Auth
+    'login': 'ግባ',
+    'register': 'ተመዝገብ',
+    'logout': 'ውጣ',
+    'email': 'ኢሜይል',
+    'password': 'የይለፍ ቃል',
+    'confirmPassword': 'የይለፍ ቃል አረጋግጥ',
+    'forgotPassword': 'የይለፍ ቃል ረሳሁ?',
+    'resetPassword': 'የይለፍ ቃል ቀይር',
+    'changePassword': 'የይለፍ ቃል ለውጥ',
+    'phoneNumber': 'ስልክ ቁጥር',
+    'fullName': 'ሙሉ ስም',
+    'rememberMe': 'አስታውሰኝ',
+    'termsAndConditions': 'ደንቦቹን ተቀበልኩ',
+
+    // Home
+    'home': 'መነሻ',
+    'search': 'ፈልግ',
+    'profile': 'መገለጫ',
+    'settings': 'ቅንብሮች',
+    'notifications': 'ማሳወቂያዎች',
+    'bookTrip': 'ጉዞ አስይዝ',
+    'trackCargo': 'ጭነት ተከታተል',
+    'myTickets': 'ትኬቶቼ',
+    'myCargo': 'ጭነቶቼ',
+
+    // Trip
+    'from': 'ከ',
+    'to': 'ወደ',
+    'departure': 'መነሻ',
+    'arrival': 'መድረሻ',
+    'date': 'ቀን',
+    'time': 'ሰዓት',
+    'passengers': 'ተሳፋሪዎች',
+    'seatNumber': 'መቀመጫ ቁጥር',
+    'busType': 'አውቶቡስ አይነት',
+    'amenities': 'አገልግሎቶች',
+    'price': 'ዋጋ',
+    'totalPrice': 'ጠቅላላ ዋጋ',
+    'availableSeats': 'የተረፉ መቀመጫዎች',
+    'selectSeats': 'መቀመጫ ምረጥ',
+
+    // Booking
+    'bookNow': 'አሁን አስይዝ',
+    'bookingConfirmed': 'ትእዛዝ ተረጋገጠ!',
+    'bookingFailed': 'ትእዛዝ አልተሳካም',
+    'bookingCancelled': 'ትእዛዝ ተሰርዟል',
+    'payment': 'ክፍያ',
+    'paymentMethod': 'የክፍያ ዘዴ',
+    'paymentSuccess': 'ክፍያ ተሳክቷል!',
+    'paymentFailed': 'ክፍያ አልተሳካም',
+    'payNow': 'አሁን ክፈል',
+
+    // Cargo
+    'cargoRegistration': 'ጭነት ምዝገባ',
+    'senderInfo': 'ላኪ መረጃ',
+    'receiverInfo': 'ተቀባይ መረጃ',
+    'cargoType': 'የጭነት አይነት',
+    'weight': 'ክብደት (ኪ.ግ)',
+    'dimensions': 'መጠን (ሳ.ሜ)',
+    'fragile': 'በቀላሉ የሚሰበር',
+    'perishable': 'በቀላሉ የሚበላሽ',
+    'refrigeration': 'ማቀዝቀዣ ያስፈልጋል',
+    'cargoFee': 'የጭነት ክፍያ',
+    'trackingCode': 'ክትትል ኮድ',
+
+    // Driver
+    'driverDashboard': 'ነጂ ዳሽቦርድ',
+    'assignedTrips': 'የተመደቡ ጉዞዎች',
+    'currentTrip': 'የአሁኑ ጉዞ',
+    'boarding': 'ማሳፈሪያ',
+    'validateTicket': 'ትኬት አረጋግጥ',
+    'passengerManifest': 'ተሳፋሪዎች ዝርዝር',
+    'cargoManifest': 'ጭነት ዝርዝር',
+    'reportIncident': 'ክስተት ሪፖርት አድርግ',
+    'updateStatus': 'ሁኔታ አዘምን',
+
+    // Profile
+    'editProfile': 'መገለጫ አርትዕ',
+    'changePhoto': 'ፎቶ ለውጥ',
+    'language': 'ቋንቋ',
+    'darkMode': 'ጨለማ ሞድ',
+    'privacyPolicy': 'የግላዊነት ፖሊሲ',
+    'helpSupport': 'እርዳታ እና ድጋፍ',
+    'about': 'ስለ እኛ',
+    'version': 'ስሪት',
+
+    // Validation messages
+    'required': 'ይህ መረጃ ያስፈልጋል',
+    'invalidEmail': 'እባክዎ ትክክለኛ ኢሜይል ያስገቡ',
+    'invalidPhone': 'እባክዎ ትክክለኛ ስልክ ቁጥር ያስገቡ',
+    'passwordTooShort': 'የይለፍ ቃል ቢያንስ 6 ቁምፊዎች መሆን አለበት',
+    'passwordsDoNotMatch': 'የይለፍ ቃላት አይዛመዱም',
+    'invalidOTP': 'ልክ ያልሆነ ኦቲፒ ኮድ',
+
+    // Success messages
+    'loginSuccess': 'በስኬት ገብተዋል!',
+    'registerSuccess': 'በስኬት ተመዝግበዋል!',
+    'logoutSuccess': 'በስኬት ወጥተዋል!',
+    'profileUpdated': 'መገለጫ በስኬት ተሻሽሏል',
+    'passwordChanged': 'የይለፍ ቃል በስኬት ተለውጧል',
+    'bookingSuccess': 'ትእዛዝ በስኬት ተረጋግጧል',
+    'paymentSuccesss': 'ክፍያ በስኬት ተፈጽሟል',
+    'cargoRegistered': 'ጭነት በስኬት ተመዝግቧል',
+
+    // Empty states
+    'noTrips': 'ምንም ጉዞዎች የሉም',
+    'noTickets': 'ምንም ትኬቶች አልተገኙም',
+    'noCargo': 'ምንም የጭነት መረጃ አልተገኘም',
+    'noNotifications': 'ምንም ማሳወቂያዎች የሉም',
+    'noSearchResults': 'ምንም ውጤት አልተገኘም',
+  };
+}

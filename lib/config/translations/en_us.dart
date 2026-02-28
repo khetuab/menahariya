@@ -1,0 +1,142 @@
+// lib/config/translations/en_us.dart
+
+class EnUs {
+  static const Map<String, String> translations = {
+    // Common
+    'appName': 'Menahariya Smart',
+    'loading': 'Loading...',
+    'error': 'Error',
+    'success': 'Success',
+    'warning': 'Warning',
+    'info': 'Information',
+    'confirm': 'Confirm',
+    'cancel': 'Cancel',
+    'ok': 'OK',
+    'yes': 'Yes',
+    'no': 'No',
+    'save': 'Save',
+    'update': 'Update',
+    'delete': 'Delete',
+    'edit': 'Edit',
+    'back': 'Back',
+    'next': 'Next',
+    'done': 'Done',
+    'retry': 'Retry',
+    'tryAgain': 'Try Again',
+    'networkError': 'Network connection error. Please check your internet.',
+    'serverError': 'Server error. Please try again later.',
+    'unknownError': 'An unknown error occurred.',
+
+    // Auth
+    'login': 'Login',
+    'register': 'Register',
+    'logout': 'Logout',
+    'email': 'Email',
+    'password': 'Password',
+    'confirmPassword': 'Confirm Password',
+    'forgotPassword': 'Forgot Password?',
+    'resetPassword': 'Reset Password',
+    'changePassword': 'Change Password',
+    'phoneNumber': 'Phone Number',
+    'fullName': 'Full Name',
+    'rememberMe': 'Remember Me',
+    'termsAndConditions': 'I agree to the Terms and Conditions',
+
+    // Home
+    'home': 'Home',
+    'search': 'Search',
+    'profile': 'Profile',
+    'settings': 'Settings',
+    'notifications': 'Notifications',
+    'bookTrip': 'Book a Trip',
+    'trackCargo': 'Track Cargo',
+    'myTickets': 'My Tickets',
+    'myCargo': 'My Cargo',
+
+    // Trip
+    'from': 'From',
+    'to': 'To',
+    'departure': 'Departure',
+    'arrival': 'Arrival',
+    'date': 'Date',
+    'time': 'Time',
+    'passengers': 'Passengers',
+    'seatNumber': 'Seat Number',
+    'busType': 'Bus Type',
+    'amenities': 'Amenities',
+    'price': 'Price',
+    'totalPrice': 'Total Price',
+    'availableSeats': 'Available Seats',
+    'selectSeats': 'Select Seats',
+
+    // Booking
+    'bookNow': 'Book Now',
+    'bookingConfirmed': 'Booking Confirmed!',
+    'bookingFailed': 'Booking Failed',
+    'bookingCancelled': 'Booking Cancelled',
+    'payment': 'Payment',
+    'paymentMethod': 'Payment Method',
+    'paymentSuccess': 'Payment Successful!',
+    'paymentFailed': 'Payment Failed',
+    'payNow': 'Pay Now',
+
+    // Cargo
+    'cargoRegistration': 'Cargo Registration',
+    'senderInfo': 'Sender Information',
+    'receiverInfo': 'Receiver Information',
+    'cargoType': 'Cargo Type',
+    'weight': 'Weight (kg)',
+    'dimensions': 'Dimensions (cm)',
+    'fragile': 'Fragile',
+    'perishable': 'Perishable',
+    'refrigeration': 'Refrigeration Required',
+    'cargoFee': 'Cargo Fee',
+    'trackingCode': 'Tracking Code',
+
+    // Driver
+    'driverDashboard': 'Driver Dashboard',
+    'assignedTrips': 'Assigned Trips',
+    'currentTrip': 'Current Trip',
+    'boarding': 'Boarding',
+    'validateTicket': 'Validate Ticket',
+    'passengerManifest': 'Passenger Manifest',
+    'cargoManifest': 'Cargo Manifest',
+    'reportIncident': 'Report Incident',
+    'updateStatus': 'Update Status',
+
+    // Profile
+    'editProfile': 'Edit Profile',
+    'changePhoto': 'Change Photo',
+    'language': 'Language',
+    'darkMode': 'Dark Mode',
+    'privacyPolicy': 'Privacy Policy',
+    'helpSupport': 'Help & Support',
+    'about': 'About',
+    'version': 'Version',
+
+    // Validation messages
+    'required': 'This field is required',
+    'invalidEmail': 'Please enter a valid email',
+    'invalidPhone': 'Please enter a valid phone number',
+    'passwordTooShort': 'Password must be at least 6 characters',
+    'passwordsDoNotMatch': 'Passwords do not match',
+    'invalidOTP': 'Invalid OTP code',
+
+    // Success messages
+    'loginSuccess': 'Login successful!',
+    'registerSuccess': 'Registration successful!',
+    'logoutSuccess': 'Logout successful!',
+    'profileUpdated': 'Profile updated successfully',
+    'passwordChanged': 'Password changed successfully',
+    'bookingSuccess': 'Booking confirmed successfully',
+    'paymentSuccesss': 'Payment completed successfully',
+    'cargoRegistered': 'Cargo registered successfully',
+
+    // Empty states
+    'noTrips': 'No trips available',
+    'noTickets': 'No tickets found',
+    'noCargo': 'No cargo records found',
+    'noNotifications': 'No notifications',
+    'noSearchResults': 'No results found',
+  };
+}
