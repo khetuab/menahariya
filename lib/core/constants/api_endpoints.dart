@@ -2,8 +2,8 @@
 
 class ApiEndpoints {
   // Base URL - Will be replaced by environment config
-  static const String baseUrl = 'https://api.menahariya-smart.com/api/v1';
-  static const String socketUrl = 'https://socket.menahariya-smart.com';
+  static const String baseUrl = 'http://10.194.117.152:3000/api/v1';
+  static const String socketUrl = 'https://10.194.117.152:3000';
 
   // Auth Endpoints
   static const String auth = '/auth';

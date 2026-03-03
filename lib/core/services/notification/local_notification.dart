@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/routes/app_routes.dart';
-import 'package:timezone/browser.dart';
-
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import '../../../modules/auth/controllers/auth_controller.dart';
 
 class LocalNotificationService extends GetxService {
@@ -259,7 +259,7 @@ class LocalNotificationService extends GetxService {
     required int id,
     required String title,
     required String body,
-    required TZDateTime scheduledTime,
+    required tz.TZDateTime scheduledTime,
     String? payload,
   }) async {
     final androidPlatformChannelSpecifics = AndroidNotificationDetails(

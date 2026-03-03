@@ -7,7 +7,7 @@ class DevConfig {
   static const String buildNumber = '1';
 
   // API Configuration
-  static const String apiBaseUrl = 'http://10.194.117.152:3000';
+  static const String apiBaseUrl = 'http://10.194.117.152:3000/api';
   static const String socketUrl = 'http://10.194.117.152:3000';
   static const String apiVersion = 'v1';
 

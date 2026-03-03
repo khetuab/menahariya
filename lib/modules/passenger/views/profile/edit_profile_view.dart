@@ -41,21 +41,23 @@ class EditProfileView extends GetView<PassengerProfileController> {
               Center(
                 child: Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: isDark ? AppColors.grey800 : AppColors.grey200,
-                      backgroundImage: controller.profileImage != null
-                          ? FileImage(controller.profileImage!)
-                          : (controller.profileImageUrl != null
-                          ? NetworkImage(controller.profileImageUrl!)
-                          : null),
-                      child: controller.profileImage == null && controller.profileImageUrl == null
-                          ? Text(
-                        controller.user.fullName[0].toUpperCase(),
-                        style: const TextStyle(fontSize: 40),
-                      )
-                          : null,
-                    ),
+                  CircleAvatar(
+                  radius: 50,
+                  backgroundColor: isDark ? AppColors.grey800 : AppColors.grey200,
+                  backgroundImage: controller.profileImage != null
+                      ? FileImage(controller.profileImage!) as ImageProvider
+                      : controller.profileImageUrl != null
+                      ? NetworkImage(controller.profileImageUrl!) as ImageProvider
+                      : null,
+                  child: controller.profileImage == null &&
+                      controller.profileImageUrl == null
+                      ? Text(
+                    controller.user.fullName[0].toUpperCase(),
+                    style: const TextStyle(fontSize: 40),
+                  )
+                      : null,
+                ),
+
                     Positioned(
                       bottom: 0,
                       right: 0,

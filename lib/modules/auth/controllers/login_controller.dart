@@ -87,12 +87,18 @@ class LoginController extends GetxController {
   }
 
   // Handle login
+  // In your login method, before sending the request:
   Future<void> handleLogin() async {
     // Validate all fields
     validatePhone(phoneController.text);
     validatePassword(passwordController.text);
 
     if (!isFormValid) return;
+
+    // Remove spaces from phone number
+    String cleanPhone = phoneController.text.replaceAll(RegExp(r'\s+'), '');
+
+    print('📞 Login with phone: "$cleanPhone" (original: "${phoneController.text}")');
 
     // Save remember me preference
     await _sharedPrefs.setBool(
@@ -101,14 +107,14 @@ class LoginController extends GetxController {
     );
 
     if (_rememberMe.value) {
-      await _sharedPrefs.setString('saved_phone', phoneController.text);
+      await _sharedPrefs.setString('saved_phone', cleanPhone);
     } else {
       await _sharedPrefs.remove('saved_phone');
     }
 
-    // Perform login
+    // Perform login with cleaned phone
     final success = await _authController.login(
-      phoneController.text,
+      cleanPhone,  // Use cleaned phone without spaces
       passwordController.text,
     );
 
@@ -120,7 +126,6 @@ class LoginController extends GetxController {
       passwordController.clear();
     }
   }
-
   // Navigate to register
   void goToRegister() {
     Get.toNamed(AppRoutes.register);

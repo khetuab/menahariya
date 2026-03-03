@@ -2,12 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:menahariya/core/routes/app_routes.dart';
 import 'package:menahariya/core/utils/validators/auth_validator.dart';
-import 'package:menahariya/core/utils/helpers/string_helper.dart';
 import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
 import 'package:menahariya/data/models/user/register_request.dart';
-
-import '../../../core/routes/app_routes.dart';
 
 class RegisterController extends GetxController {
   static RegisterController get instance => Get.find();
@@ -29,6 +27,7 @@ class RegisterController extends GetxController {
   late final FocusNode confirmPasswordFocusNode;
 
   // Observables
+  final _isLoading = false.obs;
   final _isPasswordVisible = false.obs;
   final _isConfirmPasswordVisible = false.obs;
   final _agreeToTerms = false.obs;
@@ -45,6 +44,7 @@ class RegisterController extends GetxController {
   final _passwordStrength = 0.0.obs;
 
   // Getters
+  bool get isLoading => _isLoading.value;
   bool get isPasswordVisible => _isPasswordVisible.value;
   bool get isConfirmPasswordVisible => _isConfirmPasswordVisible.value;
   bool get agreeToTerms => _agreeToTerms.value;
@@ -56,19 +56,19 @@ class RegisterController extends GetxController {
   String? get termsError => _termsError.value;
   double get passwordStrength => _passwordStrength.value;
 
-  // bool get isFormValid {
-  //   return _fullNameError.value == null &&
-  //       _phoneError.value == null &&
-  //       _emailError.value == null &&
-  //       _passwordError.value == null &&
-  //       _confirmPasswordError.value == null &&
-  //       _termsError.value == null &&
-  //       fullNameController.text.isNotEmpty &&
-  //       phoneController.text.isNotEmpty &&
-  //       passwordController.text.isNotEmpty &&
-  //       confirmPasswordController.text.isNotEmpty &&
-  //       _agreeToTerms.value;
-  // }
+  bool get isFormValid {
+    return _fullNameError.value == null &&
+        _phoneError.value == null &&
+        _emailError.value == null &&
+        _passwordError.value == null &&
+        _confirmPasswordError.value == null &&
+        _termsError.value == null &&
+        fullNameController.text.isNotEmpty &&
+        phoneController.text.isNotEmpty &&
+        passwordController.text.isNotEmpty &&
+        confirmPasswordController.text.isNotEmpty &&
+        _agreeToTerms.value;
+  }
 
   @override
   void onInit() {
@@ -146,9 +146,9 @@ class RegisterController extends GetxController {
     _fullNameError.value = AuthValidator.validateFullName(value);
   }
 
-  // Update validatePhone method
+  // FIXED: Proper phone validation
   void validatePhone(String value) {
-    // Remove spaces and check
+    // Remove spaces
     final cleanValue = value.replaceAll(RegExp(r'\s+'), '');
 
     if (cleanValue.isEmpty) {
@@ -156,22 +156,28 @@ class RegisterController extends GetxController {
       return;
     }
 
+    // Get only digits
+    final digits = cleanValue.replaceAll(RegExp(r'\D'), '');
+
     // Handle different input formats
-    if (cleanValue.length == 9 && cleanValue.startsWith('9')) {
-      // User entered 9 digits without leading zero
-      final fullNumber = '0$cleanValue';
+    if (digits.length == 9 && digits.startsWith('9')) {
+      // 9 digits without leading zero -> add 0
+      final fullNumber = '0$digits';
       _phoneError.value = AuthValidator.validatePhone(fullNumber);
-    } else if (cleanValue.length == 10 && cleanValue.startsWith('09')) {
-      // Correct format
-      _phoneError.value = AuthValidator.validatePhone(cleanValue);
-    } else if (cleanValue.length == 12 && cleanValue.startsWith('251')) {
-      // International format
-      _phoneError.value = AuthValidator.validatePhone(cleanValue);
+    } else if (digits.length == 10 && digits.startsWith('09')) {
+      // Correct 10-digit format
+      _phoneError.value = AuthValidator.validatePhone(digits);
+    } else if (digits.length == 12 && digits.startsWith('251')) {
+      // International format without +
+      _phoneError.value = AuthValidator.validatePhone(digits);
+    } else if (digits.length == 13 && digits.startsWith('251')) {
+      // International format with + (digits only)
+      _phoneError.value = AuthValidator.validatePhone(digits.substring(1));
     } else {
       _phoneError.value = 'Please enter a valid Ethiopian phone number (e.g., 0912345678)';
     }
 
-    print('Phone validation: "$cleanValue" -> error: ${_phoneError.value}');
+    print('Phone validation: "$digits" -> error: ${_phoneError.value}');
   }
 
   void validateEmail(String value) {
@@ -211,33 +217,32 @@ class RegisterController extends GetxController {
     _termsError.value = null;
   }
 
-  // Add this to your isFormValid getter to see what's happening
-  bool get isFormValid {
-    print('🔍 Checking form validity:');
-    print('  - fullNameError: ${_fullNameError.value}');
-    print('  - phoneError: ${_phoneError.value}');
-    print('  - emailError: ${_emailError.value}');
-    print('  - passwordError: ${_passwordError.value}');
-    print('  - confirmPasswordError: ${_confirmPasswordError.value}');
-    print('  - termsError: ${_termsError.value}');
-    print('  - fullName not empty: ${fullNameController.text.isNotEmpty}');
-    print('  - phone not empty: ${phoneController.text.isNotEmpty}');
-    print('  - password not empty: ${passwordController.text.isNotEmpty}');
-    print('  - confirmPassword not empty: ${confirmPasswordController.text.isNotEmpty}');
-    print('  - agreeToTerms: ${_agreeToTerms.value}');
+  // FIXED: Proper phone formatting for backend
+  String _formatPhoneForBackend(String phone) {
+    // Remove all spaces and non-digits
+    String digits = phone.replaceAll(RegExp(r'\s+'), '').replaceAll(RegExp(r'\D'), '');
 
-    return _fullNameError.value == null &&
-        _phoneError.value == null &&
-        _emailError.value == null &&
-        _passwordError.value == null &&
-        _confirmPasswordError.value == null &&
-        _termsError.value == null &&
-        fullNameController.text.isNotEmpty &&
-        phoneController.text.isNotEmpty &&
-        passwordController.text.isNotEmpty &&
-        confirmPasswordController.text.isNotEmpty &&
-        _agreeToTerms.value;
+    print('📞 Original phone input: "$phone", digits: "$digits"');
+
+    // Format for backend (expects 10 digits starting with 09)
+    if (digits.length == 9 && digits.startsWith('9')) {
+      // 912345678 -> 0912345678
+      return '0$digits';
+    } else if (digits.length == 10 && digits.startsWith('09')) {
+      // 0912345678 -> keep as is
+      return digits;
+    } else if (digits.length == 12 && digits.startsWith('251')) {
+      // 251912345678 -> convert to 09 format
+      return '0${digits.substring(3)}';
+    } else if (digits.length == 13 && digits.startsWith('251')) {
+      // +251912345678 (digits only) -> convert to 09 format
+      return '0${digits.substring(3)}';
+    }
+
+    // Default: return as is
+    return digits;
   }
+
   // Handle registration
   Future<void> handleRegister() async {
     print('📝 handleRegister called');
@@ -255,8 +260,6 @@ class RegisterController extends GetxController {
 
     if (!isFormValid) {
       print('❌ Form is invalid, cannot register');
-
-      // Show error message to user
       Get.snackbar(
         'Validation Error',
         'Please check all fields and try again',
@@ -270,13 +273,16 @@ class RegisterController extends GetxController {
     print('✅ Form is valid, proceeding with registration');
 
     try {
-      // Format phone number
-      final formattedPhone = StringHelper.formatPhoneNumber(phoneController.text);
-      final cleanPhone = formattedPhone.replaceAll(' ', '');
+      _isLoading.value = true;
+
+      // FIXED: Format phone number properly for backend
+      final formattedPhone = _formatPhoneForBackend(phoneController.text);
+
+      print('📞 Formatted phone for backend: "$formattedPhone"');
 
       final request = RegisterRequest(
         fullName: fullNameController.text.trim(),
-        phone: cleanPhone,
+        phone: formattedPhone,
         email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
         password: passwordController.text,
       );
@@ -291,7 +297,6 @@ class RegisterController extends GetxController {
         passwordController.clear();
         confirmPasswordController.clear();
 
-        // Show success message
         Get.snackbar(
           'Success',
           'Registration successful! Please verify your phone number.',
@@ -311,6 +316,8 @@ class RegisterController extends GetxController {
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
+    } finally {
+      _isLoading.value = false;
     }
   }
 

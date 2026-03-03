@@ -117,9 +117,12 @@ class AuthController extends GetxController {
 
     try {
       _isLoading.value = true;
+      final cleanPhone = phone.replaceAll(RegExp(r'\s+'), '');
+
+      print('📞 AuthController.login with phone: "$cleanPhone"');
 
       final request = LoginRequest(
-        phone: phone,
+        phone: cleanPhone,
         password: password,
       );
 
