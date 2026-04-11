@@ -1,7 +1,10 @@
 // lib/modules/passenger/controllers/ticket_controller.dart
 
 import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:menahariya/modules/passenger/controllers/search_controller.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:screenshot/screenshot.dart';
@@ -10,6 +13,10 @@ import 'package:menahariya/core/constants/app_constants.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/services/api/api_exception.dart';
 import 'package:menahariya/data/models/ticket/ticket_model.dart';
+
+import '../../../core/routes/app_routes.dart';
+import '../../../core/utils/formatters/date_formatter.dart';
+import '../../../data/models/trip/trip_model.dart';
 
 class PassengerTicketController extends GetxController {
   static PassengerTicketController get instance => Get.find();
@@ -29,6 +36,20 @@ class PassengerTicketController extends GetxController {
   final _currentFilter = TicketFilter.all.obs;
   final _searchQuery = ''.obs;
 
+  // Trip search observables
+  final origin = ''.obs;
+  final destination = ''.obs;
+  final selectedDate = Rxn<DateTime>();
+  final availableTrips = <TripModel>[].obs;
+  final _isLoadingTrips = false.obs;
+  final placeSuggestions = <Place>[].obs;
+
+  // Focus nodes for suggestions
+  final originFocusNode = FocusNode();
+  final destinationFocusNode = FocusNode();
+  final showOriginSuggestions = false.obs;
+  final showDestinationSuggestions = false.obs;
+
   // Pagination
   final _currentPage = 1.obs;
   final _hasMorePages = true.obs;
@@ -36,6 +57,7 @@ class PassengerTicketController extends GetxController {
 
   // Getters
   bool get isLoading => _isLoading.value;
+  bool get isLoadingTrips => _isLoadingTrips.value;
   bool get isRefreshing => _isRefreshing.value;
   List<TicketModel> get tickets => _tickets;
   List<TicketModel> get activeTickets => _activeTickets;
@@ -81,6 +103,104 @@ class PassengerTicketController extends GetxController {
   void onInit() {
     super.onInit();
     fetchTickets();
+    _setupFocusListeners();
+  }
+
+  void _setupFocusListeners() {
+    originFocusNode.addListener(() {
+      showOriginSuggestions.value = originFocusNode.hasFocus;
+    });
+
+    destinationFocusNode.addListener(() {
+      showDestinationSuggestions.value = destinationFocusNode.hasFocus;
+    });
+  }
+
+  Future<void> getPlaceSuggestions(String query) async {
+    if (query.length < 2) {
+      placeSuggestions.clear();
+      return;
+    }
+
+    try {
+      final response = await _apiClient.get(
+        '/places/suggest',  // Make sure this endpoint exists
+        queryParameters: {'q': query},
+      );
+
+      if (response != null && response['data'] != null) {
+        final List<dynamic> placesData = response['data'];
+        placeSuggestions.value = placesData
+            .map((p) => Place.fromJson(p))
+            .toList();
+      }
+    } catch (e) {
+      print('❌ Error getting suggestions: $e');
+      placeSuggestions.clear();
+    }
+  }
+
+  Future<void> searchTripsForTicket() async {
+    if (origin.value.isEmpty || destination.value.isEmpty || selectedDate.value == null) {
+      Get.snackbar(
+        'Missing Information',
+        'Please fill all search fields',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      _isLoadingTrips.value = true;
+
+      final response = await _apiClient.get(
+        ApiEndpoints.tripsSearch,
+        queryParameters: {
+          'origin': origin.value,
+          'destination': destination.value,
+          'date': DateFormatter.toApiDate(selectedDate.value!),
+        },
+      );
+
+      if (response != null && response['data'] != null) {
+        final List<dynamic> tripsData = response['data'];
+        availableTrips.value = tripsData.map((t) => TripModel.fromJson(t)).toList();
+
+        if (availableTrips.isEmpty) {
+          Get.snackbar(
+            'No Trips',
+            'No trips found for your search',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error searching trips: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to search trips',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      _isLoadingTrips.value = false;
+    }
+  }
+
+  // In PassengerTicketController, update selectTripForTicket:
+
+  void selectTripForTicket(TripModel trip) {
+    // Clear suggestions before navigating
+    placeSuggestions.clear();
+    originFocusNode.unfocus();
+    destinationFocusNode.unfocus();
+
+    // Navigate to trip detail to book the ticket
+    Get.toNamed(
+      AppRoutes.passengerTripDetail,  // Changed from passengerTicketSelectTrip
+      arguments: {'tripId': trip.id},
+    );
   }
 
   Future<void> fetchTickets({bool refresh = false}) async {
@@ -163,22 +283,27 @@ class PassengerTicketController extends GetxController {
     await fetchTickets();
   }
 
+  // In PassengerTicketController, make sure getTicketDetails is working:
+
   Future<TicketModel?> getTicketDetails(String ticketId) async {
     try {
       _isLoading.value = true;
+
+      print('🔍 Fetching ticket details for ID: $ticketId');
 
       final response = await _apiClient.get(
         '${ApiEndpoints.tickets}/$ticketId',
       );
 
       if (response != null && response['data'] != null) {
+        print('✅ Ticket details received');
         final ticket = TicketModel.fromJson(response['data']);
         _selectedTicket.value = ticket;
         return ticket;
       }
       return null;
     } catch (e) {
-      print('Error fetching ticket details: $e');
+      print('❌ Error fetching ticket details: $e');
       return null;
     } finally {
       _isLoading.value = false;
@@ -268,33 +393,48 @@ class PassengerTicketController extends GetxController {
     }
   }
 
+  // In PassengerTicketController, fix the downloadTicket method:
+
+  // In PassengerTicketController, alternative Dio approach:
+
   Future<void> downloadTicket(TicketModel ticket) async {
     try {
-      Get.snackbar(
-        'Downloading',
-        'Your ticket is being downloaded...',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
+      final String ticketId = ticket.id;
+      if (ticketId.isEmpty) {
+        Get.snackbar('Error', 'Invalid ticket ID');
+        return;
+      }
+
+      Get.snackbar('Processing', 'Downloading your ticket...');
+
+      // Configure Dio for binary response
+      final response = await _apiClient.dio.get(
+        '${ApiEndpoints.ticketsDownload}/$ticketId',
+        options: Options(
+          responseType: ResponseType.bytes,
+          followRedirects: false,
+        ),
       );
 
-      final response = await _apiClient.get(
-        '${ApiEndpoints.ticketsDownload}/$ticket.id',
-        requiresAuth: true,
-      );
+      if (response.statusCode == 200) {
+        // Save the PDF file
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/ticket_$ticketId.pdf');
+        await file.writeAsBytes(response.data);
 
-      if (response != null && response['data'] != null) {
-        final pdfUrl = response['data']['url'];
+        print('✅ PDF saved to: ${file.path}');
 
-        // Download PDF
-        // Implementation depends on your file handling
+        // Share the PDF file
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: 'Your Ticket - ${ticket.origin} to ${ticket.destination}',
+        );
+
+        Get.snackbar('Success', 'Ticket downloaded successfully');
       }
     } catch (e) {
-      print('Error downloading ticket: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to download ticket',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      print('❌ Error downloading ticket: $e');
+      Get.snackbar('Error', 'Failed to download ticket');
     }
   }
 
@@ -328,6 +468,19 @@ class PassengerTicketController extends GetxController {
 
   List<TicketModel> getUpcomingTickets({int limit = 3}) {
     return _activeTickets.take(limit).toList();
+  }
+
+  void swapLocations() {
+    final temp = origin.value;
+    origin.value = destination.value;
+    destination.value = temp;
+  }
+
+  @override
+  void onClose() {
+    originFocusNode.dispose();
+    destinationFocusNode.dispose();
+    super.onClose();
   }
 }
 

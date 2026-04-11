@@ -235,6 +235,7 @@ extension StringExtension on String {
   // Repeat string n times
   String repeat(int n) => List.generate(n, (_) => this).join();
 
+
   // Center string with padding
   String center(int width, {String padding = ' '}) {
     if (length >= width) return this;

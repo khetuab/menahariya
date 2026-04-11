@@ -17,74 +17,106 @@ class BookingHistoryView extends GetView<PassengerHistoryController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Booking History'),
-        backgroundColor: isDark ? AppColors.surfaceDark : AppColors.white,
-        bottom: TabBar(
-          controller: TabController(length: 3, vsync: Scaffold.of(context)),
-          tabs: const [
-            Tab(text: 'Upcoming'),
-            Tab(text: 'Completed'),
-            Tab(text: 'Cancelled'),
-          ],
-          labelColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-          unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-          indicatorColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-        ),
-      ),
-      body: Obx(() {
-        if (controller.isLoading && controller.tickets.isEmpty) {
-          return _buildLoadingShimmer();
-        }
-
-        return RefreshIndicator(
-          onRefresh: controller.refreshAll,
-          child: ListView(
-            padding: const EdgeInsets.all(AppDimens.padding16),
-            children: [
-              // Date Range Filter
-              _buildDateFilter(context),
-
-              const SizedBox(height: AppDimens.margin16),
-
-              // Stats Summary
-              _buildStatsSummary(context),
-
-              const SizedBox(height: AppDimens.margin16),
-
-              // Tickets List
-              if (controller.filteredTickets.isEmpty)
-                _buildEmptyState(context)
-              else
-                ...controller.filteredTickets.map((ticket) => TicketCard(
-                  ticketId: ticket.id,
-                  origin: ticket.origin,
-                  destination: ticket.destination,
-                  departureTime: ticket.departureTime,
-                  seatNumber: ticket.seatNumber,
-                  price: ticket.price,
-                  status: ticket.status,
-                  onTap: () => Get.toNamed('/passenger/ticket/${ticket.id}'),
-                  showActions: false,
-                )),
-
-              // Load More
-              if (controller.ticketsHasMore)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppDimens.padding16),
-                  child: Center(
-                    child: ElevatedButton(
-                      onPressed: controller.loadMoreTickets,
-                      child: const Text('Load More'),
-                    ),
-                  ),
-                ),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Booking History'),
+          backgroundColor: isDark ? AppColors.surfaceDark : AppColors.white,
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Upcoming'),
+              Tab(text: 'Completed'),
+              Tab(text: 'Cancelled'),
             ],
           ),
-        );
-      }),
+        ),
+        body: TabBarView(
+          children: [
+            // Upcoming Tab
+            _buildTicketList(context, 'upcoming'),
+            // Completed Tab
+            _buildTicketList(context, 'completed'),
+            // Cancelled Tab
+            _buildTicketList(context, 'cancelled'),
+          ],
+        ),
+      ),
     );
+  }
+
+  Widget _buildTicketList(BuildContext context, String type) {
+    return Obx(() {
+      if (controller.isLoading && controller.tickets.isEmpty) {
+        return _buildLoadingShimmer();
+      }
+
+      return RefreshIndicator(
+        onRefresh: controller.refreshAll,
+        child: ListView(
+          padding: const EdgeInsets.all(AppDimens.padding16),
+          children: [
+            // Date Range Filter
+            _buildDateFilter(context),
+
+            const SizedBox(height: AppDimens.margin16),
+
+            // Stats Summary
+            _buildStatsSummary(context),
+
+            const SizedBox(height: AppDimens.margin16),
+
+            // Tickets List
+            if (_getFilteredTicketsForType(type).isEmpty)
+              _buildEmptyState(context)
+            else
+              ..._getFilteredTicketsForType(type).map((ticket) => TicketCard(
+                ticketId: ticket.id,
+                origin: ticket.origin,
+                destination: ticket.destination,
+                departureTime: ticket.departureTime,
+                seatNumber: ticket.seatNumber,
+                price: ticket.price,
+                status: ticket.status,
+                onTap: () => Get.toNamed('/passenger/ticket/${ticket.id}'),
+                showActions: false,
+              )),
+
+            // Load More
+            if (controller.ticketsHasMore)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppDimens.padding16),
+                child: Center(
+                  child: ElevatedButton(
+                    onPressed: controller.loadMoreTickets,
+                    child: const Text('Load More'),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
+  }
+
+  List<dynamic> _getFilteredTicketsForType(String type) {
+    // Filter based on tab type
+    switch (type) {
+      case 'upcoming':
+        return controller.filteredTickets.where((t) =>
+        t.status == 'confirmed' || t.status == 'paid' || t.status == 'pending'
+        ).toList();
+      case 'completed':
+        return controller.filteredTickets.where((t) =>
+        t.status == 'used' || t.status == 'completed'
+        ).toList();
+      case 'cancelled':
+        return controller.filteredTickets.where((t) =>
+        t.status == 'cancelled'
+        ).toList();
+      default:
+        return controller.filteredTickets;
+    }
   }
 
   Widget _buildDateFilter(BuildContext context) {

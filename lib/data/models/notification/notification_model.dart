@@ -2,7 +2,11 @@
 
 class NotificationModel {
   final String id;
-  final String userId;
+  final dynamic userId; // Changed from String to dynamic to handle both String and Map
+  final String? userFullName; // Added for populated user data
+  final String? userPhone;
+  final String? userEmail;
+  final String? userRole;
   final String title;
   final String body;
   final String type; // booking, payment, trip, cargo, promo, system
@@ -16,7 +20,11 @@ class NotificationModel {
 
   NotificationModel({
     required this.id,
-    required this.userId,
+    this.userId,
+    this.userFullName,
+    this.userPhone,
+    this.userEmail,
+    this.userRole,
     required this.title,
     required this.body,
     required this.type,
@@ -30,9 +38,32 @@ class NotificationModel {
   });
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
+    // Handle userId - could be String or Map
+    dynamic userIdValue = json['userId'];
+    String? userIdString;
+    String? userFullName;
+    String? userPhone;
+    String? userEmail;
+    String? userRole;
+
+    if (userIdValue is Map<String, dynamic>) {
+      // It's a populated user object
+      userIdString = userIdValue['_id'] ?? userIdValue['id'];
+      userFullName = userIdValue['fullName'];
+      userPhone = userIdValue['phone'];
+      userEmail = userIdValue['email'];
+      userRole = userIdValue['role'];
+    } else if (userIdValue is String) {
+      userIdString = userIdValue;
+    }
+
     return NotificationModel(
       id: json['_id'] ?? json['id'] ?? '',
-      userId: json['userId'] ?? '',
+      userId: userIdString,
+      userFullName: userFullName,
+      userPhone: userPhone,
+      userEmail: userEmail,
+      userRole: userRole,
       title: json['title'] ?? '',
       body: json['body'] ?? '',
       type: json['type'] ?? 'system',
@@ -45,6 +76,18 @@ class NotificationModel {
       priority: json['priority'],
     );
   }
+
+  // Helper getter to get user display name
+  String get userDisplayName {
+    if (userFullName != null && userFullName!.isNotEmpty) return userFullName!;
+    if (userId != null && userId is String && userId.toString().isNotEmpty) {
+      return userId.toString().substring(0, 8);
+    }
+    return 'All Users';
+  }
+
+  // Helper getter to check if this is a broadcast notification
+  bool get isBroadcast => userId == null || userId.toString().isEmpty;
 
   Map<String, dynamic> toJson() {
     return {
@@ -70,6 +113,10 @@ class NotificationModel {
     return NotificationModel(
       id: id,
       userId: userId,
+      userFullName: userFullName,
+      userPhone: userPhone,
+      userEmail: userEmail,
+      userRole: userRole,
       title: title,
       body: body,
       type: type,

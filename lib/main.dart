@@ -12,15 +12,12 @@ import 'package:menahariya/core/routes/app_pages.dart';
 import 'package:menahariya/core/services/storage/local_storage.dart';
 import 'package:menahariya/core/services/storage/shared_prefs.dart';
 import 'package:menahariya/core/theme/light_theme.dart';
-import 'package:menahariya/modules/auth/views/login_view.dart';
 import 'package:menahariya/modules/common/views/not_found_view.dart';
 
 import 'core/routes/app_routes.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Set preferred orientations
+  WidgetsFlutterBinding.ensureInitialized( );
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -131,12 +128,14 @@ class MenahariyaSmartApp extends StatelessWidget {
       // Other Configurations
       defaultTransition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
-
-      // Builder for environment badge in development
+      //
+      // // Builder for environment badge in development
       builder: (context, child) {
+        if (child == null) return const SizedBox();
+
         return EnvConfig.instance.isDevelopment
-            ? _buildEnvironmentBadge(context, child!)
-            : child!;
+            ? _buildEnvironmentBadge(context, child)
+            : child;
       },
     );
   }

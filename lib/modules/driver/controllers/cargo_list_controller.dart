@@ -3,6 +3,7 @@
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/api_endpoints.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
+import 'package:menahariya/core/utils/app_snackbar.dart';
 import 'package:menahariya/data/models/cargo/cargo_model.dart';
 
 class CargoListController extends GetxController {
@@ -158,17 +159,15 @@ class CargoListController extends GetxController {
         _calculateTotals();
       }
 
-      Get.snackbar(
+      AppSnackbar.show(
         'Success',
         'Cargo marked as loaded',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
       print('Error marking cargo loaded: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to update cargo status',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }

@@ -5,6 +5,8 @@ import 'package:menahariya/core/constants/api_endpoints.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/services/socket/socket_service.dart';
 
+import '../../../core/utils/app_snackbar.dart';
+
 class TripStatusController extends GetxController {
   static TripStatusController get instance => Get.find();
 
@@ -86,10 +88,9 @@ class TripStatusController extends GetxController {
 
   Future<bool> updateStatus(String newStatus, {String? reason}) async {
     if (!_availableStatuses.contains(newStatus)) {
-      Get.snackbar(
+      AppSnackbar.show(
         'Invalid Status',
         'Cannot change from $_currentStatus to $newStatus',
-        snackPosition: SnackPosition.BOTTOM,
       );
       return false;
     }
@@ -123,10 +124,9 @@ class TripStatusController extends GetxController {
         // Emit socket event
         _socketService.sendTripStatusUpdate(tripId, newStatus);
 
-        Get.snackbar(
+        AppSnackbar.show(
           'Status Updated',
           'Trip status changed to $newStatus',
-          snackPosition: SnackPosition.BOTTOM,
         );
 
         return true;
@@ -134,10 +134,9 @@ class TripStatusController extends GetxController {
       return false;
     } catch (e) {
       print('Error updating status: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to update trip status',
-        snackPosition: SnackPosition.BOTTOM,
       );
       return false;
     } finally {
@@ -163,10 +162,9 @@ class TripStatusController extends GetxController {
 
         await updateStatus('delayed', reason: reason);
 
-        Get.snackbar(
+        AppSnackbar.show(
           'Delay Reported',
           'Trip delayed by $minutes minutes',
-          snackPosition: SnackPosition.BOTTOM,
         );
       }
     } catch (e) {

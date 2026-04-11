@@ -1,6 +1,7 @@
 // lib/modules/passenger/controllers/profile_controller.dart
 
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,6 +15,9 @@ import 'package:menahariya/data/models/user/user_model.dart';
 import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
 import 'package:menahariya/core/utils/validators/auth_validator.dart';
 import 'package:menahariya/core/utils/permissions/permission_handler.dart';
+import 'package:menahariya/modules/passenger/views/support/about_view.dart';
+import 'package:menahariya/modules/passenger/views/support/help_support_view.dart';
+import 'package:menahariya/modules/passenger/views/support/privacy_security_view.dart';
 
 class PassengerProfileController extends GetxController {
   static PassengerProfileController get instance => Get.find();
@@ -25,7 +29,10 @@ class PassengerProfileController extends GetxController {
   final ThemeController _themeController = ThemeController.to;
 
   // User data
-  late final UserModel user;
+  //late final UserModel user;
+
+  final _user = Rxn<UserModel>();
+  UserModel get user => _user.value!;
 
   // Form controllers for edit profile
   late final TextEditingController nameController;
@@ -119,9 +126,9 @@ class PassengerProfileController extends GetxController {
   String? get loyaltyTier => _loyaltyTier.value;
 
   // Computed getters
-  String get displayName => user.fullName;
-  String get displayPhone => user.phone;
-  String get displayEmail => user.email ?? 'Not provided';
+  String get displayName => _user.value?.fullName ?? '';
+  String get displayPhone => _user.value?.phone ?? '';
+  String get displayEmail => _user.value?.email ?? 'Not provided';
   String get displayAddress => addressController.text.isEmpty ? 'Not set' : addressController.text;
   String get memberSinceText {
     if (_memberSince.value == null) return 'Unknown';
@@ -153,10 +160,11 @@ class PassengerProfileController extends GetxController {
     _initializeControllers();
     _loadPreferences();
     _loadStatistics();
+    PermissionHandler.debugPermissions();
   }
 
   void _loadUserData() {
-    user = _authController.currentUser!;
+    _user.value = _authController.currentUser!;
     _profileImageUrl.value = user.profileImage;
     _memberSince.value = user.createdAt;
   }
@@ -235,9 +243,23 @@ class PassengerProfileController extends GetxController {
     }
   }
 
+  // In your profile controller's pickImageFromGallery method:
+
   Future<void> pickImageFromGallery() async {
-    final granted = await PermissionHandler.requestStoragePermission();
-    if (!granted) return;
+    // Use the new image picker permission method
+    final granted = await PermissionHandler.requestImagePickerPermission();
+
+    if (!granted) {
+      Get.snackbar(
+        'Permission Required',
+        'Photos permission is needed to select images',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
 
     try {
       final picker = ImagePicker();
@@ -249,50 +271,121 @@ class PassengerProfileController extends GetxController {
       );
 
       if (pickedFile != null) {
+        print('✅ Image selected: ${pickedFile.path}');
+        print('📏 File size: ${await pickedFile.length()} bytes');
         _profileImage.value = File(pickedFile.path);
         await _uploadProfileImage();
+      } else {
+        print('⚠️ No image selected by user');
       }
     } catch (e) {
-      print('Error picking image from gallery: $e');
+      print('❌ Error picking image from gallery: $e');
       Get.snackbar(
         'Error',
-        'Failed to pick image',
+        'Failed to pick image: ${e.toString().split('\n')[0]}',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     }
   }
 
+  // In PassengerProfileController, update _uploadProfileImage:
+
   Future<void> _uploadProfileImage() async {
     if (_profileImage.value == null) return;
 
+
+    // Check if file exists
+    if (!await _profileImage.value!.exists()) {
+      print('❌ File does not exist: ${_profileImage.value!.path}');
+      Get.snackbar(
+        'Error',
+        'Image file not found',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
     try {
       _isUploading.value = true;
 
+      print('📤 Uploading avatar from: ${_profileImage.value!.path}');
+
+      // Use the uploadFile method with fieldName 'avatar'
       final response = await _apiClient.uploadFile(
         ApiEndpoints.usersUpdateAvatar,
         _profileImage.value!.path,
+        fieldName: 'avatar', // This will be used as the form field name
       );
 
+      print('✅ Upload response: $response');
+
       if (response != null && response['data'] != null) {
-        _profileImageUrl.value = response['data']['url'];
+        // Log the response structure for debugging
+        print('📦 Response data keys: ${response['data'].keys}');
 
-        // Update user in auth controller
-        await _authController.updateProfile({
-          'profileImage': _profileImageUrl.value,
-        });
+        // Get the URL from response - try different possible paths
+        String? avatarUrl;
 
-        Get.snackbar(
-          'Success',
-          'Profile picture updated',
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        if (response['data']['url'] != null) {
+          avatarUrl = response['data']['url'];
+        } else if (response['data']['avatar'] != null) {
+          avatarUrl = response['data']['avatar'];
+        } else if (response['data']['profileImage'] != null) {
+          avatarUrl = response['data']['profileImage'];
+        } else if (response['data']['image'] != null) {
+          avatarUrl = response['data']['image'];
+        }
+
+        if (avatarUrl != null) {
+          _profileImageUrl.value = avatarUrl;
+          print('✅ Avatar URL: $avatarUrl');
+
+          // Update user in auth controller
+          await _authController.updateProfile({
+            'profileImage': avatarUrl,
+          });
+
+          Get.snackbar(
+            'Success',
+            'Profile picture updated',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+        } else {
+          throw Exception('No URL found in response: ${response['data']}');
+        }
+      } else {
+        throw Exception('Invalid response structure: $response');
       }
-    } catch (e) {
-      print('Error uploading image: $e');
+    } on DioException catch (e) {
+      print('❌ Upload Dio error: ${e.message}');
+      print('❌ Response: ${e.response?.data}');
+      print('❌ Status code: ${e.response?.statusCode}');
+
+      String errorMessage = 'Failed to upload image';
+      if (e.response?.data != null && e.response!.data is Map) {
+        errorMessage = e.response!.data['message'] ?? errorMessage;
+      }
+
       Get.snackbar(
         'Error',
-        'Failed to upload image',
+        errorMessage,
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print('❌ Upload error: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to upload image: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     } finally {
       _isUploading.value = false;
@@ -304,11 +397,11 @@ class PassengerProfileController extends GetxController {
   void toggleEditMode() {
     if (_isEditing.value) {
       // Cancel editing - revert changes
-      nameController.text = user.fullName;
-      emailController.text = user.email ?? '';
-      phoneController.text = user.phone;
-      addressController.text = user.address ?? '';
-      cityController.text = user.city ?? '';
+      nameController.text = _user.value!.fullName;
+      emailController.text = _user.value!.email ?? '';
+      phoneController.text = _user.value!.phone;
+      addressController.text = _user.value!.address ?? '';
+      cityController.text = _user.value!.city ?? '';
       _clearEditErrors();
     }
     _isEditing.value = !_isEditing.value;
@@ -332,6 +425,8 @@ class PassengerProfileController extends GetxController {
     _phoneError.value = null;
   }
 
+  // In PassengerProfileController, update the saveProfile method:
+
   Future<void> saveProfile() async {
     if (!canSaveProfile) return;
 
@@ -349,14 +444,27 @@ class PassengerProfileController extends GetxController {
       final success = await _authController.updateProfile(updates);
 
       if (success) {
-        // Update local user data
-        user = _authController.currentUser!;
+        // Update the reactive user object
+        final updatedUser = _authController.currentUser;
+        if (updatedUser != null) {
+          _user.value = updatedUser; // This is now allowed
+        }
+
+        // Update form controllers with new data
+        nameController.text = _user.value!.fullName;
+        emailController.text = _user.value!.email ?? '';
+        phoneController.text = _user.value!.phone;
+        addressController.text = _user.value!.address ?? '';
+        cityController.text = _user.value!.city ?? '';
+
         _isEditing.value = false;
 
         Get.snackbar(
           'Success',
           'Profile updated successfully',
           snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
         );
       }
     } catch (e) {
@@ -365,12 +473,13 @@ class PassengerProfileController extends GetxController {
         'Error',
         'Failed to update profile',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     } finally {
       _isSaving.value = false;
     }
   }
-
   // ============== Password Change Methods ==============
 
   void togglePasswordChange() {
@@ -492,7 +601,7 @@ class PassengerProfileController extends GetxController {
   // ============== Support Methods ==============
 
   void contactSupport() {
-    Get.toNamed('/support');
+    Get.to(()=> HelpSupportView());
   }
 
   void viewFAQs() {
@@ -500,11 +609,11 @@ class PassengerProfileController extends GetxController {
   }
 
   void viewTermsAndConditions() {
-    Get.toNamed('/terms');
+    Get.to(()=> AboutView());
   }
 
   void viewPrivacyPolicy() {
-    Get.toNamed('/privacy');
+    Get.to(()=> PrivacySecurityView());
   }
 
   void rateApp() {

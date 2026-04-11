@@ -36,19 +36,53 @@ class RouteModel {
   });
 
   factory RouteModel.fromJson(Map<String, dynamic> json) {
+    // Helper to extract ID
+    String extractId(dynamic field) {
+      if (field == null) return '';
+      if (field is String) return field;
+      if (field is Map<String, dynamic>) {
+        if (field.containsKey('_id')) {
+          if (field['_id'] is Map && field['_id'].containsKey('\$oid')) {
+            return field['_id']['\$oid']?.toString() ?? '';
+          }
+          return field['_id']?.toString() ?? '';
+        }
+        if (field.containsKey('\$oid')) {
+          return field['\$oid']?.toString() ?? '';
+        }
+      }
+      return field.toString();
+    }
+
     return RouteModel(
-      id: json['_id'] ?? json['id'] ?? '',
+      id: extractId(json['_id']),
       name: json['name'] ?? '',
       origin: json['origin'] ?? '',
       destination: json['destination'] ?? '',
       distance: (json['distance'] ?? 0).toDouble(),
       duration: json['duration'] ?? 0,
-      stops: json['stops'] != null ? List<String>.from(json['stops']) : null,
+      stops: json['stops'] != null
+          ? (json['stops'] as List).map((stop) {
+        if (stop is String) return stop;
+        if (stop is Map) return stop['name']?.toString() ?? '';
+        return stop.toString();
+      }).toList()
+          : null,
       basePrice: (json['basePrice'] ?? 0).toDouble(),
       isActive: json['isActive'] ?? true,
       metadata: json['metadata'],
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      createdAt: DateTime.parse(
+          json['createdAt'] is Map
+              ? json['createdAt']['\$date']
+              : (json['createdAt'] ?? DateTime.now().toIso8601String())
+      ),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(
+          json['updatedAt'] is Map
+              ? json['updatedAt']['\$date']
+              : json['updatedAt']
+      )
+          : null,
       tripCount: json['tripCount'],
       passengerCount: json['passengerCount'],
     );

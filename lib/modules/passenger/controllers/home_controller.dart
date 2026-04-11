@@ -47,19 +47,19 @@ class HomeController extends GetxController {
         title: 'Send Cargo',
         icon: Icons.inventory_2_rounded,
         color: const Color(0xFF2196F3),
-        route: '/passenger/cargo/register',
+        route: '/passenger/cargo-registration',
       ),
       QuickAction(
         title: 'Track Cargo',
         icon: Icons.track_changes_rounded,
         color: const Color(0xFFFF9800),
-        route: '/passenger/cargo/track',
+        route: '/passenger/cargo-tracking',
       ),
       QuickAction(
         title: 'My Tickets',
         icon: Icons.confirmation_number_rounded,
         color: const Color(0xFF9C27B0),
-        route: '/passenger/tickets',
+        route: '/passenger/my-tickets',
       ),
     ];
   }

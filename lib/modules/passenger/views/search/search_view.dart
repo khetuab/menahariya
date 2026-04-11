@@ -41,7 +41,59 @@ class PassengerSearchView extends GetView<search.PassengerSearchController> {
                 prefixIcon: Icons.trip_origin_rounded,
                 suffixIcon: Icons.location_on_rounded,
               ),
-
+              Obx(() {
+                if (controller.suggestions.isEmpty || !controller.fromFocusNode.hasFocus) return const SizedBox();
+                return Container(
+                  margin: const EdgeInsets.only(top: AppDimens.margin8),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(AppDimens.radius12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppDimens.padding16,
+                          AppDimens.padding12,
+                          AppDimens.padding16,
+                          AppDimens.padding4,
+                        ),
+                        child: Text(
+                          'Suggestions',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: AppFonts.semiBold,
+                          ),
+                        ),
+                      ),
+                      ...controller.suggestions.map((place) {
+                        return ListTile(
+                          leading: const Icon(Icons.location_on_rounded, size: 20),
+                          title: Text(place.name),
+                          subtitle: place.city != null ? Text(place.city!) : null,
+                          onTap: () {
+                            if (controller.fromFocusNode.hasFocus) {
+                              controller.setFromLocation(place);
+                              controller.fromFocusNode.unfocus();
+                            } else if (controller.toFocusNode.hasFocus) {
+                              controller.setToLocation(place);
+                              controller.toFocusNode.unfocus();
+                            }
+                            controller.suggestions.clear();
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+                );
+              }),
               const SizedBox(height: AppDimens.margin8),
 
               // Swap Button
@@ -67,6 +119,59 @@ class PassengerSearchView extends GetView<search.PassengerSearchController> {
                 prefixIcon: Icons.location_on_rounded,
               ),
 
+              Obx(() {
+                if (controller.suggestions.isEmpty || !controller.toFocusNode.hasFocus) return const SizedBox();
+                return Container(
+                  margin: const EdgeInsets.only(top: AppDimens.margin8),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(AppDimens.radius12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppDimens.padding16,
+                          AppDimens.padding12,
+                          AppDimens.padding16,
+                          AppDimens.padding4,
+                        ),
+                        child: Text(
+                          'Suggestions',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: AppFonts.semiBold,
+                          ),
+                        ),
+                      ),
+                      ...controller.suggestions.map((place) {
+                        return ListTile(
+                          leading: const Icon(Icons.location_on_rounded, size: 20),
+                          title: Text(place.name),
+                          subtitle: place.city != null ? Text(place.city!) : null,
+                          onTap: () {
+                            if (controller.fromFocusNode.hasFocus) {
+                              controller.setFromLocation(place);
+                              controller.fromFocusNode.unfocus();
+                            } else if (controller.toFocusNode.hasFocus) {
+                              controller.setToLocation(place);
+                              controller.toFocusNode.unfocus();
+                            }
+                            controller.suggestions.clear();
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+                );
+              }),
               const SizedBox(height: AppDimens.margin16),
 
               // Date Selection
@@ -182,36 +287,7 @@ class PassengerSearchView extends GetView<search.PassengerSearchController> {
 
               const SizedBox(height: AppDimens.margin24),
 
-              // Suggestions
-              Obx(() {
-                if (controller.suggestions.isEmpty) return const SizedBox();
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Suggestions',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: AppFonts.semiBold,
-                      ),
-                    ),
-                    const SizedBox(height: AppDimens.margin12),
-                    ...controller.suggestions.map((suggestion) {
-                      return ListTile(
-                        leading: const Icon(Icons.location_on_rounded),
-                        title: Text(suggestion),
-                        onTap: () {
-                          if (controller.fromFocusNode.hasFocus) {
-                            controller.fromController.text = suggestion;
-                          } else if (controller.toFocusNode.hasFocus) {
-                            controller.toController.text = suggestion;
-                          }
-                          controller.suggestions.clear();
-                        },
-                      );
-                    }),
-                  ],
-                );
-              }),
+
             ],
           ),
         ),
@@ -268,6 +344,6 @@ class PassengerSearchView extends GetView<search.PassengerSearchController> {
   void _performSearch() {
     FocusScope.of(Get.context!).unfocus();
     controller.searchTrips();
-    Get.toNamed('/passenger/search/results');
+    Get.toNamed('/passenger/search-results');
   }
 }

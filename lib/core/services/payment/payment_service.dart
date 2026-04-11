@@ -384,11 +384,29 @@ class PaymentMethod {
   });
 
   factory PaymentMethod.fromJson(Map<String, dynamic> json) {
+    // Clean up the icon path
+    String? iconPath = json['icon']?.toString();
+
+    if (iconPath != null) {
+      // Remove leading slash if present
+      if (iconPath.startsWith('/')) {
+        iconPath = iconPath.substring(1);
+      }
+
+      // Ensure it starts with 'assets/'
+      if (!iconPath.startsWith('assets/')) {
+        iconPath = 'assets/$iconPath';
+      }
+
+      // Remove double slashes if any
+      iconPath = iconPath.replaceAll('//', '/');
+    }
+
     return PaymentMethod(
-      id: json['id'],
-      name: json['name'],
-      code: json['code'],
-      icon: json['icon'],
+      id: json['id'] ?? json['_id'] ?? '',
+      name: json['name'] ?? '',
+      code: json['code'] ?? json['id'] ?? '',
+      icon: iconPath,
       minAmount: json['minAmount']?.toDouble(),
       maxAmount: json['maxAmount']?.toDouble(),
       isActive: json['isActive'] ?? true,

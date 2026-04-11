@@ -11,6 +11,10 @@ import 'package:menahariya/core/widgets/inputs/custom_textfield.dart';
 import 'package:menahariya/core/widgets/inputs/phone_field.dart';
 import 'package:menahariya/modules/passenger/controllers/cargo_controller.dart';
 
+import '../../../../core/routes/app_routes.dart';
+import '../../../../data/models/trip/trip_model.dart';
+import 'cargo_trip_select_view.dart';
+
 class CargoRegistrationView extends GetView<PassengerCargoController> {
   const CargoRegistrationView({Key? key}) : super(key: key);
 
@@ -64,7 +68,7 @@ class CargoRegistrationView extends GetView<PassengerCargoController> {
           steps: [
             // Step 1: Sender & Receiver Details
             Step(
-              title: const Text('Contact Details'),
+              title: const Text('Contacts'),
               content: _buildContactDetails(context),
               isActive: controller.currentStep >= 0,
               state: controller.currentStep > 0 ? StepState.complete : StepState.indexed,
@@ -72,7 +76,7 @@ class CargoRegistrationView extends GetView<PassengerCargoController> {
 
             // Step 2: Cargo Details
             Step(
-              title: const Text('Cargo Details'),
+              title: const Text('Cargo'),
               content: _buildCargoDetails(context),
               isActive: controller.currentStep >= 1,
               state: controller.currentStep > 1 ? StepState.complete : StepState.indexed,
@@ -557,11 +561,13 @@ class CargoRegistrationView extends GetView<PassengerCargoController> {
     );
   }
 
+
+
   void _selectTrip(BuildContext context) {
-    // Navigate to trip selection screen
-    Get.toNamed('/passenger/search')?.then((result) {
-      if (result != null) {
+    Get.toNamed('/passenger/cargo/select-trip')?.then((result) {
+      if (result != null && result is TripModel) {
         controller.setSelectedTrip(result);
+        print('✅ Trip received back: ${result.origin} → ${result.destination}');
       }
     });
   }

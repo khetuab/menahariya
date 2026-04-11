@@ -20,6 +20,14 @@ class TicketDetailView extends GetView<PassengerTicketController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Get ticketId from arguments and load ticket details
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final String ticketId = Get.arguments['ticketId'];
+      if (ticketId.isNotEmpty && controller.selectedTicket == null) {
+        controller.getTicketDetails(ticketId);
+      }
+    });
+
     return Scaffold(
       body: Obx(() {
         if (controller.isLoading) {
@@ -40,7 +48,6 @@ class TicketDetailView extends GetView<PassengerTicketController> {
                 background: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // QR Code Background
                     Container(
                       color: isDark ? AppColors.primaryGreenDark : AppColors.primaryGreen,
                       child: Center(

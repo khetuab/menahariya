@@ -5,9 +5,11 @@ import 'package:menahariya/core/constants/api_endpoints.dart';
 import 'package:menahariya/core/constants/app_constants.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/services/socket/socket_service.dart';
+import 'package:menahariya/core/utils/extensions/string_extension.dart';
 import 'package:menahariya/data/models/trip/trip_model.dart';
 import 'package:menahariya/core/utils/formatters/currency_formatter.dart';
 
+import '../../../core/routes/app_routes.dart';
 import '../../../data/models/amenity/amenity_model.dart';
 import '../../../data/models/ticket/seat_model.dart';
 
@@ -34,9 +36,11 @@ class PassengerTripDetailController extends GetxController {
 
   // Seat layout
   final _seatLayout = <String, dynamic>{}.obs;
+  final _isLoadingSeats = false.obs;
 
   // Getters
   bool get isLoading => _isLoading.value;
+  bool get isLoadingSeats => _isLoadingSeats.value;
   TripModel? get trip => _trip.value;
   List<SeatModel> get seats => _seats;
   List<SeatModel> get selectedSeats => _selectedSeats;
@@ -70,6 +74,7 @@ class PassengerTripDetailController extends GetxController {
     _setupSocketListeners();
     _checkFavoriteStatus();
   }
+
 
   void _getArguments() {
     final args = Get.arguments;
@@ -134,6 +139,7 @@ class PassengerTripDetailController extends GetxController {
       print('Driver location updated: $lat, $lng');
     }
   }
+
   Future<void> _loadTripDetails() async {
     try {
       _isLoading.value = true;
@@ -145,22 +151,38 @@ class PassengerTripDetailController extends GetxController {
       if (response != null && response['data'] != null) {
         final data = response['data'];
 
-        _trip.value = TripModel.fromJson(data['trip']);
-        _amenities.value = (data['amenities'] as List)
-            .map((a) => AmenityModel.fromJson(a))
-            .toList();
-        _busImages.value = List<String>.from(data['images'] ?? []);
-        _reviews.value = (data['reviews'] as List)
-            .map((r) => Review.fromJson(r))
-            .toList();
+        // Safely parse trip data
+        _trip.value = TripModel.fromJson(data['trip'] ?? {});
+
+        // Safely parse amenities
+        if (data['amenities'] != null && data['amenities'] is List) {
+          _amenities.value = (data['amenities'] as List)
+              .map((a) => a is Map<String, dynamic>
+              ? AmenityModel.fromJson(a)
+              : AmenityModel.fromJson({'name': a.toString()}))
+              .toList();
+        }
+
+        // Safely parse images
+        _busImages.value = data['images'] != null && data['images'] is List
+            ? List<String>.from(data['images'])
+            : [];
+
+        // Safely parse reviews
+        if (data['reviews'] != null && data['reviews'] is List) {
+          _reviews.value = (data['reviews'] as List)
+              .whereType<Map<String, dynamic>>()
+              .map((r) => Review.fromJson(r))
+              .toList();
+        }
 
         _calculateAverageRating();
       }
 
-      // Load seats separately
+      // Load seats after trip details
       await _loadSeats();
     } catch (e) {
-      print('Error loading trip details: $e');
+      print('❌ Error loading trip details: $e');
       Get.snackbar(
         'Error',
         'Failed to load trip details',
@@ -173,6 +195,10 @@ class PassengerTripDetailController extends GetxController {
 
   Future<void> _loadSeats() async {
     try {
+      _isLoadingSeats.value = true;
+
+      print('🪑 Loading seats for trip: $tripId');
+
       final response = await _apiClient.get(
         ApiEndpoints.seatsAvailable,
         queryParameters: {'trip_id': tripId},
@@ -180,17 +206,97 @@ class PassengerTripDetailController extends GetxController {
 
       if (response != null && response['data'] != null) {
         final data = response['data'];
-        _seatLayout.value = data['layout'] ?? {};
+        print('✅ Seats API response received');
+        print('📦 Response data keys: ${data.keys}');
 
-        final List<dynamic> seatsList = data['seats'] ?? [];
-        _seats.value = seatsList
-            .map((s) => SeatModel.fromJson(s))
-            .toList();
+        // Parse seat layout if available
+        if (data['layout'] != null) {
+          _seatLayout.value = Map<String, dynamic>.from(data['layout']);
+          print('📐 Seat layout loaded: ${_seatLayout.keys}');
+          print('📐 Layout rows: ${_seatLayout['rows']}');
+          print('📐 Layout columns: ${_seatLayout['columns']}');
+        } else {
+          // Create default layout if not provided
+          _seatLayout.value = {
+            'rows': 12,
+            'columns': 4,
+            'layout': '2+2',
+            'windowSeats': ['A1', 'A4', 'B1', 'B4'],
+            'aisleSeats': ['A2', 'A3', 'B2', 'B3'],
+            'exitSeats': ['A1', 'A4', 'L1', 'L4']
+          };
+          print('📐 Using default seat layout');
+        }
+
+        // if (data['layout'] == null) {
+        //   // Create a default layout based on the seats we have
+        //   if (_seats.isNotEmpty) {
+        //     final rows = _seats.map((s) => s.row).toSet().toList()..sort();
+        //     final columns = _seats.map((s) => s.column).reduce((a, b) => a > b ? a : b);
+        //
+        //     _seatLayout.value = {
+        //       'rows': rows.length,
+        //       'columns': columns,
+        //       'layout': '2+2',
+        //     };
+        //     print('📐 Created dynamic layout: ${_seatLayout.value}');
+        //   }
+        // }
+        // Parse seats
+        if (data['seats'] != null && data['seats'] is List) {
+          final seatsList = data['seats'] as List;
+          print('🔢 Raw seats count: ${seatsList.length}');
+
+          // Log first seat for debugging
+          if (seatsList.isNotEmpty) {
+            print('📌 First seat data: ${seatsList.first}');
+          }
+
+          _seats.value = seatsList
+              .map((s) {
+            try {
+              return SeatModel.fromJson(s);
+            } catch (e) {
+              print('❌ Error parsing seat: $e, data: $s');
+              return null;
+            }
+          })
+              .whereType<SeatModel>()
+              .toList();
+
+          print('✅ Parsed ${_seats.length} seats from API');
+
+          // Log seat status distribution
+          final available = _seats.where((s) => s.status == 'available').length;
+          final booked = _seats.where((s) => s.status == 'booked').length;
+          final locked = _seats.where((s) => s.status == 'locked').length;
+          print('📊 Seat stats - Available: $available, Booked: $booked, Locked: $locked');
+
+          // Log first few seats for verification
+          if (_seats.isNotEmpty) {
+            print('✅ First seat: ${_seats.first.number} - ${_seats.first.status}');
+          }
+        } else {
+          print('⚠️ No seats data in response');
+          _seats.value = [];
+        }
+      } else {
+        print('⚠️ Invalid response format for seats');
+        _seats.value = [];
       }
     } catch (e) {
-      print('Error loading seats: $e');
+      print('❌ Error loading seats: $e');
+      _seats.value = [];
+      Get.snackbar(
+        'Error',
+        'Failed to load seats. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      _isLoadingSeats.value = false;
     }
   }
+  // REMOVED: _generateMockSeats method - No more mock data!
 
   void _calculateAverageRating() {
     if (_reviews.isEmpty) {
@@ -225,6 +331,38 @@ class PassengerTripDetailController extends GetxController {
     }
   }
 
+  // In PassengerTripDetailController, add this getter:
+
+  bool get isTripBookable {
+    if (_trip.value == null) return false;
+
+    // Check if trip status is 'scheduled'
+    final isScheduled = _trip.value!.status.toLowerCase() == 'scheduled';
+
+    // Check if departure time is in the future (at least 30 minutes from now)
+    final now = DateTime.now();
+    final departureTime = _trip.value!.departureTime;
+    final isFutureTrip = departureTime.isAfter(now.add(const Duration(minutes: 30)));
+
+    return isScheduled && isFutureTrip;
+  }
+
+  String get tripBookabilityMessage {
+    if (_trip.value == null) return 'Trip information not available';
+
+    if (_trip.value!.status.toLowerCase() != 'scheduled') {
+      return 'This trip is ${_trip.value!.status} and cannot be booked';
+    }
+
+    final now = DateTime.now();
+    final departureTime = _trip.value!.departureTime;
+    if (!departureTime.isAfter(now.add(const Duration(minutes: 30)))) {
+      return 'Booking closed - Trip departs soon';
+    }
+
+    return 'Available for booking';
+  }
+
   void _handleSeatReleased(dynamic data) {
     if (data['tripId'] == tripId) {
       final seatNumber = data['seatNumber'];
@@ -237,37 +375,37 @@ class PassengerTripDetailController extends GetxController {
     }
   }
 
+  // In PassengerTripDetailController, update toggleSeatSelection:
+
   void toggleSeatSelection(SeatModel seat) {
     if (seat.status != 'available') return;
 
-    void toggleSeatSelection(SeatModel seat) {
-      if (seat.status != 'available') return;
+    if (_selectedSeats.contains(seat)) {
+      _selectedSeats.remove(seat);
+      _releaseSeatLock(seat);
+    } else {
+      final maxSeats = _trip.value?.maxSeatsPerBooking ?? 10;
 
-      if (_selectedSeats.contains(seat)) {
-        _selectedSeats.remove(seat);
-        _releaseSeatLock(seat);
+      if (_selectedSeats.length < maxSeats) {
+        _selectedSeats.add(seat);
+        _lockSeat(seat);
       } else {
-        // Ensure RHS is not null
-        final maxSeats = _trip.value?.maxSeatsPerBooking ?? 10;
-
-        if (_selectedSeats.length < maxSeats) {
-          _selectedSeats.add(seat);
-          _lockSeat(seat);
-        } else {
-          Get.snackbar(
-            'Maximum Seats',
-            'You can only select up to $maxSeats seats',
-            snackPosition: SnackPosition.BOTTOM,
-          );
-        }
+        Get.snackbar(
+          'Maximum Seats',
+          'You can only select up to $maxSeats seats',
+          snackPosition: SnackPosition.BOTTOM,
+        );
       }
     }
+
+    // Refresh the UI
+    update();
   }
 
   void _lockSeat(SeatModel seat) {
     _socketService.lockSeat(
       tripId,
-      int.parse(seat.number),
+      seat.number.toIntOrNull()!, // Fixed: seat.number is String, no need to parse int
       AppConstants.seatLockDuration,
     );
   }
@@ -275,7 +413,7 @@ class PassengerTripDetailController extends GetxController {
   void _releaseSeatLock(SeatModel seat) {
     _socketService.releaseSeat(
       tripId,
-      int.parse(seat.number),
+      seat.number.toIntOrNull()!, // Fixed: seat.number is String, no need to parse int
     );
   }
 
@@ -287,8 +425,19 @@ class PassengerTripDetailController extends GetxController {
         await _apiClient.post('/favorites/trip', data: {'tripId': tripId});
       }
       _isFavorite.value = !_isFavorite.value;
+
+      Get.snackbar(
+        'Success',
+        _isFavorite.value ? 'Added to favorites' : 'Removed from favorites',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     } catch (e) {
       print('Error toggling favorite: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to update favorite',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -300,8 +449,11 @@ class PassengerTripDetailController extends GetxController {
       }
     } catch (e) {
       print('Error checking favorite status: $e');
+      // Don't show error to user, just log it
     }
   }
+
+  // In PassengerTripDetailController, update the proceedToBooking method:
 
   void proceedToBooking() {
     if (_selectedSeats.isEmpty) {
@@ -313,8 +465,9 @@ class PassengerTripDetailController extends GetxController {
       return;
     }
 
+    // Use the correct route name from AppRoutes
     Get.toNamed(
-      '/passenger/booking/summary',
+      AppRoutes.passengerBookingSummary, // This is '/passenger/booking-summary'
       arguments: {
         'trip': _trip.value,
         'selectedSeats': _selectedSeats.map((s) => s.toJson()).toList(),
@@ -384,12 +537,12 @@ class Review {
 
   factory Review.fromJson(Map<String, dynamic> json) {
     return Review(
-      id: json['id'],
-      userName: json['userName'],
-      userImage: json['userImage'],
-      rating: json['rating'].toDouble(),
-      comment: json['comment'],
-      date: DateTime.parse(json['date']),
+      id: json['_id'] ?? json['id'] ?? '',
+      userName: json['userName'] ?? json['user']?['name'] ?? 'Anonymous',
+      userImage: json['userImage'] ?? json['user']?['image'],
+      rating: (json['rating'] ?? 0).toDouble(),
+      comment: json['comment'] ?? '',
+      date: DateTime.parse(json['date'] ?? json['createdAt'] ?? DateTime.now().toIso8601String()),
       images: json['images'] != null ? List<String>.from(json['images']) : null,
     );
   }

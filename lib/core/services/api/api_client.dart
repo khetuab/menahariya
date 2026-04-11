@@ -20,6 +20,7 @@ class ApiClient extends getx.GetxService {
   // Observable for API loading state
   final _isLoading = false.obs;
   bool get isLoading => _isLoading.value;
+  Dio get dio => _dio;
   set isLoading(bool value) => _isLoading.value = value;
 
   @override
@@ -63,6 +64,36 @@ class ApiClient extends getx.GetxService {
     };
   }
 
+  // ==================== AUTH TOKEN MANAGEMENT ====================
+
+  /// Set authentication token for all future requests
+  void setAuthToken(String token) {
+    _dio.options.headers['Authorization'] = 'Bearer $token';
+    print('🔐 Auth token set successfully');
+  }
+
+  /// Clear authentication token
+  void clearAuthToken() {
+    _dio.options.headers.remove('Authorization');
+    print('🔐 Auth token cleared');
+  }
+
+  /// Check if auth token is set
+  bool hasAuthToken() {
+    return _dio.options.headers.containsKey('Authorization');
+  }
+
+  /// Get current auth token
+  String? getAuthToken() {
+    final authHeader = _dio.options.headers['Authorization'];
+    if (authHeader is String && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7);
+    }
+    return null;
+  }
+
+  // ==================== GENERIC REQUEST METHODS ====================
+
   // Generic GET request
   Future<dynamic> get(
       String endpoint, {
@@ -105,6 +136,9 @@ class ApiClient extends getx.GetxService {
       if (requiresAuth) {
         await _addAuthHeader();
       }
+
+      print('📤 POST Request to: $endpoint');
+      print('📦 Data: $data');
 
       final response = await _dio.post(
         endpoint,
@@ -211,11 +245,14 @@ class ApiClient extends getx.GetxService {
     }
   }
 
+  // ==================== FILE UPLOAD/DOWNLOAD ====================
+
   // Multipart file upload
   Future<dynamic> uploadFile(
       String endpoint,
       String filePath, {
         Map<String, dynamic>? data,
+        String fieldName = 'file',
         Function(int, int)? onSendProgress,
         bool requiresAuth = true,
       }) async {
@@ -226,10 +263,70 @@ class ApiClient extends getx.GetxService {
         await _addAuthHeader();
       }
 
+      print('📤 Uploading to: $endpoint');
+      print('📤 Field name: $fieldName');
+      print('📤 File path: $filePath');
+
+      final file = await MultipartFile.fromFile(filePath);
+      print('📤 File size: ${file.length} bytes');
+      print('📤 File name: ${file.filename}');
+
       final formData = FormData.fromMap({
         ...?data,
-        'file': await MultipartFile.fromFile(filePath),
+        fieldName: file,
       });
+
+      final response = await _dio.post(
+        endpoint,
+        data: formData,
+        onSendProgress: onSendProgress,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+
+      print('✅ Upload response status: ${response.statusCode}');
+      print('✅ Upload response data: ${response.data}');
+
+      return _handleResponse(response);
+    } on DioException catch (e) {
+      print('❌ Upload error: ${e.message}');
+      print('❌ Response: ${e.response?.data}');
+      print('❌ Status code: ${e.response?.statusCode}');
+      throw _handleDioError(e);
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // Upload multiple files
+  Future<dynamic> uploadMultipleFiles(
+      String endpoint,
+      List<String> filePaths, {
+        Map<String, dynamic>? data,
+        String fieldName = 'files',
+        Function(int, int)? onSendProgress,
+        bool requiresAuth = true,
+      }) async {
+    try {
+      isLoading = true;
+
+      if (requiresAuth) {
+        await _addAuthHeader();
+      }
+
+      final formData = FormData();
+
+      // Add files
+      for (int i = 0; i < filePaths.length; i++) {
+        final file = await MultipartFile.fromFile(filePaths[i]);
+        formData.files.add(MapEntry('$fieldName[$i]', file));
+      }
+
+      // Add other data
+      if (data != null) {
+        data.forEach((key, value) {
+          formData.fields.add(MapEntry(key, value.toString()));
+        });
+      }
 
       final response = await _dio.post(
         endpoint,
@@ -283,13 +380,32 @@ class ApiClient extends getx.GetxService {
     }
   }
 
-  // Add authentication header
+  // ==================== AUTH HEADER MANAGEMENT ====================
+
+  // Add authentication header (reads from storage)
   Future<void> _addAuthHeader() async {
     final token = await _storage.read(AppConstants.prefKeyToken);
-    if (token != null) {
+    if (token != null && token.isNotEmpty) {
       _dio.options.headers['Authorization'] = 'Bearer $token';
     }
   }
+
+  // Add custom header
+  void addHeader(String key, String value) {
+    _dio.options.headers[key] = value;
+  }
+
+  // Remove header
+  void removeHeader(String key) {
+    _dio.options.headers.remove(key);
+  }
+
+  // Clear all custom headers
+  void clearHeaders() {
+    _dio.options.headers = _getDefaultHeaders();
+  }
+
+  // ==================== RESPONSE HANDLING ====================
 
   // Handle successful response
   dynamic _handleResponse(Response response) {
@@ -357,9 +473,16 @@ class ApiClient extends getx.GetxService {
   Future<void> _handleUnauthorized() async {
     await _storage.delete(AppConstants.prefKeyToken);
     await _storage.delete(AppConstants.prefKeyUser);
+    await _storage.delete('admin_token');
+    await _storage.delete('admin_user');
 
-    // Navigate to login
-    getx.Get.offAllNamed('/auth/login');
+    // Navigate to login based on current route
+    final currentRoute = getx.Get.currentRoute;
+    if (currentRoute.contains('/admin')) {
+      getx.Get.offAllNamed('/admin/login');
+    } else {
+      getx.Get.offAllNamed('/auth/login');
+    }
   }
 
   // Extract error message from response
@@ -386,19 +509,43 @@ class ApiClient extends getx.GetxService {
     return null;
   }
 
-  // Clear auth header
+  // ==================== UTILITY METHODS ====================
+
+  // Clear auth header (removes from memory only)
   void clearAuthHeader() {
     _dio.options.headers.remove('Authorization');
+    print('🔐 Auth header cleared from memory');
   }
 
   // Update base URL
   void updateBaseUrl(String newBaseUrl) {
     _dio.options.baseUrl = newBaseUrl;
+    print('🌐 Base URL updated to: $newBaseUrl');
   }
 
   // Cancel all requests
   void cancelRequests() {
     _dio.close(force: true);
     _initDio();
+  }
+
+  // Get current base URL
+  String getBaseUrl() {
+    return _dio.options.baseUrl;
+  }
+
+  // Set custom options for specific request
+  void setOptions(BaseOptions options) {
+    _dio.options = options;
+  }
+
+  // Add interceptor
+  void addInterceptor(Interceptor interceptor) {
+    _dio.interceptors.add(interceptor);
+  }
+
+  // Remove interceptor
+  void removeInterceptor(Interceptor interceptor) {
+    _dio.interceptors.remove(interceptor);
   }
 }

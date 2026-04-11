@@ -66,9 +66,7 @@ class LoginView extends GetView<LoginController> {
                         ],
 
                         const SizedBox(height: AppDimens.margin16),
-
-                        // Password Field
-                        CustomTextField(
+                        Obx(() => CustomTextField(
                           label: AppStrings.password,
                           controller: controller.passwordController,
                           focusNode: controller.passwordFocusNode,
@@ -82,8 +80,7 @@ class LoginView extends GetView<LoginController> {
                               : Icons.visibility_rounded,
                           onSuffixTap: controller.togglePasswordVisibility,
                           errorText: controller.passwordError,
-                        ),
-
+                        )),
                         const SizedBox(height: AppDimens.margin8),
 
                         // Remember Me & Forgot Password

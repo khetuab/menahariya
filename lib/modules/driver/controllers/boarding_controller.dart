@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:menahariya/core/constants/api_endpoints.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/services/socket/socket_service.dart';
-import 'package:menahariya/data/models/ticket/ticket_model.dart';
 
 import '../../../data/models/passenger/passenger_model.dart';
 

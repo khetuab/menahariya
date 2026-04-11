@@ -9,6 +9,8 @@ import 'package:menahariya/data/models/passenger/passenger_model.dart';
 import 'package:menahariya/data/models/cargo/cargo_model.dart';
 import 'package:menahariya/data/models/vehicle/vehicle_model.dart';
 
+import '../../../core/utils/app_snackbar.dart';
+
 class DriverTripDetailController extends GetxController {
   static DriverTripDetailController get instance => Get.find();
 
@@ -66,10 +68,9 @@ class DriverTripDetailController extends GetxController {
       tripId = args['tripId'];
     } else {
       Get.back();
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Trip information not found',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }
@@ -131,10 +132,9 @@ class DriverTripDetailController extends GetxController {
       }
     } catch (e) {
       print('Error loading trip details: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to load trip details',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
       _isLoading.value = false;
@@ -194,17 +194,15 @@ class DriverTripDetailController extends GetxController {
         val?.status = status;
       });
 
-      Get.snackbar(
+      AppSnackbar.show(
         'Success',
         'Trip status updated to $status',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
       print('Error updating trip status: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to update trip status',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }

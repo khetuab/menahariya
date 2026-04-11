@@ -13,6 +13,7 @@ import '../../controllers/notification_controller.dart';
 class ProfileView extends GetView<PassengerProfileController> {
   const ProfileView({Key? key}) : super(key: key);
 
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -64,6 +65,7 @@ class ProfileView extends GetView<PassengerProfileController> {
                   borderColor: isDark ? AppColors.errorLight : AppColors.error,
                 ),
               ),
+              const SizedBox(height: AppDimens.margin60),
             ],
           ),
         );
@@ -273,25 +275,25 @@ class ProfileView extends GetView<PassengerProfileController> {
           context,
           icon: Icons.person_rounded,
           title: 'Edit Profile',
-          onTap: () => Get.toNamed('/passenger/profile/edit'),
+          onTap: () => Get.toNamed('/passenger/edit-profile'),
         ),
         _buildMenuItem(
           context,
           icon: Icons.history_rounded,
           title: 'Booking History',
-          onTap: () => Get.toNamed('/passenger/history/bookings'),
+          onTap: () => Get.toNamed('/passenger/booking-history'),
         ),
         _buildMenuItem(
           context,
           icon: Icons.inventory_2_rounded,
           title: 'Cargo History',
-          onTap: () => Get.toNamed('/passenger/history/cargo'),
+          onTap: () => Get.toNamed('/passenger/cargo-history'),
         ),
         _buildMenuItem(
           context,
           icon: Icons.payment_rounded,
           title: 'Payment Methods',
-          onTap: () => Get.toNamed('/passenger/profile/payments'),
+          onTap: () => Get.toNamed('/passenger/payment'),
         ),
         _buildMenuItem(
           context,
@@ -336,7 +338,7 @@ class ProfileView extends GetView<PassengerProfileController> {
           context,
           icon: Icons.info_rounded,
           title: 'About',
-          onTap: () {},
+          onTap: controller.viewTermsAndConditions,
         ),
       ],
     );

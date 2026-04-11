@@ -14,6 +14,8 @@ import 'package:menahariya/core/utils/validators/auth_validator.dart';
 import 'package:menahariya/data/models/user/user_model.dart';
 import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
 
+import '../../../core/utils/app_snackbar.dart';
+
 class DriverProfileController extends GetxController {
   static DriverProfileController get instance => Get.find();
 
@@ -146,10 +148,9 @@ class DriverProfileController extends GetxController {
       }
     } catch (e) {
       print('Error picking image from camera: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to capture image',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }
@@ -173,10 +174,9 @@ class DriverProfileController extends GetxController {
       }
     } catch (e) {
       print('Error picking image from gallery: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to pick image',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }
@@ -199,18 +199,16 @@ class DriverProfileController extends GetxController {
           'profileImage': _profileImageUrl.value,
         });
 
-        Get.snackbar(
+        AppSnackbar.show(
           'Success',
           'Profile picture updated',
-          snackPosition: SnackPosition.BOTTOM,
         );
       }
     } catch (e) {
       print('Error uploading image: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to upload image',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
       _isUploading.value = false;
@@ -247,18 +245,16 @@ class DriverProfileController extends GetxController {
         user = _authController.currentUser!;
         _isEditing.value = false;
 
-        Get.snackbar(
+        AppSnackbar.show(
           'Success',
           'Profile updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
         );
       }
     } catch (e) {
       print('Error saving profile: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to update profile',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
       _isSaving.value = false;

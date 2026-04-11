@@ -18,6 +18,7 @@ class AppRoutes {
   static const String otpVerification = '/auth/otp-verification';
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
+  static const String adminProfile = '/admin/profile';
 
   // Passenger Routes
   static const String passenger = '/passenger';
@@ -42,6 +43,17 @@ class AppRoutes {
   static const String passengerEditProfile = '/passenger/edit-profile';
   static const String passengerSettings = '/passenger/settings';
   static const String passengerNotifications = '/passenger/notifications';
+  static const String passengerCargoSelectTrip = '/passenger/cargo/select-trip';
+  static const String passengerCargoSuccess = '/passenger/cargo/success';
+  static const String passengerTicketSelectTrip = '/passenger/tickets/select-trip';
+
+  static const String privacySecurity = '/passenger/privacy-security';
+  static const String helpSupport = '/passenger/help-support';
+  static const String about = '/passenger/about';
+  static const String faqs = '/passenger/faqs';
+  static const String terms = '/passenger/terms';
+  static const String privacy = '/passenger/privacy';
+
 
   // Driver Routes
   static const String driver = '/driver';
@@ -59,6 +71,18 @@ class AppRoutes {
   static const String driverSettings = '/driver/settings';
   static const String driverNotifications = '/driver/notifications';
 
+  // Admin Routes
+  static const String adminDashboard = '/admin/dashboard';
+  static const String adminTrips = '/admin/trips';
+  static const String adminBookings = '/admin/bookings';
+  static const String adminCargo = '/admin/cargo';
+  static const String adminUsers = '/admin/users';
+  static const String adminRoutes = '/admin/routes';
+  static const String adminVehicles = '/admin/vehicles';
+  static const String adminReports = '/admin/reports';
+  static const String adminPayments = '/admin/payments';
+  static const String adminNotifications = '/admin/notifications';
+  static const String adminSettings = '/admin/settings';
   // Common Routes
   static const String notFound = '/404';
   static const String noInternet = '/no-internet';

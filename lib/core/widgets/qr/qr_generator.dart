@@ -36,7 +36,7 @@ class QRGenerator extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(AppDimens.padding16),
+        padding: const EdgeInsets.all(AppDimens.padding4),
         decoration: BoxDecoration(
           color: backgroundColor ?? (isDark ? AppColors.surfaceDark : AppColors.white),
           borderRadius: BorderRadius.circular(AppDimens.radius16),
@@ -144,7 +144,7 @@ class TicketQRWidget extends StatelessWidget {
 
           // Content
           Padding(
-            padding: const EdgeInsets.all(AppDimens.padding20),
+            padding: const EdgeInsets.all(AppDimens.padding10),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -176,10 +176,11 @@ class TicketQRWidget extends StatelessWidget {
                   data: ticketData,
                   size: 180,
                   backgroundColor: Colors.white,
+                  color: Colors.black,
                   logo: Container(
                     padding: const EdgeInsets.all(4),
                     child: Image.asset(
-                      'assets/images/menahariya_icon.png',
+                      'assets/illustrations/onboarding2.png',
                       width: 30,
                       height: 30,
                     ),
@@ -229,7 +230,7 @@ class TicketPatternPainter extends CustomPainter {
     for (double i = 0; i < size.width; i += 20) {
       canvas.drawLine(
         Offset(i, 0),
-        Offset(i + 10, size.height),
+        Offset(i + 0, size.height),
         paint,
       );
     }

@@ -48,12 +48,33 @@ import 'package:menahariya/modules/common/views/server_error_view.dart';
 import 'package:menahariya/modules/common/views/not_found_view.dart';
 import 'package:menahariya/modules/common/views/under_construction_view.dart';
 
+// ==================== ADMIN IMPORTS ====================
+import 'package:menahariya/modules/admin/bindings/admin_binding.dart';
+import 'package:menahariya/modules/admin/views/admin_dashboard_view.dart';
+import 'package:menahariya/modules/admin/views/admin_trips_view.dart';
+import 'package:menahariya/modules/admin/views/admin_bookings_view.dart';
+import 'package:menahariya/modules/admin/views/admin_cargo_view.dart';
+import 'package:menahariya/modules/admin/views/admin_users_view.dart';
+import 'package:menahariya/modules/admin/views/admin_routes_view.dart';
+import 'package:menahariya/modules/admin/views/admin_vehicles_view.dart';
+import 'package:menahariya/modules/admin/views/admin_reports_view.dart';
+import 'package:menahariya/modules/admin/views/admin_payments_view.dart';
+import 'package:menahariya/modules/admin/views/admin_notifications_view.dart';
+import 'package:menahariya/modules/admin/views/admin_settings_view.dart';
+
+// ==================== OTHER IMPORTS ====================
+import '../../modules/admin/views/admin_profile_view.dart';
 import '../../modules/auth/controllers/auth_controller.dart';
 import '../../modules/auth/views/forgot_password_view.dart';
 import '../../modules/driver/trips/assigned_trips_view.dart';
 import '../../modules/driver/views/trip/update_trip_status_view.dart';
 import '../../modules/onboarding/bindings/onboarding_binding.dart';
 import '../../modules/onboarding/views/onboarding_view.dart';
+import '../../modules/passenger/views/cargo/cargo_trip_select_view.dart';
+import '../../modules/passenger/views/support/privacy_security_view.dart';
+import '../../modules/passenger/views/support/about_view.dart';
+import '../../modules/passenger/views/support/help_support_view.dart';
+import '../../modules/passenger/views/tickets/ticket_trip_select_view.dart';
 
 class AppPages {
   // Private constructor
@@ -77,6 +98,9 @@ class AppPages {
       binding: OnboardingBinding(),
       transition: Transition.fadeIn,
     ),
+
+    GetPage(name: AppRoutes.adminProfile, page: () => const AdminProfileView()),
+    GetPage(name: AppRoutes.adminSettings, page: () => const AdminSettingsView()),
     // Auth Routes
     GetPage(
       name: AppRoutes.login,
@@ -101,7 +125,7 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.forgotPassword,
-      page: () => const ForgotPasswordView( ),
+      page: () => const ForgotPasswordView(),
       binding: AuthBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
@@ -114,7 +138,120 @@ class AppPages {
       transitionDuration: const Duration(milliseconds: 300),
     ),
 
-    // Passenger Routes
+    // ==================== ADMIN ROUTES ====================
+
+
+    // Admin Dashboard with middleware
+    GetPage(
+      name: AppRoutes.adminDashboard,
+      page: () => const AdminDashboardView(),
+      binding: AdminBinding(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Trips
+    GetPage(
+      name: AppRoutes.adminTrips,
+      page: () => const AdminTripsView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Bookings
+    GetPage(
+      name: AppRoutes.adminBookings,
+      page: () => const AdminBookingsView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Cargo
+    GetPage(
+      name: AppRoutes.adminCargo,
+      page: () => const AdminCargoView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Users
+    GetPage(
+      name: AppRoutes.adminUsers,
+      page: () => const AdminUsersView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Routes
+    GetPage(
+      name: AppRoutes.adminRoutes,
+      page: () => const AdminRoutesView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Vehicles
+    GetPage(
+      name: AppRoutes.adminVehicles,
+      page: () => const AdminVehiclesView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Reports
+    GetPage(
+      name: AppRoutes.adminReports,
+      page: () => const AdminReportsView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Payments
+    GetPage(
+      name: AppRoutes.adminPayments,
+      page: () => const AdminPaymentsView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Notifications
+    GetPage(
+      name: AppRoutes.adminNotifications,
+      page: () => const AdminNotificationsView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // Admin Settings
+    GetPage(
+      name: AppRoutes.adminSettings,
+      page: () => const AdminSettingsView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // ==================== PASSENGER ROUTES ====================
     GetPage(
       name: AppRoutes.passengerDashboard,
       page: () => const PassengerDashboardView(),
@@ -174,6 +311,41 @@ class AppPages {
     GetPage(
       name: AppRoutes.passengerPayment,
       page: () => const PaymentView(),
+      binding: PassengerBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.privacySecurity,
+      page: () => const PrivacySecurityView(),
+      binding: PassengerBinding(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.helpSupport,
+      page: () => const HelpSupportView(),
+      binding: PassengerBinding(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.about,
+      page: () => const AboutView(),
+      binding: PassengerBinding(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.passengerCargoSelectTrip,
+      page: () => const CargoTripSelectView(),
+      binding: PassengerBinding(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.passengerTicketSelectTrip,
+      page: () => const TicketTripSelectView(),
       binding: PassengerBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
@@ -284,7 +456,7 @@ class AppPages {
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
 
-    // Driver Routes
+    // ==================== DRIVER ROUTES ====================
     GetPage(
       name: AppRoutes.driverDashboard,
       page: () => const DriverDashboardView(),
@@ -390,7 +562,7 @@ class AppPages {
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
 
-    // Common Routes
+    // ==================== COMMON ROUTES ====================
     GetPage(
       name: AppRoutes.noInternet,
       page: () => const NoInternetView(),
@@ -418,6 +590,7 @@ class AppPages {
   ];
 }
 
+// ==================== AUTH MIDDLEWARE ====================
 // Auth Middleware for role-based access control
 class AuthMiddleware extends GetMiddleware {
   final String? role;
@@ -426,23 +599,32 @@ class AuthMiddleware extends GetMiddleware {
 
   @override
   RouteSettings? redirect(String? route) {
-    final authController = Get.find<AuthController>();
+    try {
+      final authController = Get.find<AuthController>();
 
-    // Check if user is logged in
-    if (!authController.isAuthenticated) {
+      // Check if user is logged in
+      if (!authController.isAuthenticated) {
+        return const RouteSettings(name: AppRoutes.login);
+      }
+
+      // Check role-based access
+      if (role != null && authController.userRole != role) {
+        // Redirect to appropriate dashboard based on role
+        if (authController.userRole == 'passenger') {
+          return const RouteSettings(name: AppRoutes.passengerDashboard);
+        } else if (authController.userRole == 'driver') {
+          return const RouteSettings(name: AppRoutes.driverDashboard);
+        } else if (authController.userRole == 'admin') {
+          return const RouteSettings(name: AppRoutes.adminDashboard);
+        }
+        // If role doesn't match any, go to login
+        return const RouteSettings(name: AppRoutes.login);
+      }
+
+      return null;
+    } catch (e) {
+      // AuthController not found, go to login
       return const RouteSettings(name: AppRoutes.login);
     }
-
-    // Check role-based access
-    if (role != null && authController.userRole != role) {
-      // Redirect to appropriate dashboard based on role
-      if (authController.userRole == 'passenger') {
-        return const RouteSettings(name: AppRoutes.passengerDashboard);
-      } else if (authController.userRole == 'driver') {
-        return const RouteSettings(name: AppRoutes.driverDashboard);
-      }
-    }
-
-    return null;
   }
 }

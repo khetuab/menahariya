@@ -25,16 +25,14 @@ class SplashPermanentBinding extends Bindings {
       permanent: true,
     );
   }
+
 }
 
 // Binding with additional dependencies
 class SplashWithDependenciesBinding extends Bindings {
-  @override
+ @override
   void dependencies() {
-    // Load only essential services needed for splash
     Get.lazyPut<SplashController>(() => SplashController());
-
-    // Preload auth controller for faster navigation
     Get.lazyPut(() => AuthController(), fenix: true);
   }
 }

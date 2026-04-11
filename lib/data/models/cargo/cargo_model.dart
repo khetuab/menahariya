@@ -68,36 +68,93 @@ class CargoModel {
   });
 
   factory CargoModel.fromJson(Map<String, dynamic> json) {
+    // Helper function to safely extract tripId whether it's a string or object
+    String extractTripId(dynamic tripField) {
+      if (tripField == null) return '';
+      if (tripField is String) return tripField;
+      if (tripField is Map<String, dynamic>) {
+        // If it's a populated trip object, extract its ID
+        if (tripField.containsKey('_id')) {
+          return tripField['_id']?.toString() ?? '';
+        }
+        if (tripField.containsKey('id')) {
+          return tripField['id']?.toString() ?? '';
+        }
+      }
+      return tripField.toString();
+    }
+
+    // Helper function to safely parse dates
+    DateTime parseDate(dynamic dateField, {DateTime? fallback}) {
+      if (dateField == null) return fallback ?? DateTime.now();
+      try {
+        if (dateField is DateTime) return dateField;
+        if (dateField is String) return DateTime.parse(dateField);
+        if (dateField is Map && dateField.containsKey('\$date')) {
+          return DateTime.parse(dateField['\$date'].toString());
+        }
+      } catch (e) {
+        print('⚠️ Error parsing date: $dateField');
+      }
+      return fallback ?? DateTime.now();
+    }
+
+    // Extract trip data - could be string or object
+    dynamic tripData = json['tripId'] ?? json['trip'];
+    String extractedTripId = extractTripId(tripData);
+
+    // Parse trip if it's a full object
+    TripModel? parsedTrip;
+    if (tripData is Map<String, dynamic> && tripData.isNotEmpty) {
+      try {
+        parsedTrip = TripModel.fromJson(tripData);
+      } catch (e) {
+        print('⚠️ Error parsing trip data: $e');
+      }
+    }
+
+    // Extract origin/destination from various possible locations
+    String origin = json['origin'] ?? '';
+    String destination = json['destination'] ?? '';
+    DateTime departureTime = parseDate(json['departureTime']);
+
+    // If we have a parsed trip, use its data as fallback
+    if (parsedTrip != null) {
+      if (origin.isEmpty) origin = parsedTrip.origin;
+      if (destination.isEmpty) destination = parsedTrip.destination;
+      if (json['departureTime'] == null) departureTime = parsedTrip.departureTime;
+    }
+
     return CargoModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      trackingCode: json['trackingCode'] ?? '',
-      tripId: json['tripId'] ?? json['trip']?['_id'] ?? '',
-      trip: json['trip'] != null ? TripModel.fromJson(json['trip']) : null,
-      senderName: json['senderName'] ?? '',
-      senderPhone: json['senderPhone'] ?? '',
-      receiverName: json['receiverName'] ?? '',
-      receiverPhone: json['receiverPhone'] ?? '',
-      cargoType: json['cargoType'] ?? '',
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      trackingCode: json['trackingCode']?.toString() ?? '',
+      tripId: extractedTripId,
+      trip: parsedTrip,
+      senderName: json['senderName']?.toString() ?? '',
+      senderPhone: json['senderPhone']?.toString() ?? '',
+      receiverName: json['receiverName']?.toString() ?? '',
+      receiverPhone: json['receiverPhone']?.toString() ?? '',
+      cargoType: json['cargoType']?.toString() ?? '',
       weight: (json['weight'] ?? 0).toDouble(),
-      dimensions: json['dimensions'],
-      description: json['description'],
+      dimensions: json['dimensions']?.toString(),
+      description: json['description']?.toString(),
       declaredValue: json['declaredValue']?.toDouble(),
       fee: (json['fee'] ?? 0).toDouble(),
       isFragile: json['isFragile'] ?? false,
       isPerishable: json['isPerishable'] ?? false,
       needsRefrigeration: json['needsRefrigeration'] ?? false,
-      status: json['status'] ?? 'registered',
-      location: json['location'],
-      registeredDate: DateTime.parse(json['registeredDate'] ?? DateTime.now().toIso8601String()),
-      loadedDate: json['loadedDate'] != null ? DateTime.parse(json['loadedDate']) : null,
-      inTransitDate: json['inTransitDate'] != null ? DateTime.parse(json['inTransitDate']) : null,
-      deliveredDate: json['deliveredDate'] != null ? DateTime.parse(json['deliveredDate']) : null,
-      cancelledDate: json['cancelledDate'] != null ? DateTime.parse(json['cancelledDate']) : null,
-      notes: json['notes'],
-      metadata: json['metadata'],
-      origin: json['origin'] ?? json['trip']?['route']?['origin'] ?? '',
-      destination: json['destination'] ?? json['trip']?['route']?['destination'] ?? '',
-      departureTime: DateTime.parse(json['departureTime'] ?? json['trip']?['departureTime'] ?? DateTime.now().toIso8601String()),
+      status: json['status']?.toString() ?? 'registered',
+      location: json['location']?.toString(),
+      registeredDate: parseDate(json['registeredDate'] ?? json['createdAt']),
+      loadedDate: json['loadedDate'] != null ? parseDate(json['loadedDate']) : null,
+      inTransitDate: json['inTransitDate'] != null ? parseDate(json['inTransitDate']) : null,
+      deliveredDate: json['deliveredDate'] != null ? parseDate(json['deliveredDate']) : null,
+      cancelledDate: json['cancelledDate'] != null ? parseDate(json['cancelledDate']) : null,
+      notes: json['notes']?.toString(),
+      metadata: json['metadata'] is Map ? Map<String, dynamic>.from(json['metadata']) : null,
+      origin: origin,
+      destination: destination,
+      departureTime: departureTime,
     );
   }
 
@@ -181,6 +238,25 @@ class CargoModel {
   bool get isInTransit => status == 'in_transit';
   bool get isDelivered => status == 'delivered';
   bool get isCancelled => status == 'cancelled';
+
+  String get formattedFee => fee.toStringAsFixed(2);
+
+  String get statusText {
+    switch (status) {
+      case 'registered':
+        return 'Registered';
+      case 'loaded':
+        return 'Loaded';
+      case 'in_transit':
+        return 'In Transit';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
+    }
+  }
 }
 
 // Cargo Tracking Update

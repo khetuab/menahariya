@@ -37,9 +37,9 @@ class SplashController extends GetxController {
   final _errorMessage = ''.obs;
 
   // Animation controllers (to be set from view)
-  late AnimationController animationController;
-  late Animation<double> fadeAnimation;
-  late Animation<double> scaleAnimation;
+  AnimationController? animationController;
+  Animation<double>? fadeAnimation;
+  Animation<double>? scaleAnimation;
 
   // Getters
   double get loadingProgress => _loadingProgress.value;
@@ -51,7 +51,7 @@ class SplashController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Animations will be set by view
+
   }
 
   @override
@@ -231,6 +231,8 @@ class SplashController extends GetxController {
     _hasError.value = true;
     _errorMessage.value = error;
 
+    Future.delayed(Duration.zero, () {
+      if (Get.context != null) {
     Get.snackbar(
       'Initialization Error',
       error,
@@ -244,6 +246,8 @@ class SplashController extends GetxController {
         child: const Text('Retry'),
       ),
     );
+      }
+    });
   }
 
   void retryInitialization() {
@@ -253,11 +257,19 @@ class SplashController extends GetxController {
     _startInitialization();
   }
 
-  // @override
-  // void onClose() {
-  //   if (animationController.hasListeners) {
-  //     animationController.dispose();
-  //   }
-  //   super.onClose();
-  // }
+  void safeSnackbar(String title, String message) {
+    Future.delayed(Duration.zero, () {
+      if (Get.context != null) {
+        Get.snackbar(title, message);
+      }
+    });
+  }
+
+  @override
+  void onClose() {
+    if (animationController!.isCompleted) {
+      animationController!.dispose();
+    }
+    super.onClose();
+  }
 }

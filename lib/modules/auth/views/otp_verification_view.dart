@@ -136,7 +136,7 @@ class OtpVerificationView extends GetView<OtpController> {
                         },
                         onEditingComplete: () {
                           if (index == AppConstants.otpLength - 1) {
-                            controller.verifyOtp();
+                            //controller.verifyOtp();
                           }
                         },
                       ),

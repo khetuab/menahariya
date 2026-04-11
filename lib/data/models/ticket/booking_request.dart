@@ -54,12 +54,15 @@ class PassengerDetail {
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'phone': phone,
-      'email': email,
+    final Map<String, dynamic> json = {
       'seatNumber': seatNumber,
     };
+
+    if (name != null && name!.isNotEmpty) json['name'] = name;
+    if (phone != null && phone!.isNotEmpty) json['phone'] = phone;
+    if (email != null && email!.isNotEmpty) json['email'] = email;
+
+    return json;
   }
 }
 

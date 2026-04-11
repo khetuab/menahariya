@@ -20,6 +20,12 @@ class PermissionHandler {
     ph.Permission.storage,
   ];
 
+  static const List<ph.Permission> mediaPermissions = [
+    ph.Permission.photos,
+    ph.Permission.videos,
+    ph.Permission.audio,
+  ];
+
   static const List<ph.Permission> locationPermissions = [
     ph.Permission.location,
     ph.Permission.locationAlways,
@@ -102,35 +108,63 @@ class PermissionHandler {
   }) async {
     return requestPermission(
       ph.Permission.camera,
-      rationale: rationale ?? 'Camera access is needed to scan QR codes',
+      rationale: rationale ?? 'Camera access is needed to scan QR codes and take photos',
       showDialog: showDialog,
     );
   }
 
-  // Request storage permission
+  // Request storage permission - UPDATED for Android 13+
   static Future<bool> requestStoragePermission({
     String? rationale,
     bool showDialog = true,
   }) async {
     if (Platform.isAndroid) {
-      if (await ph.Permission.storage.isGranted) {
-        return true;
-      }
+      // Check Android version
+      if (await _isAndroidVersionOrAbove(33)) {
+        // Android 13+ (API 33+) - Use photos permission
+        if (await ph.Permission.photos.isGranted) {
+          return true;
+        }
 
-      return requestPermission(
-        ph.Permission.storage,
-        rationale: rationale ?? 'Storage access is needed to download tickets',
-        showDialog: showDialog,
-      );
+        return requestPermission(
+          ph.Permission.photos,
+          rationale: rationale ?? 'Photos access is needed to select images for your profile',
+          showDialog: showDialog,
+        );
+      } else {
+        // Android 12 and below - Use storage permission
+        if (await ph.Permission.storage.isGranted) {
+          return true;
+        }
+
+        return requestPermission(
+          ph.Permission.storage,
+          rationale: rationale ?? 'Storage access is needed to select images for your profile',
+          showDialog: showDialog,
+        );
+      }
     } else if (Platform.isIOS) {
       // iOS uses photo library permission
       return requestPermission(
         ph.Permission.photos,
-        rationale: rationale ?? 'Photo access is needed to save tickets',
+        rationale: rationale ?? 'Photo access is needed to select images for your profile',
         showDialog: showDialog,
       );
     }
     return false;
+  }
+
+  // Helper to check Android version
+  static Future<bool> _isAndroidVersionOrAbove(int version) async {
+    // You can use DeviceInfoPlugin for more accurate version checking
+    // For now, we'll check which permissions are available
+    try {
+      final sdkInt = await ph.Permission.storage.status;
+      // If storage is available, it's likely Android 12 or below
+      return false; // Placeholder - you should implement proper version checking
+    } catch (e) {
+      return true;
+    }
   }
 
   // Request location permission
@@ -163,11 +197,7 @@ class PermissionHandler {
       final cameraGranted = await requestCameraPermission();
       if (!cameraGranted) return false;
 
-      // On newer Android versions, storage permission might not be needed
-      if (await ph.Permission.storage.status.isDenied) {
-        // Optional storage for saving QR codes
-        await requestStoragePermission(showDialog: false);
-      }
+      // On newer Android versions, storage permission might not be needed for QR scanning
       return true;
     } else if (Platform.isIOS) {
       return requestCameraPermission();
@@ -180,6 +210,45 @@ class PermissionHandler {
     return requestStoragePermission(
       rationale: 'Storage permission is needed to download and save your tickets',
     );
+  }
+
+  static Future<bool> requestImagePickerPermission() async {
+    if (Platform.isAndroid) {
+      // First try photos permission (Android 13+)
+      if (await ph.Permission.photos.isGranted) {
+        return true;
+      }
+
+      // Try to request photos
+      final photosStatus = await ph.Permission.photos.request();
+      if (photosStatus.isGranted) {
+        return true;
+      }
+
+      // Fallback to storage (Android 12 and below)
+      if (await ph.Permission.storage.isGranted) {
+        return true;
+      }
+
+      final storageStatus = await ph.Permission.storage.request();
+      if (storageStatus.isGranted) {
+        return true;
+      }
+
+      // Last resort - try mediaLibrary
+      if (await ph.Permission.mediaLibrary.isGranted) {
+        return true;
+      }
+
+      final mediaStatus = await ph.Permission.mediaLibrary.request();
+      return mediaStatus.isGranted;
+    } else if (Platform.isIOS) {
+      return requestPermission(
+        ph.Permission.photos,
+        rationale: 'Photos access is needed to select a profile picture',
+      );
+    }
+    return false;
   }
 
   // Open app settings
@@ -235,8 +304,13 @@ class PermissionHandler {
       case ph.Permission.camera:
         return 'Camera';
       case ph.Permission.storage:
-      case ph.Permission.photos:
         return 'Storage';
+      case ph.Permission.photos:
+        return 'Photos';
+      case ph.Permission.videos:
+        return 'Videos';
+      case ph.Permission.audio:
+        return 'Audio';
       case ph.Permission.location:
       case ph.Permission.locationAlways:
       case ph.Permission.locationWhenInUse:
@@ -283,6 +357,13 @@ class PermissionHandler {
     return permission.status.asStream();
   }
 
+  static Future<void> debugPermissions() async {
+    print('📱 Checking permissions status:');
+    print('  - Camera: ${await ph.Permission.camera.status}');
+    print('  - Photos: ${await ph.Permission.photos.status}');
+    print('  - Storage: ${await ph.Permission.storage.status}');
+    print('  - READ_MEDIA_IMAGES: ${await ph.Permission.mediaLibrary.status}');
+  }
   // Reset all permissions (useful for testing)
   static Future<void> resetAllPermissions() async {
     await ph.Permission.camera.request();
@@ -307,6 +388,10 @@ mixin PermissionMixin {
 
   Future<bool> ensureStoragePermission() {
     return PermissionHandler.requestStoragePermission();
+  }
+
+  Future<bool> ensureImagePickerPermission() {
+    return PermissionHandler.requestImagePickerPermission();
   }
 
   Future<bool> ensureLocationPermission() {

@@ -8,6 +8,8 @@ import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/services/socket/socket_service.dart';
 import 'package:menahariya/data/models/notification/notification_model.dart';
 
+import '../../../core/utils/app_snackbar.dart';
+
 class DriverNotificationController extends GetxController {
   static DriverNotificationController get instance => Get.find();
 
@@ -104,11 +106,9 @@ class DriverNotificationController extends GetxController {
       if (!notification.isRead) {
         _unreadCount.value++;
 
-        Get.snackbar(
+        AppSnackbar.show(
           notification.title,
           notification.body,
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 3),
         );
       }
 
@@ -232,10 +232,9 @@ class DriverNotificationController extends GetxController {
       _notifications.refresh();
       _unreadCount.value = 0;
 
-      Get.snackbar(
+      AppSnackbar.show(
         'Success',
         'All notifications marked as read',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
       print('Error marking all as read: $e');
@@ -251,10 +250,9 @@ class DriverNotificationController extends GetxController {
       _notifications.removeWhere((n) => n.id == notificationId);
       _updateUnreadCount();
 
-      Get.snackbar(
+      AppSnackbar.show(
         'Success',
         'Notification deleted',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
       print('Error deleting notification: $e');

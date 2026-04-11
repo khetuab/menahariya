@@ -38,6 +38,7 @@ class SeatMap extends StatefulWidget {
 class _SeatMapState extends State<SeatMap> {
   late List<String> _selectedSeats;
   final Map<String, SeatData> _seatMap = {};
+  late Map<String, List<SeatData>> _seatsByRow;
 
   @override
   void initState() {
@@ -47,9 +48,25 @@ class _SeatMapState extends State<SeatMap> {
   }
 
   void _buildSeatMap() {
+    _seatsByRow = {};
+
     for (var seat in widget.seats) {
       _seatMap[seat.id] = seat;
+
+      // Group seats by row
+      if (!_seatsByRow.containsKey(seat.row)) {
+        _seatsByRow[seat.row] = [];
+      }
+      _seatsByRow[seat.row]!.add(seat);
     }
+
+    // Sort seats in each row by column
+    _seatsByRow.forEach((row, seats) {
+      seats.sort((a, b) => a.column.compareTo(b.column));
+    });
+
+    print('🎯 SeatMap initialized with ${widget.seats.length} seats');
+    print('📊 Rows found: ${_seatsByRow.keys.length}');
   }
 
   void _handleSeatTap(SeatData seat) {
@@ -74,6 +91,27 @@ class _SeatMapState extends State<SeatMap> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    print('🎯 Building SeatMap with ${_seatsByRow.length} rows');
+
+    if (widget.seats.isEmpty) {
+      return Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.event_seat_rounded,
+              size: 48,
+              color: isDark ? AppColors.grey600 : AppColors.grey400,
+            ),
+            const SizedBox(height: AppDimens.margin8),
+            Text(
+              'No seats available',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      );
+    }
 
     return Column(
       children: [
@@ -228,15 +266,48 @@ class _SeatMapState extends State<SeatMap> {
 
   List<Widget> _buildSeatRows() {
     final List<Widget> rows = [];
-    final layout = widget.seatLayout;
 
-    for (var row in layout['rows'] as List) {
+    // Get sorted row keys
+    final sortedRows = _seatsByRow.keys.toList()..sort();
+
+    print('📊 Building ${sortedRows.length} rows');
+
+    // Determine max columns for consistent spacing
+    int maxColumns = 4; // Default
+    if (widget.seats.isNotEmpty) {
+      maxColumns = widget.seats.map((s) => s.column).reduce((a, b) => a > b ? a : b);
+    }
+
+    for (var rowName in sortedRows) {
+      final rowSeats = _seatsByRow[rowName]!;
+
       rows.add(
         Padding(
           padding: const EdgeInsets.only(bottom: AppDimens.padding8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: _buildSeatsInRow(row),
+            children: _buildSeatsInRow(rowName, rowSeats, maxColumns),
+          ),
+        ),
+      );
+
+      // Add row label on the side
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.only(left: 4.0),
+          child: Row(
+            children: [
+              Container(
+                width: 20,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  rowName,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -245,21 +316,27 @@ class _SeatMapState extends State<SeatMap> {
     return rows;
   }
 
-  List<Widget> _buildSeatsInRow(Map<String, dynamic> rowData) {
+  List<Widget> _buildSeatsInRow(String rowName, List<SeatData> rowSeats, int totalColumns) {
     final List<Widget> seats = [];
-    final rowName = rowData['row'];
-    final seatsInRow = rowData['seats'] as List;
 
-    for (var seatData in seatsInRow) {
-      final seatNumber = seatData['number'];
-      final seatId = '$rowName$seatNumber';
-      final seat = _seatMap[seatId];
+    // Create a map of column -> seat for quick lookup
+    final Map<int, SeatData> columnSeatMap = {};
+    for (var seat in rowSeats) {
+      columnSeatMap[seat.column] = seat;
+    }
+
+    // Build seats for all columns
+    for (int col = 1; col <= totalColumns; col++) {
+      final seat = columnSeatMap[col];
 
       if (seat != null) {
+        // Add aisle spacing for middle columns
+        final bool isAisle = col == 2 || col == 3;
+
         seats.add(
           Padding(
             padding: EdgeInsets.only(
-              right: seatData['aisle'] == true ? AppDimens.seatAisleWidth : AppDimens.padding4,
+              right: isAisle ? AppDimens.seatAisleWidth : AppDimens.padding4,
             ),
             child: SeatItem(
               seat: seat,
@@ -270,7 +347,7 @@ class _SeatMapState extends State<SeatMap> {
           ),
         );
       } else {
-        // Empty space for layout
+        // Empty space for missing seat (shouldn't happen with proper data)
         seats.add(
           SizedBox(
             width: widget.seatSize,
@@ -313,17 +390,17 @@ class SeatData {
 
   factory SeatData.fromJson(Map<String, dynamic> json) {
     return SeatData(
-      id: json['id'],
-      number: json['number'],
-      row: json['row'],
-      column: json['column'],
-      status: json['status'],
-      price: json['price']?.toDouble(),
-      passengerName: json['passengerName'],
-      isAvailable: json['isAvailable'] ?? false,
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      number: json['number']?.toString() ?? '',
+      row: json['row']?.toString() ?? '',
+      column: json['column'] is int ? json['column'] : int.tryParse(json['column']?.toString() ?? '0') ?? 0,
+      status: json['status']?.toString() ?? 'available',
+      price: json['price'] != null ? (json['price'] is int ? (json['price'] as int).toDouble() : json['price']?.toDouble()) : null,
+      passengerName: json['passengerName']?.toString(),
+      isAvailable: json['status'] == 'available',
       isWindow: json['isWindow'] ?? false,
       isAisle: json['isAisle'] ?? false,
-      metadata: json['metadata'],
+      metadata: json['metadata'] is Map ? Map<String, dynamic>.from(json['metadata']) : null,
     );
   }
 }

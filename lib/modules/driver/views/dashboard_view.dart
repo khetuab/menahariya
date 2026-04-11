@@ -7,7 +7,13 @@ import 'package:menahariya/core/constants/app_dimens.dart';
 import 'package:menahariya/core/constants/app_fonts.dart';
 import 'package:menahariya/core/widgets/cards/trip_card.dart';
 import 'package:menahariya/core/widgets/loading/shimmer_loading.dart';
+import 'package:menahariya/core/utils/app_snackbar.dart';
 import 'package:menahariya/modules/driver/controllers/dashboard_controller.dart';
+import 'package:menahariya/modules/driver/views/boarding/boarding_management_view.dart';
+import 'package:menahariya/modules/driver/views/boarding/validation_view.dart';
+import 'package:menahariya/modules/driver/views/profile/profile_view.dart';
+
+import '../trips/assigned_trips_view.dart';
 
 class DriverDashboardView extends GetView<DriverDashboardController> {
   const DriverDashboardView({Key? key}) : super(key: key);
@@ -85,38 +91,29 @@ class DriverDashboardView extends GetView<DriverDashboardController> {
         ],
       ),
       body: Obx(() {
-        if (controller.isLoading) {
+        if (controller.isLoading && controller.currentIndex == 0) {
           return _buildLoadingShimmer();
         }
 
-        return RefreshIndicator(
-          onRefresh: controller.refreshDashboard,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppDimens.padding16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Stats Grid
-                _buildStatsGrid(context),
+        // Show different screens based on selected tab
+        return IndexedStack(
+          index: controller.currentIndex,
+          children: const [
+            // Index 0: Dashboard (current view)
+            _DashboardContent(),
 
-                const SizedBox(height: AppDimens.margin24),
+            // Index 1: Trips
+            AssignedTripsView(),
 
-                // Current Trip Section
-                if (controller.currentTrip != null)
-                  _buildCurrentTrip(context),
+            // Index 2: Boarding
+            BoardingManagementView(),
 
-                const SizedBox(height: AppDimens.margin24),
+            // Index 3: Validate
+            ValidationView(),
 
-                // Upcoming Trips
-                _buildUpcomingTrips(context),
-
-                const SizedBox(height: AppDimens.margin24),
-
-                // Quick Actions
-                _buildQuickActions(context),
-              ],
-            ),
-          ),
+            // Index 4: Profile
+            DriverProfileView(),
+          ],
         );
       }),
       bottomNavigationBar: Obx(() => BottomNavigationBar(
@@ -135,6 +132,84 @@ class DriverDashboardView extends GetView<DriverDashboardController> {
           );
         }),
       )),
+    );
+  }
+
+  Widget _buildLoadingShimmer() {
+    return ListView(
+      padding: const EdgeInsets.all(AppDimens.padding16),
+      children: [
+        ShimmerLoading(
+          child: Container(
+            height: 100,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppDimens.radius12),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppDimens.margin16),
+        ShimmerLoading(
+          child: Container(
+            height: 150,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppDimens.radius12),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppDimens.margin16),
+        ShimmerLoading(
+          child: Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppDimens.radius12),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Extract dashboard content to a separate widget for cleaner code
+class _DashboardContent extends GetView<DriverDashboardController> {
+  const _DashboardContent({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return RefreshIndicator(
+      onRefresh: controller.refreshDashboard,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppDimens.padding16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Stats Grid
+            _buildStatsGrid(context),
+
+            const SizedBox(height: AppDimens.margin24),
+
+            // Current Trip Section
+            if (controller.currentTrip != null)
+              _buildCurrentTrip(context),
+
+            const SizedBox(height: AppDimens.margin24),
+
+            // Upcoming Trips
+            _buildUpcomingTrips(context),
+
+            const SizedBox(height: AppDimens.margin24),
+
+            // Quick Actions
+            _buildQuickActions(context),
+          ],
+        ),
+      ),
     );
   }
 
@@ -359,10 +434,9 @@ class DriverDashboardView extends GetView<DriverDashboardController> {
                       arguments: {'tripId': controller.currentTrip!.id},
                     );
                   } else {
-                    Get.snackbar(
+                    AppSnackbar.show(
                       'No Active Trip',
                       'You don\'t have an active trip to manage boarding',
-                      snackPosition: SnackPosition.BOTTOM,
                     );
                   }
                 },
@@ -452,43 +526,6 @@ class DriverDashboardView extends GetView<DriverDashboardController> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildLoadingShimmer() {
-    return ListView(
-      padding: const EdgeInsets.all(AppDimens.padding16),
-      children: [
-        ShimmerLoading(
-          child: Container(
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppDimens.radius12),
-            ),
-          ),
-        ),
-        const SizedBox(height: AppDimens.margin16),
-        ShimmerLoading(
-          child: Container(
-            height: 150,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppDimens.radius12),
-            ),
-          ),
-        ),
-        const SizedBox(height: AppDimens.margin16),
-        ShimmerLoading(
-          child: Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppDimens.radius12),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

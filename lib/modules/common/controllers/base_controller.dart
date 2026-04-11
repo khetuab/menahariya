@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/services/api/api_exception.dart';
 import 'package:menahariya/core/services/connectivity/connectivity_service.dart';
+import 'package:menahariya/core/widgets/dialogs/custom_snackbar.dart';
 
 abstract class BaseController extends GetxController {
   // Loading states
@@ -37,7 +38,6 @@ abstract class BaseController extends GetxController {
     _setupConnectivityListener();
   }
 
-  // FIXED: Use ever on the Rx observable, not on the value
   void _setupConnectivityListener() {
     // _connectivityService.isConnected is already an RxBool
     ever(_connectivityService.isConnectedRx, (connected) {
@@ -54,7 +54,7 @@ abstract class BaseController extends GetxController {
   void showRefreshing() => _isRefreshing.value = true;
   void hideRefreshing() => _isRefreshing.value = false;
 
-  // Error handling
+  // Error handling - NO GETX SNACKBARS USED
   void handleError(dynamic error) {
     hideLoading();
     hideRefreshing();
@@ -87,63 +87,27 @@ abstract class BaseController extends GetxController {
   }
 
   void _handleUnauthorized() {
-    Get.snackbar(
-      'Session Expired',
-      'Please login again to continue',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-    );
+    CustomSnackbar.showError('Session expired. Please login again.');
     Get.offAllNamed('/auth/login');
   }
 
   void _handleForbidden() {
-    Get.snackbar(
-      'Access Denied',
-      'You do not have permission to perform this action',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.orange,
-      colorText: Colors.white,
-    );
+    CustomSnackbar.showError('You do not have permission to perform this action');
   }
 
   void _handleNotFound() {
-    Get.snackbar(
-      'Not Found',
-      'The requested resource was not found',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue,
-      colorText: Colors.white,
-    );
+    CustomSnackbar.showError('The requested resource was not found');
   }
 
   void _handleServerError() {
-    Get.snackbar(
-      'Server Error',
-      'An error occurred on the server. Please try again later.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-    );
+    CustomSnackbar.showError('Server error. Please try again later.');
   }
 
   void _handleGenericError(String message) {
     if (!_connectivityService.isConnected) {
-      Get.snackbar(
-        'No Internet',
-        'Please check your internet connection',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
+      CustomSnackbar.showWarning('No internet connection');
     } else {
-      Get.snackbar(
-        'Error',
-        message,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      CustomSnackbar.showError(message);
     }
   }
 
@@ -177,10 +141,8 @@ abstract class BaseController extends GetxController {
     await fetchData();
   }
 
-  // Abstract methods to be implemented by child controllers
-  Future<void> fetchData({bool refresh = false}) async {
-    // Override in child classes
-  }
+  // Abstract methods
+  Future<void> fetchData({bool refresh = false}) async {}
 
   Future<void> refreshData() async {
     _isRefreshing.value = true;
@@ -194,11 +156,53 @@ abstract class BaseController extends GetxController {
     if (!_connectivityService.isConnected) {
       final hasConnection = await _connectivityService.hasInternetConnection();
       if (!hasConnection) {
-        Get.toNamed('/no-internet');
+        CustomSnackbar.showWarning('No internet connection');
         return false;
       }
     }
     return true;
+  }
+
+  // Success messages
+  void showSuccess(String message) {
+    CustomSnackbar.showSuccess(message);
+  }
+
+  void showWarning(String message) {
+    CustomSnackbar.showWarning(message);
+  }
+
+  void showInfo(String message) {
+    CustomSnackbar.showInfo(message);
+  }
+
+  // Confirmation dialog
+  Future<bool> showConfirmation({
+    required String title,
+    required String message,
+    String confirmText = 'Confirm',
+    String cancelText = 'Cancel',
+  }) async {
+    return await Get.dialog<bool>(
+      AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(cancelText),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: Text(confirmText),
+          ),
+        ],
+      ),
+    ) ??
+        false;
   }
 
   // Loading overlay
@@ -229,68 +233,6 @@ abstract class BaseController extends GetxController {
     if (Get.isDialogOpen ?? false) {
       Get.back();
     }
-  }
-
-  // Success messages
-  void showSuccess(String message) {
-    Get.snackbar(
-      'Success',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
-  }
-
-  // Warning messages
-  void showWarning(String message) {
-    Get.snackbar(
-      'Warning',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.orange,
-      colorText: Colors.white,
-    );
-  }
-
-  // Info messages
-  void showInfo(String message) {
-    Get.snackbar(
-      'Information',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue,
-      colorText: Colors.white,
-    );
-  }
-
-  // Confirmation dialog
-  Future<bool> showConfirmation({
-    required String title,
-    required String message,
-    String confirmText = 'Confirm',
-    String cancelText = 'Cancel',
-  }) async {
-    final result = await Get.dialog<bool>(
-      AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text(cancelText),
-          ),
-          ElevatedButton(
-            onPressed: () => Get.back(result: true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: Text(confirmText),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
   }
 }
 
@@ -337,10 +279,7 @@ mixin PaginationMixin<T> on BaseController {
   }
 
   @protected
-  List<T> filterItems(List<T> items) {
-    // Override in child classes for custom filtering
-    return items;
-  }
+  List<T> filterItems(List<T> items) => items;
 }
 
 // Search Mixin
@@ -364,9 +303,7 @@ mixin SearchMixin<T> on BaseController {
   }
 
   @protected
-  void performSearch(String query) {
-    // Override in child classes
-  }
+  void performSearch(String query) {}
 
   List<T> filterByQuery(List<T> items, String query, String Function(T) getSearchableText) {
     if (query.isEmpty) return items;
@@ -381,7 +318,7 @@ mixin SearchMixin<T> on BaseController {
 mixin RefreshMixin on BaseController {
   Future<void> onRefresh() async {
     if (!isConnected) {
-      showWarning('No internet connection');
+      CustomSnackbar.showWarning('No internet connection');
       return;
     }
     await refreshData();

@@ -6,6 +6,7 @@ import 'package:menahariya/core/constants/api_endpoints.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/data/models/trip/trip_model.dart';
 import 'package:menahariya/core/utils/formatters/date_formatter.dart';
+import 'package:menahariya/core/utils/app_snackbar.dart';
 
 class PassengerSearchController extends GetxController {
   static PassengerSearchController get instance => Get.find();
@@ -25,9 +26,11 @@ class PassengerSearchController extends GetxController {
   late final FocusNode passengersFocusNode;
 
   // Observables
+  final showFromSuggestions = false.obs;
+  final showToSuggestions = false.obs;
   final _isLoading = false.obs;
   final _searchResults = <TripModel>[].obs;
-  final _suggestions = <String>[].obs;
+  final _suggestions = <Place>[].obs;
   final _recentSearches = <RecentSearch>[].obs;
   final _selectedFrom = Rxn<Place>();
   final _selectedTo = Rxn<Place>();
@@ -41,7 +44,7 @@ class PassengerSearchController extends GetxController {
   // Getters
   bool get isLoading => _isLoading.value;
   List<TripModel> get searchResults => _searchResults;
-  List<String> get suggestions => _suggestions;
+  List<Place> get suggestions => _suggestions;
   List<RecentSearch> get recentSearches => _recentSearches;
   Place? get selectedFrom => _selectedFrom.value;
   Place? get selectedTo => _selectedTo.value;
@@ -65,6 +68,7 @@ class PassengerSearchController extends GetxController {
     super.onInit();
     _initializeControllers();
     _loadRecentSearches();
+    _setupFocusListeners();
   }
 
   void _initializeControllers() {
@@ -95,15 +99,47 @@ class PassengerSearchController extends GetxController {
     _selectedTo.value = tempFrom;
     toController.text = tempFromText;
   }
+  void _setupFocusListeners() {
+    fromFocusNode.addListener(_onFromFocusChange);
+    toFocusNode.addListener(_onToFocusChange);
+  }
+  void _onFromFocusChange() {
+    showFromSuggestions.value = fromFocusNode.hasFocus;
+    if (!fromFocusNode.hasFocus) {
+      // Clear suggestions when losing focus
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (!fromFocusNode.hasFocus && !toFocusNode.hasFocus) {
+          _suggestions.clear();
+        }
+      });
+    }
+  }
+
+  void _onToFocusChange() {
+    showToSuggestions.value = toFocusNode.hasFocus;
+    if (!toFocusNode.hasFocus) {
+      // Clear suggestions when losing focus
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (!toFocusNode.hasFocus && !fromFocusNode.hasFocus) {
+          _suggestions.clear();
+        }
+      });
+    }
+  }
+
 
   void setFromLocation(Place place) {
     _selectedFrom.value = place;
     fromController.text = place.name;
+    // Clear suggestions after selection
+    _suggestions.clear();
   }
 
   void setToLocation(Place place) {
     _selectedTo.value = place;
     toController.text = place.name;
+    // Clear suggestions after selection
+    _suggestions.clear();
   }
 
   void setDate(DateTime date) {
@@ -137,7 +173,10 @@ class PassengerSearchController extends GetxController {
   }
 
   Future<void> searchTrips() async {
-    if (!isValidSearch) return;
+    if (!isValidSearch) {
+      AppSnackbar.show('Error', 'Please select origin and destination');
+      return;
+    }
 
     try {
       _isLoading.value = true;
@@ -146,8 +185,8 @@ class PassengerSearchController extends GetxController {
       final response = await _apiClient.get(
         ApiEndpoints.tripsSearch,
         queryParameters: {
-          'from': _selectedFrom.value?.id,
-          'to': _selectedTo.value?.id,
+          'origin': _selectedFrom.value?.name,
+          'destination': _selectedTo.value?.name,
           'date': DateFormatter.toApiDate(_selectedDate.value!),
           'passengers': _passengerCount.value,
           ..._appliedFilters.value.toQueryParams(),
@@ -158,16 +197,15 @@ class PassengerSearchController extends GetxController {
         final List<dynamic> trips = response['data'];
         _searchResults.value = trips.map((t) => TripModel.fromJson(t)).toList();
 
-        // Save to recent searches
-        _saveRecentSearch();
+        if (_searchResults.isNotEmpty) {
+          _saveRecentSearch();
+        } else {
+          AppSnackbar.show('Info', 'No trips found for your search');
+        }
       }
     } catch (e) {
-      print('Search error: $e');
-      Get.snackbar(
-        'Search Failed',
-        'An error occurred while searching. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      print('❌ Search error: $e');
+      AppSnackbar.show('Error', 'Failed to search trips. Please try again.');
     } finally {
       _isLoading.value = false;
     }
@@ -186,15 +224,21 @@ class PassengerSearchController extends GetxController {
       );
 
       if (response != null && response['data'] != null) {
-        final List<dynamic> places = response['data'];
-        _suggestions.value = places.map((p) => p['name'].toString()).toList();
+        final List<dynamic> placesData = response['data'];
+        _suggestions.value = placesData
+            .map((p) => Place.fromJson(p))
+            .toList();
       }
     } catch (e) {
-      print('Error getting suggestions: $e');
+      print('❌ Error getting suggestions: $e');
+      // Don't show error to user, just clear suggestions
+      _suggestions.clear();
     }
   }
 
   void _saveRecentSearch() {
+    if (_selectedFrom.value == null || _selectedTo.value == null) return;
+
     final search = RecentSearch(
       from: _selectedFrom.value!,
       to: _selectedTo.value!,
@@ -202,16 +246,29 @@ class PassengerSearchController extends GetxController {
       timestamp: DateTime.now(),
     );
 
+    // Remove duplicate if exists
+    _recentSearches.removeWhere((s) =>
+    s.from.id == search.from.id &&
+        s.to.id == search.to.id &&
+        s.date.year == search.date.year &&
+        s.date.month == search.date.month &&
+        s.date.day == search.date.day
+    );
+
     _recentSearches.insert(0, search);
+
+    // Keep only last 5
     if (_recentSearches.length > 5) {
       _recentSearches.removeLast();
     }
 
-    // Save to local storage
+    // TODO: Save to local storage (SharedPreferences)
   }
 
   void _loadRecentSearches() {
-    // Load from local storage
+    // TODO: Load from local storage (SharedPreferences)
+    // For now, just initialize empty list
+    _recentSearches.clear();
   }
 
   void applyFilters(FilterOptions filters) {
@@ -241,12 +298,23 @@ class PassengerSearchController extends GetxController {
     _suggestions.clear();
   }
 
+  void useRecentSearch(RecentSearch search) {
+    setFromLocation(search.from);
+    setToLocation(search.to);
+    setDate(search.date);
+    searchTrips();
+  }
+
   @override
   void onClose() {
+    fromFocusNode.removeListener(_onFromFocusChange);
+    toFocusNode.removeListener(_onToFocusChange);
     fromController.dispose();
     toController.dispose();
     dateController.dispose();
     passengersController.dispose();
+    fromFocusNode.dispose();
+    toFocusNode.dispose();
     fromFocusNode.dispose();
     toFocusNode.dispose();
     dateFocusNode.dispose();
@@ -254,7 +322,6 @@ class PassengerSearchController extends GetxController {
     super.onClose();
   }
 }
-
 class Place {
   final String id;
   final String name;
@@ -270,11 +337,20 @@ class Place {
 
   factory Place.fromJson(Map<String, dynamic> json) {
     return Place(
-      id: json['id'],
-      name: json['name'],
+      id: json['id'] ?? json['_id'] ?? '',
+      name: json['name'] ?? '',
       city: json['city'],
       station: json['station'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'city': city,
+      'station': station,
+    };
   }
 }
 
@@ -312,13 +388,31 @@ class FilterOptions {
   Map<String, dynamic> toQueryParams() {
     final params = <String, dynamic>{};
 
-    if (minPrice != null) params['min_price'] = minPrice;
-    if (maxPrice != null) params['max_price'] = maxPrice;
-    if (busTypes.isNotEmpty) params['bus_types'] = busTypes.join(',');
+    if (minPrice != null) params['minPrice'] = minPrice;
+    if (maxPrice != null) params['maxPrice'] = maxPrice;
+    if (busTypes.isNotEmpty) params['busTypes'] = busTypes.join(',');
     if (amenities.isNotEmpty) params['amenities'] = amenities.join(',');
-    if (sortBy != null) params['sort_by'] = sortBy;
-    if (departureTimeRange != null) params['time_range'] = departureTimeRange;
+    if (sortBy != null) params['sortBy'] = sortBy;
+    if (departureTimeRange != null) params['timeRange'] = departureTimeRange;
 
     return params;
+  }
+
+  FilterOptions copyWith({
+    double? minPrice,
+    double? maxPrice,
+    List<String>? busTypes,
+    List<String>? amenities,
+    String? sortBy,
+    String? departureTimeRange,
+  }) {
+    return FilterOptions(
+      minPrice: minPrice ?? this.minPrice,
+      maxPrice: maxPrice ?? this.maxPrice,
+      busTypes: busTypes ?? this.busTypes,
+      amenities: amenities ?? this.amenities,
+      sortBy: sortBy ?? this.sortBy,
+      departureTimeRange: departureTimeRange ?? this.departureTimeRange,
+    );
   }
 }

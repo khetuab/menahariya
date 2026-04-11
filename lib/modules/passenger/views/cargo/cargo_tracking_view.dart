@@ -20,6 +20,9 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Get tracking code from arguments if provided
+    final String? initialCode = Get.arguments?['trackingCode'];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Track Cargo'),
@@ -37,19 +40,21 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
                   children: [
                     CustomTextField(
                       label: 'Tracking Code',
-                      controller: TextEditingController(),
+                      controller: controller.trackingCodeController,
                       prefixIcon: Icons.qr_code_scanner_rounded,
                       hint: 'Enter tracking code',
                       onSubmitted: (value) => controller.trackCargo(value),
+                      initialValue: initialCode, // Pre-fill if provided
                     ),
                     const SizedBox(height: AppDimens.margin16),
-                    PrimaryButton(
-                      text: 'Track Cargo',
-                      onPressed: () {
-                        // Implement tracking
-                      },
+                    Obx(() => PrimaryButton(
+                      text: controller.isLoading ? 'Tracking...' : 'Track Cargo',
+                      onPressed: controller.isLoading
+                          ? null
+                          : () => controller.trackCargo(controller.trackingCodeController.text),
                       icon: Icons.track_changes_rounded,
-                    ),
+                      isLoading: controller.isLoading,
+                    )),
                   ],
                 ),
               ),
@@ -58,14 +63,18 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
             const SizedBox(height: AppDimens.margin24),
 
             // Tracking Result
-            Obx(() {
-              final cargo = controller.selectedCargo;
-              if (cargo == null) {
-                return _buildEmptyState(context);
-              }
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              return Expanded(
-                child: SingleChildScrollView(
+                final cargo = controller.selectedCargo;
+                if (cargo == null) {
+                  return _buildEmptyState(context);
+                }
+
+                return SingleChildScrollView(
                   child: Column(
                     children: [
                       // Status Timeline
@@ -75,11 +84,16 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
 
                       // Cargo Details
                       _buildCargoDetails(context, cargo),
+
+                      const SizedBox(height: AppDimens.margin20),
+
+                      // Sender & Receiver Info
+                      _buildContactInfo(context, cargo),
                     ],
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ],
         ),
       ),
@@ -90,31 +104,29 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Expanded(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.inventory_2_rounded,
-              size: 80,
-              color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inventory_2_rounded,
+            size: 80,
+            color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
+          ),
+          const SizedBox(height: AppDimens.margin16),
+          Text(
+            'Enter tracking code',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: AppDimens.margin8),
+          Text(
+            'Enter your cargo tracking code to check status',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
             ),
-            const SizedBox(height: AppDimens.margin16),
-            Text(
-              'Enter tracking code',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: AppDimens.margin8),
-            Text(
-              'Enter your cargo tracking code to check status',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -155,8 +167,8 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
                   Column(
                     children: [
                       Container(
-                        width: 20,
-                        height: 20,
+                        width: 24,
+                        height: 24,
                         decoration: BoxDecoration(
                           color: isCompleted
                               ? (isDark ? AppColors.successLight : AppColors.success)
@@ -167,14 +179,14 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
                             ? const Icon(
                           Icons.check_rounded,
                           color: Colors.white,
-                          size: 14,
+                          size: 16,
                         )
                             : null,
                       ),
                       if (!isLast)
                         Container(
                           width: 2,
-                          height: 40,
+                          height: 50,
                           color: isCompleted
                               ? (isDark ? AppColors.successLight : AppColors.success)
                               : (isDark ? AppColors.grey700 : AppColors.grey300),
@@ -197,8 +209,18 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
                         ),
                         if (step['date'] != null)
                           Text(
-                            (step['date'] as DateTime).toString().substring(0, 16),
+                            _formatDate(step['date'] as DateTime),
                             style: theme.textTheme.bodySmall,
+                          ),
+                        if (step['status'] == 'In Transit' && cargo.location != null && cargo.isInTransit)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              '📍 ${cargo.location}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                              ),
+                            ),
                           ),
                         if (!isLast) const SizedBox(height: AppDimens.margin12),
                       ],
@@ -223,21 +245,141 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Cargo Details',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: AppFonts.semiBold,
-              ),
+            Row(
+              children: [
+                Icon(
+                  Icons.inventory_2_rounded,
+                  color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                ),
+                const SizedBox(width: AppDimens.margin8),
+                Text(
+                  'Cargo Details',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: AppFonts.semiBold,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppDimens.margin16),
 
             _buildDetailRow(context, 'Tracking Code', cargo.trackingCode),
-            _buildDetailRow(context, 'Status', cargo.status),
-            _buildDetailRow(context, 'Destination', cargo.destination),
+            _buildDetailRow(context, 'Status', cargo.statusText),
+            _buildDetailRow(context, 'Type', cargo.cargoType),
             _buildDetailRow(context, 'Weight', '${cargo.weight} kg'),
+            if (cargo.dimensions != null && cargo.dimensions!.isNotEmpty)
+              _buildDetailRow(context, 'Dimensions', cargo.dimensions!),
             _buildDetailRow(context, 'Fee', CurrencyFormatter.format(cargo.fee)),
-            if (cargo.description != null)
-              _buildDetailRow(context, 'Description', cargo.description!),
+            if (cargo.description != null && cargo.description!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  cargo.description!,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactInfo(BuildContext context, CargoModel cargo) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.padding16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.person_rounded,
+                  color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                ),
+                const SizedBox(width: AppDimens.margin8),
+                Text(
+                  'Contact Information',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: AppFonts.semiBold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.margin16),
+
+            Container(
+              padding: const EdgeInsets.all(AppDimens.padding12),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.grey800 : AppColors.grey50,
+                borderRadius: BorderRadius.circular(AppDimens.radius8),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Sender',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              cargo.senderName,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: AppFonts.medium,
+                              ),
+                            ),
+                            Text(
+                              cargo.senderPhone,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        height: 40,
+                        width: 1,
+                        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Receiver',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              cargo.receiverName,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: AppFonts.medium,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                            Text(
+                              cargo.receiverPhone,
+                              style: theme.textTheme.bodySmall,
+                              textAlign: TextAlign.right,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -246,7 +388,6 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
 
   Widget _buildDetailRow(BuildContext context, String label, String value) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.padding8),
@@ -256,7 +397,7 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
           Text(
             label,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: theme.textTheme.bodySmall?.color,
             ),
           ),
           Text(
@@ -268,5 +409,9 @@ class CargoTrackingView extends GetView<PassengerCargoController> {
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 }

@@ -64,16 +64,41 @@ class TripModel {
   });
 
   factory TripModel.fromJson(Map<String, dynamic> json) {
+    // Helper function to extract ID from either string or object
+    String extractId(dynamic field) {
+      if (field == null) return '';
+      if (field is String) return field;
+      if (field is Map<String, dynamic>) {
+        // Handle MongoDB ObjectId format
+        if (field.containsKey('_id')) {
+          if (field['_id'] is Map && field['_id'].containsKey('\$oid')) {
+            return field['_id']['\$oid']?.toString() ?? '';
+          }
+          return field['_id']?.toString() ?? '';
+        }
+        if (field.containsKey('\$oid')) {
+          return field['\$oid']?.toString() ?? '';
+        }
+      }
+      return field.toString();
+    }
+
     return TripModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      routeId: json['routeId'] ?? json['route']?['_id'] ?? '',
+      id: json['_id'] is Map
+          ? (json['_id']['\$oid'] ?? json['_id'].toString())
+          : (json['_id'] ?? json['id'] ?? '').toString(),
+      routeId: extractId(json['routeId']),
       route: json['route'] != null ? RouteModel.fromJson(json['route']) : null,
-      vehicleId: json['vehicleId'] ?? json['vehicle']?['_id'] ?? '',
+      vehicleId: extractId(json['vehicleId']),
       vehicle: json['vehicle'] != null ? VehicleModel.fromJson(json['vehicle']) : null,
-      driverId: json['driverId'] ?? json['driver']?['_id'] ?? '',
+      driverId: extractId(json['driverId']),
       driver: json['driver'] != null ? UserModel.fromJson(json['driver']) : null,
-      departureTime: DateTime.parse(json['departureTime']),
-      arrivalTime: DateTime.parse(json['arrivalTime']),
+      departureTime: DateTime.parse(json['departureTime'] is Map
+          ? json['departureTime']['\$date']
+          : json['departureTime']),
+      arrivalTime: DateTime.parse(json['arrivalTime'] is Map
+          ? json['arrivalTime']['\$date']
+          : json['arrivalTime']),
       price: (json['price'] ?? 0).toDouble(),
       availableSeats: json['availableSeats'] ?? 0,
       totalSeats: json['totalSeats'] ?? 0,
@@ -85,8 +110,18 @@ class TripModel {
       passengerCount: json['passengerCount'],
       cargoCount: json['cargoCount'],
       notes: json['notes'],
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      createdAt: DateTime.parse(
+          json['createdAt'] is Map
+              ? json['createdAt']['\$date']
+              : (json['createdAt'] ?? DateTime.now().toIso8601String())
+      ),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(
+          json['updatedAt'] is Map
+              ? json['updatedAt']['\$date']
+              : json['updatedAt']
+      )
+          : null,
       metadata: json['metadata'],
     );
   }

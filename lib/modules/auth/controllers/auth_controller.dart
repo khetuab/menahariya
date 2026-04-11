@@ -10,14 +10,14 @@ import 'package:menahariya/core/services/socket/socket_service.dart';
 import 'package:menahariya/core/services/storage/secure_storage.dart';
 import 'package:menahariya/core/services/storage/local_storage.dart';
 import 'package:menahariya/core/services/storage/shared_prefs.dart';
+import 'package:menahariya/core/utils/app_snackbar.dart';
 import 'package:menahariya/data/models/user/user_model.dart';
 import 'package:menahariya/data/models/user/login_request.dart';
 import 'package:menahariya/data/models/user/register_request.dart';
+import 'package:menahariya/modules/admin/views/admin_dashboard_view.dart';
 
 import '../../../core/constants/api_endpoints.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/routes/app_routes.dart';
-import '../../../data/models/user/user_model.dart';
 
 class AuthController extends GetxController {
   static AuthController get instance => Get.find();
@@ -172,10 +172,9 @@ class AuthController extends GetxController {
       return false;
     } catch (e) {
       print('Login error: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'An unexpected error occurred',
-        snackPosition: SnackPosition.BOTTOM,
       );
       return false;
     } finally {
@@ -209,10 +208,9 @@ class AuthController extends GetxController {
       }
       return false;
     } on ApiException catch (e) {
-      Get.snackbar(
+      AppSnackbar.show(
         'Registration Failed',
         e.message,
-        snackPosition: SnackPosition.BOTTOM,
       );
       return false;
     } finally {
@@ -233,6 +231,7 @@ class AuthController extends GetxController {
           'otp': otp,
           'userId': userId,
         },
+        requiresAuth: false
       );
 
       if (response != null && response['data'] != null) {
@@ -274,13 +273,13 @@ class AuthController extends GetxController {
       final response = await _apiClient.post(
         ApiEndpoints.authResendOTP,
         data: {'phone': phone},
+        requiresAuth: false
       );
 
       if (response != null && response['success'] == true) {
-        Get.snackbar(
+        AppSnackbar.show(
           'Success',
           'OTP resent successfully',
-          snackPosition: SnackPosition.BOTTOM,
         );
         return true;
       }
@@ -338,10 +337,9 @@ class AuthController extends GetxController {
       );
 
       if (response != null && response['success'] == true) {
-        Get.snackbar(
+        AppSnackbar.show(
           'Success',
           'Password reset successfully',
-          snackPosition: SnackPosition.BOTTOM,
         );
 
         // Navigate to login
@@ -394,6 +392,9 @@ class AuthController extends GetxController {
 
       // Force logout even if API fails
       await _secureStorage.deleteAll();
+      _currentUser.value = null;
+      _authToken.value = null;
+      _isAuthenticated.value = false;
       Get.offAllNamed(AppRoutes.login);
     } finally {
       _isLoading.value = false;
@@ -475,10 +476,9 @@ class AuthController extends GetxController {
       );
 
       if (response != null && response['success'] == true) {
-        Get.snackbar(
+        AppSnackbar.show(
           'Success',
           'Password changed successfully',
-          snackPosition: SnackPosition.BOTTOM,
         );
         return true;
       }
@@ -499,11 +499,9 @@ class AuthController extends GetxController {
       _blockUser();
     }
 
-    Get.snackbar(
-      'Login Failed',
-      e.message,
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    AppSnackbar.show('Login Failed',
+      e.message,);
+
   }
 
   // Block user after too many attempts
@@ -522,11 +520,11 @@ class AuthController extends GetxController {
   // Show blocked message
   void _showBlockedMessage() {
     final minutesLeft = _blockedUntil.value?.difference(DateTime.now()).inMinutes ?? 0;
-    Get.snackbar(
+    AppSnackbar.show(
       'Account Blocked',
       'Too many login attempts. Please try again in $minutesLeft minutes.',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+      );
+
   }
 
   // Navigate to appropriate dashboard based on role
@@ -541,8 +539,7 @@ class AuthController extends GetxController {
       case AppConstants.roleAdmin:
       case AppConstants.roleTicketingStaff:
       case AppConstants.roleCargoStaff:
-      // Navigate to staff dashboard (web view)
-        Get.offAllNamed('/staff/dashboard');
+        Get.offAllNamed(AppRoutes.adminDashboard);
         break;
       default:
         Get.offAllNamed(AppRoutes.passengerDashboard);

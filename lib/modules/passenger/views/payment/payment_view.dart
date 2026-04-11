@@ -181,16 +181,7 @@ class PaymentView extends GetView<PassengerPaymentController> {
                 color: isDark ? AppColors.grey700 : AppColors.grey100,
                 borderRadius: BorderRadius.circular(AppDimens.radius8),
               ),
-              child: method.icon != null
-                  ? Image.asset(
-                method.icon!,
-                width: 24,
-                height: 24,
-              )
-                  : Icon(
-                Icons.payment_rounded,
-                color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-              ),
+              child: ClipOval(child: _buildPaymentIcon(method, context)),
             ),
             const SizedBox(width: AppDimens.margin12),
             Expanded(
@@ -223,6 +214,52 @@ class PaymentView extends GetView<PassengerPaymentController> {
     );
   }
 
+  // Helper method to build payment icon with proper asset path
+  Widget _buildPaymentIcon(PaymentMethod method,BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (method.icon == null) {
+      return Icon(
+        _getPaymentIcon(method.code),
+        color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+      );
+    }
+
+    // Clean up the icon path
+    String iconPath = method.icon!;
+
+    // Remove leading slash if present
+    if (iconPath.startsWith('/')) {
+      iconPath = iconPath.substring(1);
+    }
+
+    // Ensure it starts with 'assets/'
+    if (!iconPath.startsWith('assets/')) {
+      iconPath = 'assets/$iconPath';
+    }
+
+    // Replace any backslashes with forward slashes
+    iconPath = iconPath.replaceAll('\\', '/');
+
+    // Remove any double slashes
+    iconPath = iconPath.replaceAll('//', '/');
+
+    //print('📁 Loading icon from: $iconPath');
+
+    return Image.asset(
+      iconPath,
+      width: 34,
+      height: 34,
+      errorBuilder: (context, error, stackTrace) {
+        print('❌ Failed to load icon: $iconPath');
+        return Icon(
+          _getPaymentIcon(method.code),
+          color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+        );
+      },
+    );
+  }
+
   Widget _buildMobileMoneyForm(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -241,7 +278,7 @@ class PaymentView extends GetView<PassengerPaymentController> {
           keyboardType: TextInputType.phone,
           prefixIcon: Icons.phone_rounded,
           hint: 'Enter your mobile money number',
-          label: 'Money number',
+          label: 'Mobile money number',
         ),
       ],
     );
@@ -277,7 +314,7 @@ class PaymentView extends GetView<PassengerPaymentController> {
             Expanded(
               child: CustomTextField(
                 controller: controller.cardExpiryController,
-                label: 'Expiry',
+                label: 'Expiry Date',
                 onChanged: (_) => controller.formatExpiry(controller.cardExpiryController.text),
                 prefixIcon: Icons.calendar_today_rounded,
                 hint: 'MM/YY',
@@ -312,36 +349,51 @@ class PaymentView extends GetView<PassengerPaymentController> {
         color: isDark ? AppColors.grey800 : AppColors.grey50,
         borderRadius: BorderRadius.circular(AppDimens.radius12),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.account_balance_wallet_rounded,
-                color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-              ),
-              const SizedBox(width: AppDimens.margin12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Wallet Balance',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    Text(
-                      CurrencyFormatter.format(controller.amount),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: AppFonts.bold,
-                      ),
-                    ),
-                  ],
+          Icon(
+            Icons.account_balance_wallet_rounded,
+            color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+            size: 32,
+          ),
+          const SizedBox(width: AppDimens.margin12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Wallet Balance',
+                  style: theme.textTheme.bodySmall,
                 ),
-              ),
-            ],
+                Text(
+                  CurrencyFormatter.format(controller.amount),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: AppFonts.bold,
+                    color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
+}
+
+IconData _getPaymentIcon(String methodCode) {
+  switch (methodCode) {
+    case 'telebirr':
+      return Icons.phone_android_rounded;
+    case 'cbe_birr':
+      return Icons.account_balance_rounded;
+    case 'card':
+      return Icons.credit_card_rounded;
+    case 'wallet':
+      return Icons.account_balance_wallet_rounded;
+    case 'cash':
+      return Icons.money_rounded;
+    default:
+      return Icons.payment_rounded;
   }
 }

@@ -1,5 +1,7 @@
 // lib/data/models/cargo/cargo_request.dart
 
+// In cargo_request.dart, make sure the toJson method properly formats the data:
+
 class CargoRequest {
   final String senderName;
   final String senderPhone;
@@ -33,16 +35,16 @@ class CargoRequest {
 
   Map<String, dynamic> toJson() {
     return {
-      'senderName': senderName,
-      'senderPhone': senderPhone,
-      'receiverName': receiverName,
-      'receiverPhone': receiverPhone,
+      'senderName': senderName.trim(),
+      'senderPhone': senderPhone.replaceAll(RegExp(r'\D'), ''), // Extra safety
+      'receiverName': receiverName.trim(),
+      'receiverPhone': receiverPhone.replaceAll(RegExp(r'\D'), ''), // Extra safety
       'tripId': tripId,
       'cargoTypeId': cargoTypeId,
       'weight': weight,
-      'dimensions': dimensions,
-      'description': description,
-      'declaredValue': declaredValue,
+      if (dimensions != null && dimensions!.isNotEmpty) 'dimensions': dimensions!.trim(),
+      if (description != null && description!.isNotEmpty) 'description': description!.trim(),
+      if (declaredValue != null) 'declaredValue': declaredValue,
       'isFragile': isFragile,
       'isPerishable': isPerishable,
       'needsRefrigeration': needsRefrigeration,

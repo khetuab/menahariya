@@ -61,7 +61,9 @@ class LoginController extends GetxController {
   }
 
   // Toggle password visibility
+  // In login_controller.dart
   void togglePasswordVisibility() {
+    print('🔓 Toggling password visibility from $_isPasswordVisible to ${!_isPasswordVisible.value}');
     _isPasswordVisible.value = !_isPasswordVisible.value;
   }
 
@@ -88,6 +90,10 @@ class LoginController extends GetxController {
 
   // Handle login
   // In your login method, before sending the request:
+  // lib/modules/auth/controllers/login_controller.dart
+
+  // lib/modules/auth/controllers/login_controller.dart
+
   Future<void> handleLogin() async {
     // Validate all fields
     validatePhone(phoneController.text);
@@ -95,10 +101,28 @@ class LoginController extends GetxController {
 
     if (!isFormValid) return;
 
-    // Remove spaces from phone number
+    // Remove spaces first
     String cleanPhone = phoneController.text.replaceAll(RegExp(r'\s+'), '');
 
-    print('📞 Login with phone: "$cleanPhone" (original: "${phoneController.text}")');
+    // CRITICAL FIX: Ensure phone has 10 digits with leading 09
+    String formattedPhone = cleanPhone;
+
+    // If it's 9 digits starting with 9, add leading zero
+    if (cleanPhone.length == 9 && cleanPhone.startsWith('9')) {
+      formattedPhone = '0$cleanPhone';
+      print('📞 Converted 9-digit to 10-digit: "$cleanPhone" -> "$formattedPhone"');
+    }
+    // If it's already 10 digits starting with 09, keep as is
+    else if (cleanPhone.length == 10 && cleanPhone.startsWith('09')) {
+      formattedPhone = cleanPhone;
+    }
+    // If it's in international format, convert
+    else if (cleanPhone.length == 12 && cleanPhone.startsWith('251')) {
+      formattedPhone = '0${cleanPhone.substring(3)}';
+      print('📞 Converted international to local: "$cleanPhone" -> "$formattedPhone"');
+    }
+
+    print('📞 Final phone format for backend: "$formattedPhone"');
 
     // Save remember me preference
     await _sharedPrefs.setBool(
@@ -107,23 +131,25 @@ class LoginController extends GetxController {
     );
 
     if (_rememberMe.value) {
-      await _sharedPrefs.setString('saved_phone', cleanPhone);
+      await _sharedPrefs.setString('saved_phone', formattedPhone);
     } else {
       await _sharedPrefs.remove('saved_phone');
     }
 
-    // Perform login with cleaned phone
+    // Perform login with formatted phone
     final success = await _authController.login(
-      cleanPhone,  // Use cleaned phone without spaces
+      formattedPhone,
       passwordController.text,
     );
 
     if (success) {
-      // Clear form
+      print('✅ Login successful!');
       if (!_rememberMe.value) {
         phoneController.clear();
       }
       passwordController.clear();
+    } else {
+      print('❌ Login failed');
     }
   }
   // Navigate to register

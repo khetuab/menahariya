@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/utils/permissions/permission_handler.dart';
 
+import '../../../core/utils/app_snackbar.dart';
+
 class IncidentController extends GetxController {
   static IncidentController get instance => Get.find();
 
@@ -153,10 +155,9 @@ class IncidentController extends GetxController {
       }
     } catch (e) {
       print('Error picking image: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to capture image',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }
@@ -179,10 +180,9 @@ class IncidentController extends GetxController {
       }
     } catch (e) {
       print('Error picking image: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to pick image',
-        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }
@@ -195,19 +195,17 @@ class IncidentController extends GetxController {
 
   Future<void> submitIncident() async {
     if (_incidentType.value == null) {
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Please select incident type',
-        snackPosition: SnackPosition.BOTTOM,
       );
       return;
     }
 
     if (titleController.text.isEmpty) {
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Please enter incident title',
-        snackPosition: SnackPosition.BOTTOM,
       );
       return;
     }
@@ -243,10 +241,9 @@ class IncidentController extends GetxController {
       );
 
       if (response != null && response['success'] == true) {
-        Get.snackbar(
+        AppSnackbar.show(
           'Success',
           'Incident reported successfully',
-          snackPosition: SnackPosition.BOTTOM,
         );
 
         // Reset form
@@ -260,10 +257,9 @@ class IncidentController extends GetxController {
       }
     } catch (e) {
       print('Error submitting incident: $e');
-      Get.snackbar(
+      AppSnackbar.show(
         'Error',
         'Failed to report incident',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
       _isLoading.value = false;

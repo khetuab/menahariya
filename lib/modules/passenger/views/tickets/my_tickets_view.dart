@@ -9,6 +9,8 @@ import 'package:menahariya/core/widgets/cards/ticket_card.dart';
 import 'package:menahariya/core/widgets/loading/shimmer_loading.dart';
 import 'package:menahariya/modules/passenger/controllers/ticket_controller.dart';
 
+import '../../../../core/routes/app_routes.dart';
+
 class MyTicketsView extends GetView<PassengerTicketController> {
   const MyTicketsView({Key? key}) : super(key: key);
 
@@ -17,93 +19,130 @@ class MyTicketsView extends GetView<PassengerTicketController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Tickets'),
-        bottom: TabBar(
-          controller: TabController(length: 3, vsync: Scaffold.of(context)),
-          tabs: const [
-            Tab(text: 'Active'),
-            Tab(text: 'Past'),
-            Tab(text: 'All'),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Tickets'),
+          bottom: TabBar(
+            tabs: const [
+              Tab(text: 'Active'),
+              Tab(text: 'Past'),
+              Tab(text: 'All'),
+            ],
+            labelColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+            unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            indicatorColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // Active Tickets Tab
+            _buildTicketList(context, 'active'),
+            // Past Tickets Tab
+            _buildTicketList(context, 'past'),
+            // All Tickets Tab
+            _buildTicketList(context, 'all'),
           ],
-          labelColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-          unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-          indicatorColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
         ),
       ),
-      body: Obx(() {
-        if (controller.isLoading && controller.tickets.isEmpty) {
-          return _buildLoadingShimmer();
-        }
-
-        return RefreshIndicator(
-          onRefresh: controller.refreshTickets,
-          child: ListView(
-            padding: const EdgeInsets.all(AppDimens.padding16),
-            children: [
-              // Active Tickets
-              if (controller.activeTickets.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppDimens.padding8),
-                  child: Text(
-                    'Active Tickets',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: AppFonts.semiBold,
-                    ),
-                  ),
-                ),
-                ...controller.activeTickets.map((ticket) => TicketCard(
-                  ticketId: ticket.id,
-                  origin: ticket.origin,
-                  destination: ticket.destination,
-                  departureTime: ticket.departureTime,
-                  seatNumber: ticket.seatNumber,
-                  price: ticket.price,
-                  status: ticket.status,
-                  onTap: () => Get.toNamed(
-                    '/passenger/ticket/${ticket.id}',
-                    arguments: {'ticketId': ticket.id},
-                  ),
-                  showActions: true,
-                )),
-                const SizedBox(height: AppDimens.margin16),
-              ],
-
-              // Past Tickets
-              if (controller.pastTickets.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppDimens.padding8),
-                  child: Text(
-                    'Past Tickets',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: AppFonts.semiBold,
-                    ),
-                  ),
-                ),
-                ...controller.pastTickets.take(5).map((ticket) => TicketCard(
-                  ticketId: ticket.id,
-                  origin: ticket.origin,
-                  destination: ticket.destination,
-                  departureTime: ticket.departureTime,
-                  seatNumber: ticket.seatNumber,
-                  price: ticket.price,
-                  status: ticket.status,
-                  onTap: () => Get.toNamed(
-                    '/passenger/ticket/${ticket.id}',
-                    arguments: {'ticketId': ticket.id},
-                  ),
-                  showActions: false,
-                )),
-              ],
-
-              if (controller.tickets.isEmpty)
-                _buildEmptyState(context),
-            ],
-          ),
-        );
-      }),
     );
+  }
+
+  Widget _buildTicketList(BuildContext context, String type) {
+    return Obx(() {
+      if (controller.isLoading && controller.tickets.isEmpty) {
+        return _buildLoadingShimmer();
+      }
+
+      return RefreshIndicator(
+        onRefresh: controller.refreshTickets,
+        child: ListView(
+          padding: const EdgeInsets.all(AppDimens.padding16),
+          children: _getTicketsForType(type),
+        ),
+      );
+    });
+  }
+
+  List<Widget> _getTicketsForType(String type) {
+    final List<Widget> ticketWidgets = [];
+
+    switch (type) {
+      case 'active':
+        if (controller.activeTickets.isEmpty) {
+          return [_buildEmptyState('No active tickets')];
+        }
+        ticketWidgets.addAll(controller.activeTickets.map((ticket) => TicketCard(
+          ticketId: ticket.id,
+          origin: ticket.origin,
+          destination: ticket.destination,
+          departureTime: ticket.departureTime,
+          seatNumber: ticket.seatNumber,
+          price: ticket.price,
+          status: ticket.status,
+          // In MyTicketsView, update the onTap:
+
+          onTap: () => Get.toNamed(
+            '/passenger/ticket-detail/${ticket.id}',
+            arguments: {'ticketId': ticket.id},
+          ),
+          showActions: true,
+        )));
+        break;
+
+      case 'past':
+        if (controller.pastTickets.isEmpty) {
+          return [_buildEmptyState('No past tickets')];
+        }
+        ticketWidgets.addAll(controller.pastTickets.map((ticket) => TicketCard(
+          ticketId: ticket.id,
+          origin: ticket.origin,
+          destination: ticket.destination,
+          departureTime: ticket.departureTime,
+          seatNumber: ticket.seatNumber,
+          price: ticket.price,
+          status: ticket.status,
+          onTap: () => Get.toNamed(
+            '/passenger/ticket-detail/${ticket.id}',
+            arguments: {'ticketId': ticket.id},
+          ),
+          showActions: false,
+        )));
+        break;
+
+      case 'all':
+      default:
+        if (controller.tickets.isEmpty) {
+          return [_buildEmptyState('No tickets found')];
+        }
+        ticketWidgets.addAll(controller.tickets.map((ticket) => TicketCard(
+          ticketId: ticket.id,
+          origin: ticket.origin,
+          destination: ticket.destination,
+          departureTime: ticket.departureTime,
+          seatNumber: ticket.seatNumber,
+          price: ticket.price,
+          status: ticket.status,
+          onTap: () => Get.toNamed(
+            AppRoutes.passengerTicketDetail,  // Use the constant, not a string with ID
+            arguments: {'ticketId': ticket.id},  // Pass ID as argument
+          ),
+          showActions: ticket.status == 'confirmed' || ticket.status == 'pending',
+        )));
+        break;
+    }
+
+    // Add spacing between tickets
+    final List<Widget> result = [];
+    for (int i = 0; i < ticketWidgets.length; i++) {
+      result.add(ticketWidgets[i]);
+      if (i < ticketWidgets.length - 1) {
+        result.add(const SizedBox(height: AppDimens.margin12));
+      }
+    }
+
+    return result;
   }
 
   Widget _buildLoadingShimmer() {
@@ -123,8 +162,10 @@ class MyTicketsView extends GetView<PassengerTicketController> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
+  // In MyTicketsView, update the _buildEmptyState method:
+
+  Widget _buildEmptyState(String message) {
+    final theme = Theme.of(Get.context!);
     final isDark = theme.brightness == Brightness.dark;
 
     return Center(
@@ -138,8 +179,8 @@ class MyTicketsView extends GetView<PassengerTicketController> {
           ),
           const SizedBox(height: AppDimens.margin16),
           Text(
-            'No Tickets Found',
-            style: theme.textTheme.headlineSmall?.copyWith(
+            message,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: AppFonts.semiBold,
             ),
           ),
@@ -152,9 +193,13 @@ class MyTicketsView extends GetView<PassengerTicketController> {
           ),
           const SizedBox(height: AppDimens.margin24),
           ElevatedButton.icon(
-            onPressed: () => Get.toNamed('/passenger/search'),
+            onPressed: () => Get.toNamed('/passenger/tickets/select-trip'), // Changed this line
             icon: const Icon(Icons.search_rounded),
             label: const Text('Search Trips'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),

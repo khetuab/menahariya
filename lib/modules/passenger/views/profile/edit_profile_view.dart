@@ -25,7 +25,10 @@ class EditProfileView extends GetView<PassengerProfileController> {
         backgroundColor: isDark ? AppColors.surfaceDark : AppColors.white,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
-          onPressed: () => controller.toggleEditMode(),
+          onPressed: ()  {
+            controller.toggleEditMode();
+            Get.back();
+          },
         ),
       ),
       body: Obx(() {
@@ -150,7 +153,11 @@ class EditProfileView extends GetView<PassengerProfileController> {
                   Expanded(
                     child: PrimaryButton(
                       text: 'Save Changes',
-                      onPressed: controller.canSaveProfile ? controller.saveProfile : null,
+                      onPressed:
+                        controller.canSaveProfile
+                            ? controller.saveProfile
+                            : null,
+
                       isDisabled: !controller.canSaveProfile,
                     ),
                   ),

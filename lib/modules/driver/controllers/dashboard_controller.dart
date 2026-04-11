@@ -6,6 +6,7 @@ import 'package:menahariya/core/constants/api_endpoints.dart';
 import 'package:menahariya/core/constants/app_constants.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/services/socket/socket_service.dart';
+import 'package:menahariya/core/utils/app_snackbar.dart';
 import 'package:menahariya/data/models/trip/trip_model.dart';
 import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
 import 'package:menahariya/modules/driver/controllers/assigned_trips_controller.dart';
@@ -197,10 +198,9 @@ class DriverDashboardController extends GetxController {
     _loadUpcomingTrips();
     _notificationsCount.value++;
 
-    Get.snackbar(
+    AppSnackbar.show(
       'New Trip Assigned',
       'You have a new trip assignment',
-      snackPosition: SnackPosition.BOTTOM,
     );
   }
 
@@ -227,10 +227,9 @@ class DriverDashboardController extends GetxController {
       );
       _driverStatus.value = online;
 
-      Get.snackbar(
+      AppSnackbar.show(
         online ? 'Online' : 'Offline',
         online ? 'You are now online and available for trips' : 'You are now offline',
-        snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
       print('Error updating driver status: $e');

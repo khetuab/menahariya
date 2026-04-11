@@ -65,6 +65,7 @@ class AuthProvider extends GetxController {
           'otp': otp,
           'userId': userId,
         },
+        requiresAuth: false
       );
 
       return ApiResponse<Map<String, dynamic>>.fromJson(

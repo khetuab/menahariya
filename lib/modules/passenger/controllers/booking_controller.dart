@@ -1,17 +1,19 @@
 // lib/modules/passenger/controllers/booking_controller.dart
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/api_endpoints.dart';
-import 'package:menahariya/core/constants/app_constants.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/services/api/api_exception.dart';
 import 'package:menahariya/core/services/socket/socket_service.dart';
 import 'package:menahariya/data/models/trip/trip_model.dart';
-import 'package:menahariya/data/models/booking/booking_model.dart';
+import 'package:menahariya/data/models/booking/booking_model.dart' hide PassengerDetail;
 import 'package:menahariya/core/utils/formatters/currency_formatter.dart';
 import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
 
+import '../../../core/routes/app_routes.dart';
 import '../../../data/models/ticket/booking_request.dart';
 import '../../../data/models/ticket/seat_model.dart';
 
@@ -139,14 +141,19 @@ class PassengerBookingController extends GetxController {
     }
   }
 
+
   Future<void> _loadWalletBalance() async {
     try {
-      final response = await _apiClient.get('/wallet/balance');
+      // Fix: Use correct endpoint - wallet is under payments
+      final response = await _apiClient.get('/payments/wallet/balance');
       if (response != null && response['data'] != null) {
         _walletBalance.value = response['data']['balance']?.toDouble() ?? 0;
+        print('💰 Wallet balance loaded: ${_walletBalance.value}');
       }
     } catch (e) {
-      print('Error loading wallet balance: $e');
+      print('⚠️ Error loading wallet balance: $e');
+      // Don't show error to user, just set balance to 0
+      _walletBalance.value = 0;
     }
   }
 
@@ -201,50 +208,121 @@ class PassengerBookingController extends GetxController {
     }
   }
 
+  // In PassengerBookingController, update createBooking method:
+
   Future<void> createBooking() async {
     if (!canProceedToPayment) return;
 
     try {
       _isProcessing.value = true;
 
-      // Prepare passenger details
-      final allPassengers = [
-        PassengerDetail(
-          name: passengerNameController.text,
-          phone: passengerPhoneController.text,
-          email: passengerEmailController.text.isEmpty
-              ? null
-              : passengerEmailController.text,
-          seatNumber: selectedSeats.first.number,
-        ),
-        ..._additionalPassengers,
-      ];
+      // Validate required fields
+      if (passengerNameController.text.trim().isEmpty) {
+        Get.snackbar(
+          'Validation Error',
+          'Passenger name is required',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
 
-      final request = BookingRequest(
-        tripId: trip.id,
-        seatNumbers: selectedSeats.map((s) => s.number).toList(),
-        passengers: allPassengers,
-        totalAmount: finalTotal,
-        paymentMethod: _selectedPaymentMethod.value,
-        specialRequests: specialRequestsController.text.isEmpty
-            ? null
-            : specialRequestsController.text,
-        useWalletBalance: _useWalletBalance.value,
-        insuranceSelected: _insuranceSelected.value,
-        mealPreferences: _mealPreferences.isEmpty ? null : _mealPreferences,
-      );
+      if (passengerPhoneController.text.trim().isEmpty) {
+        Get.snackbar(
+          'Validation Error',
+          'Phone number is required',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      // Validate phone number format (basic validation)
+      final phone = passengerPhoneController.text.trim();
+      if (phone.length < 10) {
+        Get.snackbar(
+          'Validation Error',
+          'Please enter a valid phone number',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      // Prepare primary passenger
+      final primaryPassenger = {
+        'name': passengerNameController.text.trim(),
+        'phone': passengerPhoneController.text.trim(),
+        'seatNumber': selectedSeats.first.number,
+      };
+
+      // Add email only if provided
+      if (passengerEmailController.text.trim().isNotEmpty) {
+        primaryPassenger['email'] = passengerEmailController.text.trim();
+      }
+
+      // Prepare additional passengers
+      final additionalPassengersList = [];
+      for (int i = 0; i < _additionalPassengers.length; i++) {
+        final detail = _additionalPassengers[i];
+        if (detail.name != null && detail.name!.trim().isNotEmpty) {
+          final passenger = {
+            'name': detail.name!.trim(),
+            'seatNumber': detail.seatNumber,
+          };
+          if (detail.phone != null && detail.phone!.trim().isNotEmpty) {
+            passenger['phone'] = detail.phone!.trim();
+          }
+          if (detail.email != null && detail.email!.trim().isNotEmpty) {
+            passenger['email'] = detail.email!.trim();
+          }
+          additionalPassengersList.add(passenger);
+        }
+      }
+
+      // Combine all passengers
+      final allPassengers = [primaryPassenger, ...additionalPassengersList];
+
+      // Prepare seat numbers
+      final seatNumbers = selectedSeats.map((s) => s.number).toList();
+
+      // Prepare request body
+      final requestBody = {
+        'tripId': trip.id,
+        'seatNumbers': seatNumbers,
+        'passengers': allPassengers,
+        'totalAmount': finalTotal,
+        'useWalletBalance': _useWalletBalance.value,
+        'insuranceSelected': _insuranceSelected.value,
+      };
+
+      // Add optional fields only if they have values
+      if (_selectedPaymentMethod.value != null) {
+        requestBody['paymentMethod'] = _selectedPaymentMethod.value!;
+      }
+
+      if (specialRequestsController.text.trim().isNotEmpty) {
+        requestBody['specialRequests'] = specialRequestsController.text.trim();
+      }
+
+      if (_mealPreferences.isNotEmpty) {
+        requestBody['mealPreferences'] = _mealPreferences.toList();
+      }
+
+      // Log the request for debugging
+      print('📦 Creating booking with:');
+      print('  URL: ${ApiEndpoints.bookingsCreate}');
+      print('  Request body: ${jsonEncode(requestBody)}');
 
       final response = await _apiClient.post(
         ApiEndpoints.bookingsCreate,
-        data: request.toJson(),
+        data: requestBody,
       );
 
       if (response != null && response['data'] != null) {
         _booking.value = BookingModel.fromJson(response['data']);
+        print('✅ Booking created successfully: ${_booking.value?.id}');
 
         // Navigate to payment
         Get.toNamed(
-          '/passenger/payment',
+          AppRoutes.passengerPayment,
           arguments: {
             'booking': _booking.value,
             'finalTotal': finalTotal,
@@ -252,13 +330,18 @@ class PassengerBookingController extends GetxController {
         );
       }
     } on ApiException catch (e) {
+      print('❌ API Exception: ${e.message}');
+      print('❌ Status Code: ${e.statusCode}');
+      if (e.data != null) {
+        print('❌ Error data: ${e.data}');
+      }
       Get.snackbar(
         'Booking Failed',
         e.message,
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
-      print('Error creating booking: $e');
+      print('❌ Error creating booking: $e');
       Get.snackbar(
         'Error',
         'Failed to create booking. Please try again.',

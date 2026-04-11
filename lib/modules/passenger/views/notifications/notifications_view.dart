@@ -17,6 +17,7 @@ class PassengerNotificationsView extends GetView<PassengerNotificationController
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // ✅ FIX: Use a Builder to get a fresh context under the Scaffold
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
@@ -32,7 +33,7 @@ class PassengerNotificationsView extends GetView<PassengerNotificationController
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (value) {
               if (value == 'delete_all') {
-                controller.deleteAllNotifications();
+                _showDeleteAllDialog();
               }
             },
             itemBuilder: (context) => [
@@ -49,18 +50,29 @@ class PassengerNotificationsView extends GetView<PassengerNotificationController
             ],
           ),
         ],
-        bottom: TabBar(
-          controller: TabController(
-            length: NotificationFilter.values.length,
-            vsync: Scaffold.of(context),
+        // ✅ FIX: Create TabController properly with a Builder
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(50),
+          child: Builder(
+            builder: (tabContext) {
+              return TabBar(
+                controller: TabController(
+                  length: NotificationFilter.values.length,
+                  vsync: Scaffold.of(tabContext), // ✅ Now safe!
+                ),
+                tabs: NotificationFilter.values.map((filter) {
+                  return Tab(text: filter.displayName);
+                }).toList(),
+                isScrollable: true,
+                labelColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                indicatorColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                onTap: (index) {
+                  controller.setFilter(NotificationFilter.values[index]);
+                },
+              );
+            },
           ),
-          tabs: NotificationFilter.values.map((filter) {
-            return Tab(text: filter.displayName);
-          }).toList(),
-          isScrollable: true,
-          labelColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-          unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-          indicatorColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
         ),
       ),
       body: Obx(() {
@@ -72,9 +84,6 @@ class PassengerNotificationsView extends GetView<PassengerNotificationController
           onRefresh: controller.refreshNotifications,
           child: Column(
             children: [
-              // Filter Chips (Alternative to tabs)
-              // _buildFilterChips(context),
-
               // Notifications List
               Expanded(
                 child: controller.filteredNotifications.isEmpty
@@ -95,7 +104,7 @@ class PassengerNotificationsView extends GetView<PassengerNotificationController
                       onMarkRead: notification.isRead
                           ? null
                           : () => controller.markAsRead(notification.id),
-                      onDelete: () => controller.deleteNotification(notification.id),
+                      onDelete: () => _showDeleteDialog(notification.id),
                     );
                   },
                 ),
@@ -119,33 +128,6 @@ class PassengerNotificationsView extends GetView<PassengerNotificationController
           ),
         );
       }),
-    );
-  }
-
-  Widget _buildFilterChips(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.padding16),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: NotificationFilter.values.map((filter) {
-          return Obx(() => Padding(
-            padding: const EdgeInsets.only(right: AppDimens.padding8),
-            child: FilterChip(
-              label: Text(filter.displayName),
-              selected: controller.selectedFilter == filter,
-              onSelected: (_) => controller.setFilter(filter),
-              selectedColor: isDark
-                  ? AppColors.primaryGreen.withOpacity(0.3)
-                  : AppColors.primaryGreen.withOpacity(0.1),
-              checkmarkColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-            ),
-          ));
-        }).toList(),
-      ),
     );
   }
 
@@ -192,6 +174,56 @@ class PassengerNotificationsView extends GetView<PassengerNotificationController
             style: theme.textTheme.bodyMedium?.copyWith(
               color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(String notificationId) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Delete Notification'),
+        content: const Text('Are you sure you want to delete this notification?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              controller.deleteNotification(notificationId);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAllDialog() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Delete All Notifications'),
+        content: const Text('Are you sure you want to delete all notifications? '),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              controller.deleteAllNotifications();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete All'),
           ),
         ],
       ),

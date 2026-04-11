@@ -44,16 +44,27 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
                 children: [
                   if (details.currentStep > 0)
                     Expanded(
+                      flex: 1,
                       child: SecondaryButton(
                         text: 'Back',
                         onPressed: details.onStepCancel,
                       ),
                     ),
-                  if (details.currentStep > 0) const SizedBox(width: AppDimens.margin12),
+                  if (details.currentStep > 0)
+                    const SizedBox(width: AppDimens.margin12),
                   Expanded(
+                    flex: 2,
                     child: PrimaryButton(
                       text: details.currentStep == 2 ? 'Confirm Booking' : 'Continue',
-                      onPressed: details.onStepContinue,
+                      onPressed: () {
+                        if (details.currentStep == 2) {
+                          // On the last step, create the booking
+                          controller.createBooking();
+                        } else {
+                          // Otherwise go to next step
+                          details.onStepContinue!();
+                        }
+                      },
                       isDisabled: !controller.canProceedToPayment,
                     ),
                   ),
@@ -64,7 +75,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
           steps: [
             // Step 1: Passenger Details
             Step(
-              title: const Text('Passenger Details'),
+              title: const Text('Passenger', overflow: TextOverflow.ellipsis),
               content: _buildPassengerDetails(context),
               isActive: controller.currentStep >= 0,
               state: controller.currentStep > 0 ? StepState.complete : StepState.indexed,
@@ -72,7 +83,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
 
             // Step 2: Additional Services
             Step(
-              title: const Text('Additional Services'),
+              title: const Text('Services', overflow: TextOverflow.ellipsis),
               content: _buildAdditionalServices(context),
               isActive: controller.currentStep >= 1,
               state: controller.currentStep > 1 ? StepState.complete : StepState.indexed,
@@ -80,7 +91,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
 
             // Step 3: Review & Confirm
             Step(
-              title: const Text('Review'),
+              title: const Text('Review', overflow: TextOverflow.ellipsis),
               content: _buildReview(context),
               isActive: controller.currentStep >= 2,
               state: controller.currentStep > 2 ? StepState.complete : StepState.indexed,
@@ -95,137 +106,158 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Primary Passenger
-        Text(
-          'Primary Passenger',
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: AppFonts.semiBold,
-          ),
-        ),
-        const SizedBox(height: AppDimens.margin12),
-
-        CustomTextField(
-          label: 'Full Name',
-          controller: controller.passengerNameController,
-          onChanged: (_) {},
-          prefixIcon: Icons.person_rounded,
-        ),
-        const SizedBox(height: AppDimens.margin12),
-
-        CustomTextField(
-          label: 'Phone Number',
-          controller: controller.passengerPhoneController,
-          keyboardType: TextInputType.phone,
-          prefixIcon: Icons.phone_rounded,
-        ),
-        const SizedBox(height: AppDimens.margin12),
-
-        CustomTextField(
-          label: 'Email (Optional)',
-          controller: controller.passengerEmailController,
-          keyboardType: TextInputType.emailAddress,
-          prefixIcon: Icons.email_rounded,
-        ),
-
-        // Additional Passengers
-        if (controller.additionalPassengers.isNotEmpty) ...[
-          const SizedBox(height: AppDimens.margin24),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Primary Passenger
           Text(
-            'Additional Passengers',
+            'Primary Passenger',
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: AppFonts.semiBold,
             ),
           ),
           const SizedBox(height: AppDimens.margin12),
-          ...List.generate(controller.additionalPassengers.length, (index) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: AppDimens.margin12),
-              padding: const EdgeInsets.all(AppDimens.padding12),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.grey800 : AppColors.grey50,
-                borderRadius: BorderRadius.circular(AppDimens.radius8),
+
+          CustomTextField(
+            label: 'Full Name',
+            controller: controller.passengerNameController,
+            onChanged: (_) {},
+            prefixIcon: Icons.person_rounded,
+          ),
+          const SizedBox(height: AppDimens.margin12),
+
+          CustomTextField(
+            label: 'Phone Number',
+            controller: controller.passengerPhoneController,
+            keyboardType: TextInputType.phone,
+            prefixIcon: Icons.phone_rounded,
+          ),
+          const SizedBox(height: AppDimens.margin12),
+
+          CustomTextField(
+            label: 'Email (Optional)',
+            controller: controller.passengerEmailController,
+            keyboardType: TextInputType.emailAddress,
+            prefixIcon: Icons.email_rounded,
+          ),
+
+          // Additional Passengers
+
+          if (controller.additionalPassengers.isNotEmpty) ...[
+            const SizedBox(height: AppDimens.margin24),
+            Text(
+              'Additional Passengers',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: AppFonts.semiBold,
               ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(AppDimens.padding4),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.primaryGreen.withOpacity(0.2) : AppColors.primaryGreen.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(AppDimens.radius4),
-                        ),
-                        child: Text(
-                          'Seat ${controller.selectedSeats[index + 1].number}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+            ),
+            const SizedBox(height: AppDimens.margin12),
+            ...List.generate(controller.additionalPassengers.length, (index) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: AppDimens.margin12),
+                padding: const EdgeInsets.all(AppDimens.padding12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.grey800 : AppColors.grey50,
+                  borderRadius: BorderRadius.circular(AppDimens.radius8),
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimens.padding8,
+                            vertical: AppDimens.padding4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.primaryGreen.withOpacity(0.2) : AppColors.primaryGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(AppDimens.radius4),
+                          ),
+                          child: Text(
+                            'Seat ${controller.selectedSeats[index + 1].number}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                              fontWeight: AppFonts.medium,
+                            ),
                           ),
                         ),
-                      ),
-                      const Spacer(),
-                    ],
-                  ),
-                  const SizedBox(height: AppDimens.margin8),
-                  TextFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Passenger Name',
-                      border: OutlineInputBorder(),
+                        const Spacer(),
+                        Text(
+                          'Required',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.primaryRed,
+                          ),
+                        ),
+                      ],
                     ),
-                    onChanged: (value) {
-                      final detail = controller.additionalPassengers[index];
-                      controller.updatePassengerDetail(
-                        index,
-                        PassengerDetail(
-                          name: value,
-                          phone: detail.phone,
-                          email: detail.email,
-                          seatNumber: detail.seatNumber,
+                    const SizedBox(height: AppDimens.margin8),
+                    TextFormField(
+                      decoration: InputDecoration(
+                        hintText: 'Passenger Name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppDimens.radius8),
                         ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-
-        const SizedBox(height: AppDimens.margin16),
-
-        // Terms Checkbox
-        Row(
-          children: [
-            Obx(() => Checkbox(
-              value: controller.agreeToTerms,
-              onChanged: controller.toggleTermsAgreement,
-              activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-            )),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => controller.toggleTermsAgreement(!controller.agreeToTerms),
-                child: RichText(
-                  text: TextSpan(
-                    style: theme.textTheme.bodyMedium,
-                    children: [
-                      const TextSpan(text: 'I agree to the '),
-                      TextSpan(
-                        text: 'Terms & Conditions',
-                        style: TextStyle(
-                          color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        contentPadding: const EdgeInsets.all(AppDimens.padding12),
                       ),
-                    ],
+                      onChanged: (value) {
+                        final detail = controller.additionalPassengers[index];
+                        controller.updatePassengerDetail(
+                          index,
+                          PassengerDetail(
+                            name: value.trim(),
+                            phone: detail.phone,
+                            email: detail.email,
+                            seatNumber: detail.seatNumber,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+
+          const SizedBox(height: AppDimens.margin16),
+
+          // Terms Checkbox
+          Row(
+            children: [
+              Obx(() => Checkbox(
+                value: controller.agreeToTerms,
+                onChanged: controller.toggleTermsAgreement,
+                activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+              )),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => controller.toggleTermsAgreement(!controller.agreeToTerms),
+                  child: RichText(
+                    text: TextSpan(
+                      style: theme.textTheme.bodyMedium,
+                      children: [
+                        const TextSpan(text: 'I agree to the '),
+                        TextSpan(
+                          text: 'Terms & Conditions',
+                          style: TextStyle(
+                            color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -233,101 +265,103 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Travel Insurance
-        Obx(() => Container(
-          margin: const EdgeInsets.only(bottom: AppDimens.margin12),
-          padding: const EdgeInsets.all(AppDimens.padding12),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.grey800 : AppColors.grey50,
-            borderRadius: BorderRadius.circular(AppDimens.radius8),
-            border: Border.all(
-              color: controller.insuranceSelected
-                  ? (isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen)
-                  : Colors.transparent,
-              width: 1,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Travel Insurance
+          Obx(() => Container(
+            margin: const EdgeInsets.only(bottom: AppDimens.margin12),
+            padding: const EdgeInsets.all(AppDimens.padding12),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.grey800 : AppColors.grey50,
+              borderRadius: BorderRadius.circular(AppDimens.radius8),
+              border: Border.all(
+                color: controller.insuranceSelected
+                    ? (isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen)
+                    : Colors.transparent,
+                width: 1,
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Travel Insurance',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: AppFonts.semiBold,
+                        ),
+                      ),
+                      Text(
+                        'Protect your trip with insurance',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'Travel Insurance',
+                      CurrencyFormatter.format(controller.insuranceFee),
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: AppFonts.semiBold,
+                        fontWeight: AppFonts.bold,
                       ),
                     ),
-                    Text(
-                      'Protect your trip with insurance',
-                      style: theme.textTheme.bodySmall,
+                    Switch(
+                      value: controller.insuranceSelected,
+                      onChanged: controller.toggleInsurance,
+                      activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
                     ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    CurrencyFormatter.format(controller.insuranceFee),
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: AppFonts.bold,
-                    ),
-                  ),
-                  Switch(
-                    value: controller.insuranceSelected,
-                    onChanged: controller.toggleInsurance,
-                    activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        )),
-
-        // Meal Preferences (if available)
-        if (controller.mealPreferences.isNotEmpty) ...[
-          Text(
-            'Meal Preferences',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: AppFonts.semiBold,
+              ],
             ),
-          ),
-          const SizedBox(height: AppDimens.margin12),
-          Wrap(
-            spacing: AppDimens.margin8,
-            runSpacing: AppDimens.margin8,
-            children: [
-              'Vegetarian',
-              'Vegan',
-              'Halal',
-              'Gluten-Free',
-            ].map((meal) {
-              return Obx(() => FilterChip(
-                label: Text(meal),
-                selected: controller.mealPreferences.contains(meal),
-                onSelected: (selected) => controller.toggleMealPreference(meal, selected),
-                selectedColor: isDark ? AppColors.primaryGreen.withOpacity(0.3) : AppColors.primaryGreen.withOpacity(0.1),
-                checkmarkColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-              ));
-            }).toList(),
+          )),
+
+          // Meal Preferences (if available)
+          if (controller.mealPreferences.isNotEmpty) ...[
+            Text(
+              'Meal Preferences',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: AppFonts.semiBold,
+              ),
+            ),
+            const SizedBox(height: AppDimens.margin12),
+            Wrap(
+              spacing: AppDimens.margin8,
+              runSpacing: AppDimens.margin8,
+              children: [
+                'Vegetarian',
+                'Vegan',
+                'Halal',
+                'Gluten-Free',
+              ].map((meal) {
+                return Obx(() => FilterChip(
+                  label: Text(meal),
+                  selected: controller.mealPreferences.contains(meal),
+                  onSelected: (selected) => controller.toggleMealPreference(meal, selected),
+                  selectedColor: isDark ? AppColors.primaryGreen.withOpacity(0.3) : AppColors.primaryGreen.withOpacity(0.1),
+                  checkmarkColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                ));
+              }).toList(),
+            ),
+          ],
+
+          const SizedBox(height: AppDimens.margin16),
+
+          // Special Requests
+          CustomTextField(
+            label: 'Special Requests (Optional)',
+            controller: controller.specialRequestsController,
+            maxLines: 3,
+            hint: 'Any special requirements?',
           ),
         ],
-
-        const SizedBox(height: AppDimens.margin16),
-
-        // Special Requests
-        CustomTextField(
-          label: 'Special Requests (Optional)',
-          controller: controller.specialRequestsController,
-          maxLines: 3,
-          hint: 'Any special requirements?',
-        ),
-      ],
+      ),
     );
   }
 
@@ -380,7 +414,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Departure:'),
+                  const Text('Departure:'),
                   Text(
                     DateFormatter.toDisplayDate(controller.trip.departureTime),
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -393,7 +427,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Selected Seats:'),
+                  const Text('Selected Seats:'),
                   Text(
                     controller.selectedSeats.map((s) => s.number).join(', '),
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -420,7 +454,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Subtotal'),
+                  const Text('Subtotal'),
                   Text(controller.formattedSubtotal),
                 ],
               ),
@@ -429,7 +463,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Insurance Fee'),
+                    const Text('Insurance Fee'),
                     Text(controller.formattedInsurance),
                   ],
                 ),
@@ -439,7 +473,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Wallet Balance'),
+                    const Text('Wallet Balance'),
                     Text('-${controller.formattedWalletDeduction}'),
                   ],
                 ),

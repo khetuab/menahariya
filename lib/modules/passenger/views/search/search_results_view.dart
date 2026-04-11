@@ -10,6 +10,7 @@ import 'package:menahariya/core/widgets/bottom_sheets/filter_bottom_sheet.dart' 
 import 'package:menahariya/core/widgets/loading/shimmer_loading.dart';
 import 'package:menahariya/modules/passenger/controllers/search_controller.dart' as search;
 
+import '../../../../core/routes/app_routes.dart';
 import '../../../../core/utils/formatters/date_formatter.dart';
 
 class SearchResultsView extends GetView<search.PassengerSearchController> {
@@ -75,7 +76,7 @@ class SearchResultsView extends GetView<search.PassengerSearchController> {
                 availableSeats: trip.availableSeats,
                 busType: trip.busType,
                 onTap: () => Get.toNamed(
-                  '/passenger/trip/${trip.id}',
+                  AppRoutes.passengerTripDetail,  // ✅ Use the constant
                   arguments: {'tripId': trip.id},
                 ),
               );
