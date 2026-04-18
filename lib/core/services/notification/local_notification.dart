@@ -4,10 +4,14 @@ import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/routes/app_routes.dart';
-import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../../../modules/auth/controllers/auth_controller.dart';
 
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) {
+  // Handle background notification tap
+  print('Notification tapped in background');
+}
 class LocalNotificationService extends GetxService {
   static LocalNotificationService get instance => Get.find();
 

@@ -70,7 +70,7 @@ class DriverTripDetailController extends GetxController {
       Get.back();
       AppSnackbar.show(
         'Error',
-        'Trip information not found',
+        'Trip information not found.',
       );
     }
   }
@@ -102,33 +102,52 @@ class DriverTripDetailController extends GetxController {
     _socketService.on('trip_status_changed', _handleTripStatusChange);
   }
 
+  // Update the _loadTripDetails method in trip_detail_controller.dart
+
   Future<void> _loadTripDetails() async {
     try {
       _isLoading.value = true;
 
       final response = await _apiClient.get(
-        '${ApiEndpoints.tripsDetails}/$tripId',
+        '${ApiEndpoints.trips}/$tripId',  // Change from tripsDetails to trips
       );
 
       if (response != null && response['data'] != null) {
         final data = response['data'];
 
-        _trip.value = TripModel.fromJson(data['trip']);
-        _vehicle.value = VehicleModel.fromJson(data['vehicle']);
-        _passengers.value = (data['passengers'] as List)
-            .map((p) => PassengerModel.fromJson(p))
-            .toList();
-        _cargoList.value = (data['cargo'] as List)
-            .map((c) => CargoModel.fromJson(c))
-            .toList();
+        // The API returns { success: true, data: { trip: {...}, vehicle: {...}, ... } }
+        // Or maybe just { success: true, data: {...} }
+
+        // Check if data contains a 'trip' field or is the trip itself
+        if (data['trip'] != null) {
+          // Case 1: Response has nested trip object
+          _trip.value = TripModel.fromJson(data['trip']);
+          _vehicle.value = data['vehicle'] != null
+              ? VehicleModel.fromJson(data['vehicle'])
+              : null;
+          _passengers.value = (data['passengers'] as List?)
+              ?.map((p) => PassengerModel.fromJson(p))
+              .toList() ?? [];
+          _cargoList.value = (data['cargo'] as List?)
+              ?.map((c) => CargoModel.fromJson(c))
+              .toList() ?? [];
+        } else {
+          // Case 2: Response data is the trip object directly
+          _trip.value = TripModel.fromJson(data);
+
+          // Try to get passengers from a separate endpoint or set empty
+          _passengers.value = [];
+          _cargoList.value = [];
+        }
 
         _totalPassengers.value = _passengers.length;
         _checkedInCount.value = _passengers.where((p) => p.checkedIn).length;
         _calculateBoardingProgress();
 
-        _departureTime.value = DateTime.parse(data['trip']['departureTime']);
-        _estimatedArrival.value = DateTime.parse(data['trip']['arrivalTime']);
-        _routeMap.value = data['routeMap'];
+        if (_trip.value != null) {
+          _departureTime.value = _trip.value!.departureTime;
+          _estimatedArrival.value = _trip.value!.arrivalTime;
+        }
       }
     } catch (e) {
       print('Error loading trip details: $e');

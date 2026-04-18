@@ -631,6 +631,8 @@ class MaintenanceSettings {
   }
 }
 
+// lib/modules/admin/models/admin_models.dart
+
 class AdminProfile {
   final String id;
   final String fullName;
@@ -655,19 +657,124 @@ class AdminProfile {
   });
 
   factory AdminProfile.fromJson(Map<String, dynamic> json) {
+    // Safe date parsing
+    DateTime parseDate(dynamic dateValue) {
+      if (dateValue == null) return DateTime.now();
+      if (dateValue is DateTime) return dateValue;
+      if (dateValue is String) {
+        try {
+          return DateTime.parse(dateValue);
+        } catch (e) {
+          print('Error parsing date: $dateValue - $e');
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
     return AdminProfile(
-      id: json['_id'] ?? json['id'],
-      fullName: json['fullName'] ?? '',
-      phone: json['phone'] ?? '',
-      email: json['email'] ?? '',
-      profileImage: json['profileImage'],
-      role: json['role'] ?? 'admin',
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      lastLogin: json['lastLogin'] != null
-          ? DateTime.parse(json['lastLogin'])
-          : DateTime.now(),
-      preferences: json['preferences'],
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      fullName: json['fullName']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      profileImage: json['profileImage']?.toString(),
+      role: json['role']?.toString() ?? 'admin',
+      createdAt: parseDate(json['createdAt']),
+      lastLogin: parseDate(json['lastLogin']),
+      preferences: json['preferences'] is Map ? Map<String, dynamic>.from(json['preferences']) : null,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'fullName': fullName,
+      'phone': phone,
+      'email': email,
+      'profileImage': profileImage,
+      'role': role,
+      'createdAt': createdAt.toIso8601String(),
+      'lastLogin': lastLogin.toIso8601String(),
+      'preferences': preferences,
+    };
+  }
+
+  AdminProfile copyWith({
+    String? fullName,
+    String? phone,
+    String? email,
+    String? profileImage,
+  }) {
+    return AdminProfile(
+      id: id,
+      fullName: fullName ?? this.fullName,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      profileImage: profileImage ?? this.profileImage,
+      role: role,
+      createdAt: createdAt,
+      lastLogin: lastLogin,
+      preferences: preferences,
+    );
+  }
+}
+
+class ActivityLog {
+  final String id;
+  final String adminId;
+  final String action;
+  final String details;
+  final String ipAddress;
+  final String userAgent;
+  final DateTime createdAt;
+
+  ActivityLog({
+    required this.id,
+    required this.adminId,
+    required this.action,
+    required this.details,
+    required this.ipAddress,
+    required this.userAgent,
+    required this.createdAt,
+  });
+
+  factory ActivityLog.fromJson(Map<String, dynamic> json) {
+    // Safe date parsing
+    DateTime parseDate(dynamic dateValue) {
+      if (dateValue == null) return DateTime.now();
+      if (dateValue is DateTime) return dateValue;
+      if (dateValue is String) {
+        try {
+          return DateTime.parse(dateValue);
+        } catch (e) {
+          print('Error parsing date: $dateValue - $e');
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
+    return ActivityLog(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      adminId: json['adminId']?.toString() ?? '',
+      action: json['action']?.toString() ?? '',
+      details: json['details']?.toString() ?? '',
+      ipAddress: json['ipAddress']?.toString() ?? '',
+      userAgent: json['userAgent']?.toString() ?? '',
+      createdAt: parseDate(json['createdAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'adminId': adminId,
+      'action': action,
+      'details': details,
+      'ipAddress': ipAddress,
+      'userAgent': userAgent,
+      'createdAt': createdAt.toIso8601String(),
+    };
   }
 }
 // Audit Log Entry
@@ -725,37 +832,7 @@ class AuditLogEntry {
   };
 }
 
-class ActivityLog {
-  final String id;
-  final String adminId;
-  final String action;
-  final String details;
-  final String ipAddress;
-  final String userAgent;
-  final DateTime createdAt;
 
-  ActivityLog({
-    required this.id,
-    required this.adminId,
-    required this.action,
-    required this.details,
-    required this.ipAddress,
-    required this.userAgent,
-    required this.createdAt,
-  });
-
-  factory ActivityLog.fromJson(Map<String, dynamic> json) {
-    return ActivityLog(
-      id: json['_id'] ?? json['id'],
-      adminId: json['adminId'] ?? '',
-      action: json['action'] ?? '',
-      details: json['details'] ?? '',
-      ipAddress: json['ipAddress'] ?? '',
-      userAgent: json['userAgent'] ?? '',
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-    );
-  }
-}
 // Bulk Operation Result
 class BulkOperationResult {
   final int successCount;

@@ -16,6 +16,7 @@ class UserModel {
   final bool isActive;
   final bool isVerified;
   final DateTime createdAt;
+  final DateTime? lastLogin;
   final DateTime? updatedAt;
   final Map<String, dynamic>? metadata;
 
@@ -49,6 +50,7 @@ class UserModel {
     this.metadata,
     // Driver fields
     this.licenseNumber,
+    this.lastLogin,
     this.licenseExpiry,
     this.rating,
     this.totalTrips,
@@ -60,6 +62,20 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic dateValue) {
+      if (dateValue == null) return DateTime.now();
+      if (dateValue is DateTime) return dateValue;
+      if (dateValue is String) {
+        try {
+          return DateTime.parse(dateValue);
+        } catch (e) {
+          print('Error parsing date: $dateValue - $e');
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+
     return UserModel(
       id: json['_id'] ?? json['id'] ?? '',
       fullName: json['fullName'] ?? json['name'] ?? '',
@@ -78,6 +94,7 @@ class UserModel {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
+      lastLogin: parseDate(json['lastLogin']),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : null,
@@ -142,6 +159,7 @@ class UserModel {
     // Driver fields
     String? licenseNumber,
     DateTime? licenseExpiry,
+    DateTime? lastLogin,
     double? rating,
     int? totalTrips,
     bool? isAvailable,
@@ -149,11 +167,12 @@ class UserModel {
     double? walletBalance,
     int? loyaltyPoints,
     String? loyaltyTier,
+    String? phone,
   }) {
     return UserModel(
       id: id,
       fullName: fullName ?? this.fullName,
-      phone: phone,
+      phone: phone ?? this.phone,
       email: email ?? this.email,
       profileImage: profileImage ?? this.profileImage,
       role: role,
@@ -164,6 +183,7 @@ class UserModel {
       isActive: isActive ?? this.isActive,
       isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt,
+      lastLogin: lastLogin,
       updatedAt: DateTime.now(),
       metadata: metadata ?? this.metadata,
       // Driver fields

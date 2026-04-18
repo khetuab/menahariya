@@ -3,11 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 import 'package:menahariya/modules/admin/views/widgets/admin_activity_tile.dart';
 import 'package:menahariya/modules/admin/views/widgets/admin_empty_state.dart';
 import 'package:menahariya/modules/admin/views/widgets/admin_sidebar.dart';
 import 'package:menahariya/modules/admin/views/widgets/admin_stats_card.dart';
+import '../../../config/environment/env_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimens.dart';
 import '../../../core/constants/app_fonts.dart';
@@ -129,14 +129,23 @@ class AdminDashboardView extends GetView<AdminDashboardController> {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: Colors.white,
-                child: Text(
+                backgroundImage: authController.currentUser?.profileImage != null &&
+                    authController.currentUser!.profileImage!.isNotEmpty
+                    ? NetworkImage(
+                    '${EnvConfig.instance.apiBaseUrl.replaceAll('/api', '')}${authController.currentUser!.profileImage}'
+                )
+                    : null,
+                child: authController.currentUser?.profileImage == null ||
+                    authController.currentUser!.profileImage!.isEmpty
+                    ? Text(
                   authController.currentUser?.fullName?.substring(0, 1).toUpperCase() ?? 'A',
                   style: const TextStyle(
                     color: AppColors.primaryGreen,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
-                ),
+                )
+                    : null,
               ),
               const SizedBox(width: AppDimens.margin12),
               Expanded(

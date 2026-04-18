@@ -56,10 +56,12 @@ class AppRoutes {
 
 
   // Driver Routes
+  static const String driverTripDetail = '/driver/trip/:tripId';  // Add this
+  static const String driverTripStatus = '/driver/trip/:tripId/status';  // Add this
+  static const String driverBoarding = '/driver/boarding/:tripId';  // Add this
   static const String driver = '/driver';
   static const String driverDashboard = '/driver/dashboard';
   static const String driverAssignedTrips = '/driver/assigned-trips';
-  static const String driverTripDetail = '/driver/trip-detail';
   static const String driverBoardingManagement = '/driver/boarding-management';
   static const String driverTicketValidation = '/driver/ticket-validation';
   static const String driverPassengerManifest = '/driver/passenger-manifest';

@@ -3,6 +3,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/routes/app_routes.dart';
+import 'package:menahariya/modules/driver/trips/trip_detail_view.dart';
 import 'package:menahariya/modules/splash/bindings/splash_binding.dart';
 import 'package:menahariya/modules/splash/views/splash_view.dart';
 import 'package:menahariya/modules/auth/bindings/auth_binding.dart';
@@ -475,12 +476,32 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.driverTripDetail,
-      page: () => const TripDetailView(),
+      page: () => const DriverTripDetailView(),
+      binding: DriverBinding(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+
+    GetPage(
+      name: AppRoutes.driverTripStatus,
+      page: () => const UpdateTripStatusView(),
       binding: DriverBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
+
+    GetPage(
+      name: AppRoutes.driverBoarding,
+      page: () => const BoardingManagementView(),
+      binding: DriverBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+
+
     GetPage(
       name: AppRoutes.driverBoardingManagement,
       page: () => const BoardingManagementView(),

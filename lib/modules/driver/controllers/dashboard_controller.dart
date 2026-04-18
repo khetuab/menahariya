@@ -92,17 +92,70 @@ class DriverDashboardController extends GetxController {
     updateDriverStatus(true);
   }
 
+
+  // Update the _initializeControllers method in dashboard_controller.dart
+
   void _initializeControllers() {
-    assignedTripsController = Get.find<AssignedTripsController>();
-    tripDetailController = Get.find<DriverTripDetailController>();
-    boardingController = Get.find<BoardingController>();
-    validationController = Get.find<ValidationController>();
-    passengerListController = Get.find<PassengerListController>();
-    cargoListController = Get.find<CargoListController>();
-    tripStatusController = Get.find<TripStatusController>();
-    incidentController = Get.find<IncidentController>();
-    profileController = Get.find<DriverProfileController>();
-    notificationController = Get.find<DriverNotificationController>();
+    // Use try-catch to handle controllers that might not exist yet
+    try {
+      assignedTripsController = Get.find<AssignedTripsController>();
+    } catch (e) {
+      assignedTripsController = Get.put(AssignedTripsController());
+    }
+
+    // try {
+    //   tripDetailController = Get.find<DriverTripDetailController>();
+    // } catch (e) {
+    //   tripDetailController = Get.put(DriverTripDetailController());
+    // }
+
+    try {
+      boardingController = Get.find<BoardingController>();
+    } catch (e) {
+      boardingController = Get.put(BoardingController());
+    }
+
+    try {
+      validationController = Get.find<ValidationController>();
+    } catch (e) {
+      validationController = Get.put(ValidationController());
+    }
+
+    try {
+      passengerListController = Get.find<PassengerListController>();
+    } catch (e) {
+      passengerListController = Get.put(PassengerListController());
+    }
+
+    try {
+      cargoListController = Get.find<CargoListController>();
+    } catch (e) {
+      cargoListController = Get.put(CargoListController());
+    }
+
+    try {
+      tripStatusController = Get.find<TripStatusController>();
+    } catch (e) {
+      tripStatusController = Get.put(TripStatusController());
+    }
+
+    try {
+      incidentController = Get.find<IncidentController>();
+    } catch (e) {
+      incidentController = Get.put(IncidentController());
+    }
+
+    try {
+      profileController = Get.find<DriverProfileController>();
+    } catch (e) {
+      profileController = Get.put(DriverProfileController());
+    }
+
+    try {
+      notificationController = Get.find<DriverNotificationController>();
+    } catch (e) {
+      notificationController = Get.put(DriverNotificationController());
+    }
   }
 
   Future<void> _loadDriverData() async {
@@ -120,7 +173,7 @@ class DriverDashboardController extends GetxController {
         _loadNotificationsCount(),
       ]);
     } catch (e) {
-      print('Error loading driver data: $e');
+      print('Error loading driver data : $e');
     } finally {
       _isLoading.value = false;
     }

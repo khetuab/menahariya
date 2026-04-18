@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 import '../controllers/admin_profile_controller.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimens.dart';
@@ -28,15 +27,21 @@ class AdminProfileView extends GetView<AdminProfileController> {
           backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
           elevation: 0,
           centerTitle: false,
-          bottom: TabBar(
-            tabs: const [
-              Tab(text: 'Profile', icon: Icon(Icons.person_rounded)),
-              Tab(text: 'Security', icon: Icon(Icons.security_rounded)),
-              Tab(text: 'Activity', icon: Icon(Icons.history_rounded)),
-            ],
-            labelColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-            unselectedLabelColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            indicatorColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: Container(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              child: const TabBar(
+                tabs: [
+                  Tab(text: 'Profile', icon: Icon(Icons.person_rounded)),
+                  Tab(text: 'Security', icon: Icon(Icons.security_rounded)),
+                  Tab(text: 'Activity', icon: Icon(Icons.history_rounded)),
+                ],
+                labelColor: AppColors.primaryGreen,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: AppColors.primaryGreen,
+              ),
+            ),
           ),
         ),
         body: Obx(() {
@@ -64,59 +69,8 @@ class AdminProfileView extends GetView<AdminProfileController> {
       padding: const EdgeInsets.all(AppDimens.padding16),
       child: Column(
         children: [
-          // Profile Image
-          Center(
-            child: Stack(
-              children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                      width: 3,
-                    ),
-                    image: controller.profileImage != null
-                        ? DecorationImage(
-                      image: FileImage(controller.profileImage!),
-                      fit: BoxFit.cover,
-                    )
-                        : (controller.profileImageUrl.isNotEmpty
-                        ? DecorationImage(
-                      image: NetworkImage(controller.profileImageUrl),
-                      fit: BoxFit.cover,
-                    )
-                        : null),
-                  ),
-                  child: controller.profileImage == null && controller.profileImageUrl.isEmpty
-                      ? CircleAvatar(
-                    radius: 60,
-                    backgroundColor: isDark ? AppColors.grey800 : AppColors.grey200,
-                    child: Text(
-                      controller.profile?.fullName[0].toUpperCase() ?? 'A',
-                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
-                    ),
-                  )
-                      : null,
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.camera_alt_rounded, size: 20, color: Colors.white),
-                      onPressed: () => _showImagePickerOptions(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Profile Image Section
+          _buildProfileImageSection(context),
           const SizedBox(height: AppDimens.margin24),
 
           // Profile Form
@@ -125,9 +79,24 @@ class AdminProfileView extends GetView<AdminProfileController> {
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : Colors.white,
               borderRadius: BorderRadius.circular(AppDimens.radius12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Personal Information',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: AppFonts.semiBold,
+                  ),
+                ),
+                const SizedBox(height: AppDimens.margin16),
                 CustomTextField(
                   label: 'Full Name',
                   controller: controller.fullNameController,
@@ -141,6 +110,7 @@ class AdminProfileView extends GetView<AdminProfileController> {
                   hint: 'Enter your phone number',
                   keyboardType: TextInputType.phone,
                   prefixIcon: Icons.phone_rounded,
+                  readOnly: true, // Phone number cannot be changed
                 ),
                 const SizedBox(height: AppDimens.margin16),
                 CustomTextField(
@@ -166,6 +136,7 @@ class AdminProfileView extends GetView<AdminProfileController> {
                         onPressed: controller.updateProfile,
                         isLoading: controller.isSaving,
                         icon: Icons.save_rounded,
+                        fontSize: AppDimens.fontSize12,
                       ),
                     ),
                   ],
@@ -176,39 +147,170 @@ class AdminProfileView extends GetView<AdminProfileController> {
 
           const SizedBox(height: AppDimens.margin16),
 
-          // Info Card
+          // Account Information Card
           Container(
             padding: const EdgeInsets.all(AppDimens.padding16),
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : Colors.white,
               borderRadius: BorderRadius.circular(AppDimens.radius12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.info_rounded,
-                        color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen),
+                    Icon(
+                      Icons.info_rounded,
+                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      size: 20,
+                    ),
                     const SizedBox(width: AppDimens.margin8),
-                    Text('Account Information',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: AppFonts.semiBold)),
+                    Text(
+                      'Account Information',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: AppFonts.semiBold,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppDimens.margin12),
-                _buildInfoRow('Role', controller.profile?.role?.toUpperCase() ?? 'Admin'),
-                _buildInfoRow('Member Since',
-                    controller.profile != null
-                        ? controller.formatDate(controller.profile!.createdAt)
-                        : 'N/A'),
-                _buildInfoRow('Last Login',
-                    controller.profile != null
-                        ? controller.formatDate(controller.profile!.lastLogin)
-                        : 'N/A'),
+                _buildInfoRow(
+                  'Role',
+                  controller.profile?.role?.toUpperCase() ?? 'Admin',
+                  Icons.admin_panel_settings_rounded,
+                ),
+                _buildInfoRow(
+                  'Member Since',
+                  controller.profile != null
+                      ? controller.formatDateTime(controller.profile!.createdAt)
+                      : 'N/A',
+                  Icons.calendar_today_rounded,
+                ),
+                _buildInfoRow(
+                  'Last Login',
+                  controller.profile != null
+                      ? controller.formatDateTime(controller.profile!.lastLogin)
+                      : 'N/A',
+                  Icons.login_rounded,
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProfileImageSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Center(
+      child: Obx(() {
+        return Stack(
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                  width: 3,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: controller.isUploadingImage
+                    ? Stack(
+                  children: [
+                    Container(
+                      color: isDark ? AppColors.grey800 : AppColors.grey200,
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        '${(controller.imageUploadProgress * 100).toInt()}%',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+                    : (controller.profileImage != null
+                    ? Image.file(
+                  controller.profileImage!,
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,
+                )
+                    : (controller.profileImageUrl.isNotEmpty
+                    ? Image.network(
+                  controller.profileImageUrl,
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+                )
+                    : _buildDefaultAvatar())),
+              ),
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.camera_alt_rounded, size: 20, color: Colors.white),
+                  onPressed: () => _showImagePickerOptions(),
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(),
+                ),
+              ),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+
+  Widget _buildDefaultAvatar() {
+    final theme = Get.context!.theme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      color: isDark ? AppColors.grey800 : AppColors.grey200,
+      child: Center(
+        child: Text(
+          controller.profile?.fullName[0].toUpperCase() ?? 'A',
+          style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -227,17 +329,31 @@ class AdminProfileView extends GetView<AdminProfileController> {
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : Colors.white,
               borderRadius: BorderRadius.circular(AppDimens.radius12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.lock_rounded,
-                        color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen),
+                    Icon(
+                      Icons.lock_rounded,
+                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      size: 20,
+                    ),
                     const SizedBox(width: AppDimens.margin8),
-                    Text('Change Password',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: AppFonts.semiBold)),
+                    Text(
+                      'Change Password',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: AppFonts.semiBold,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppDimens.margin16),
@@ -290,21 +406,27 @@ class AdminProfileView extends GetView<AdminProfileController> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.tips_and_updates_rounded,
-                        color: isDark ? Colors.orange : Colors.blue),
+                    Icon(
+                      Icons.tips_and_updates_rounded,
+                      color: isDark ? Colors.orange : Colors.blue,
+                      size: 20,
+                    ),
                     const SizedBox(width: AppDimens.margin8),
-                    Text('Security Tips',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: AppFonts.semiBold,
-                          color: isDark ? Colors.orange : Colors.blue,
-                        )),
+                    Text(
+                      'Security Tips',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: AppFonts.semiBold,
+                        color: isDark ? Colors.orange : Colors.blue,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppDimens.margin12),
                 _buildTipTile('Use a strong password with at least 8 characters'),
-                _buildTipTile('Enable two-factor authentication for extra security'),
                 _buildTipTile('Never share your password with anyone'),
-                _buildTipTile('Change your password regularly'),
+                _buildTipTile('Change your password regularly every 90 days'),
+                _buildTipTile('Enable two-factor authentication for extra security'),
+                _buildTipTile('Avoid using the same password across multiple platforms'),
               ],
             ),
           ),
@@ -322,12 +444,25 @@ class AdminProfileView extends GetView<AdminProfileController> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history_rounded, size: 80,
-                color: isDark ? AppColors.textHintDark : AppColors.textHintLight),
+            Icon(
+              Icons.history_rounded,
+              size: 80,
+              color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
+            ),
             const SizedBox(height: AppDimens.margin16),
-            Text('No activity logs found.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+            Text(
+              'No activity logs found',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+            ),
+            const SizedBox(height: AppDimens.margin8),
+            Text(
+              'Your admin actions will appear here',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
+              ),
+            ),
           ],
         ),
       );
@@ -344,6 +479,13 @@ class AdminProfileView extends GetView<AdminProfileController> {
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : Colors.white,
             borderRadius: BorderRadius.circular(AppDimens.radius12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 5,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -354,23 +496,38 @@ class AdminProfileView extends GetView<AdminProfileController> {
                   color: _getActionColor(log.action).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppDimens.radius8),
                 ),
-                child: Icon(_getActionIcon(log.action),
-                    color: _getActionColor(log.action), size: 20),
+                child: Icon(
+                  _getActionIcon(log.action),
+                  color: _getActionColor(log.action),
+                  size: 20,
+                ),
               ),
               const SizedBox(width: AppDimens.margin12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(log.action,
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: AppFonts.medium)),
-                    Text(log.details,
-                        style: theme.textTheme.bodySmall),
-                    Text(controller.formatDate(log.createdAt),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
-                          fontSize: 11,
-                        )),
+                    Text(
+                      _formatActionName(log.action),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: AppFonts.medium,
+                      ),
+                    ),
+                    const SizedBox(height: AppDimens.margin2),
+                    Text(
+                      log.details,
+                      style: theme.textTheme.bodySmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppDimens.margin2),
+                    Text(
+                      controller.formatDate(log.createdAt),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -381,20 +538,23 @@ class AdminProfileView extends GetView<AdminProfileController> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, IconData icon) {
     final theme = Get.context!.theme;
     final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimens.margin8),
+      padding: const EdgeInsets.only(bottom: AppDimens.margin12),
       child: Row(
         children: [
+          Icon(icon, size: 18, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+          const SizedBox(width: AppDimens.margin12),
           SizedBox(
-            width: 100,
+            width: 110,
             child: Text(label, style: theme.textTheme.bodySmall),
           ),
           Expanded(
-            child: Text(value,
+            child: Text(
+              value,
               style: theme.textTheme.bodyMedium?.copyWith(fontWeight: AppFonts.medium),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -426,7 +586,8 @@ class AdminProfileView extends GetView<AdminProfileController> {
         padding: const EdgeInsets.all(AppDimens.padding16),
         decoration: BoxDecoration(
           color: Get.context!.theme.brightness == Brightness.dark
-              ? AppColors.surfaceDark : Colors.white,
+              ? AppColors.surfaceDark
+              : Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimens.radius16)),
         ),
         child: SafeArea(
@@ -438,7 +599,7 @@ class AdminProfileView extends GetView<AdminProfileController> {
                 title: const Text('Take Photo'),
                 onTap: () {
                   Get.back();
-                  controller.takeProfilePhoto(); // Use this method
+                  controller.takeProfilePhoto();
                 },
               ),
               ListTile(
@@ -446,7 +607,7 @@ class AdminProfileView extends GetView<AdminProfileController> {
                 title: const Text('Choose from Gallery'),
                 onTap: () {
                   Get.back();
-                  controller.pickProfileImage(); // Use this method
+                  controller.pickProfileImage();
                 },
               ),
               if (controller.profileImage != null || controller.profileImageUrl.isNotEmpty)
@@ -466,18 +627,29 @@ class AdminProfileView extends GetView<AdminProfileController> {
   }
 
   Color _getActionColor(String action) {
-    if (action.contains('login')) return Colors.blue;
-    if (action.contains('update') || action.contains('edit')) return Colors.orange;
-    if (action.contains('delete')) return Colors.red;
-    if (action.contains('create')) return Colors.green;
+    final actionLower = action.toLowerCase();
+    if (actionLower.contains('login')) return Colors.blue;
+    if (actionLower.contains('update') || actionLower.contains('edit')) return Colors.orange;
+    if (actionLower.contains('delete')) return Colors.red;
+    if (actionLower.contains('create')) return Colors.green;
+    if (actionLower.contains('export')) return Colors.purple;
     return Colors.grey;
   }
 
   IconData _getActionIcon(String action) {
-    if (action.contains('login')) return Icons.login_rounded;
-    if (action.contains('update') || action.contains('edit')) return Icons.edit_rounded;
-    if (action.contains('delete')) return Icons.delete_rounded;
-    if (action.contains('create')) return Icons.add_rounded;
+    final actionLower = action.toLowerCase();
+    if (actionLower.contains('login')) return Icons.login_rounded;
+    if (actionLower.contains('update') || actionLower.contains('edit')) return Icons.edit_rounded;
+    if (actionLower.contains('delete')) return Icons.delete_rounded;
+    if (actionLower.contains('create')) return Icons.add_rounded;
+    if (actionLower.contains('export')) return Icons.file_download_rounded;
     return Icons.info_rounded;
+  }
+
+  String _formatActionName(String action) {
+    return action
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
   }
 }

@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../../config/environment/env_config.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_dimens.dart';
 import '../../../auth/controllers/auth_controller.dart';
 import '../admin_profile_view.dart';
 
@@ -22,90 +22,32 @@ class AdminDrawer extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final authController = Get.find<AuthController>();
 
+    // Get base URL without /api suffix for static files
+    final apiUrl = EnvConfig.instance.apiBaseUrl;
+    // Remove /api from the URL for static files (uploads are served from root)
+    final staticBaseUrl = apiUrl.replaceAll('/api', '');
+
     return Drawer(
       child: Column(
         children: [
           // Drawer Header
-          // Add this at the top of your drawer, before the navigation items
           UserAccountsDrawerHeader(
             decoration: BoxDecoration(
               color: isDark ? AppColors.primaryGreen : AppColors.primaryGreenLight,
             ),
             accountName: Text(
-              authController.currentUser?.fullName ?? 'Admin User',
+              authController.currentUser?.fullName ?? 'Admin User ',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             accountEmail: Text(authController.currentUser?.email ?? 'admin@menahariya.com'),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              child: authController.currentUser?.profileImage != null
-                  ? ClipOval(
-                child: Image.network(
-                  authController.currentUser!.profileImage!,
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Icon(Icons.person, size: 30),
-                ),
-              )
-                  : Text(
-                authController.currentUser?.fullName[0].toUpperCase() ?? 'A',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
+              radius: 30,
+              child: _buildProfileImage(authController, staticBaseUrl),
             ),
-            onDetailsPressed: () => Get.to(()=>AdminProfileView()),
+            onDetailsPressed: () => Get.to(() => const AdminProfileView()),
           ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppDimens.padding24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  isDark ? AppColors.primaryGreenDark : AppColors.primaryGreen,
-                  isDark ? AppColors.primaryGreen : AppColors.primaryGreenDark,
-                ],
-              ),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'M',
-                      style: TextStyle(
-                        color: AppColors.primaryGreen,
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppDimens.margin12),
-                Text(
-                  authController.currentUser?.fullName ?? 'Admin',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppDimens.margin4),
-                Text(
-                  authController.currentUser?.role?.toUpperCase() ?? 'ADMIN',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
-            ),
-          ),
+
           // Drawer Items
           Expanded(
             child: ListView(
@@ -199,6 +141,52 @@ class AdminDrawer extends StatelessWidget {
             onTap: () => _showLogoutDialog(context),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProfileImage(AuthController authController, String staticBaseUrl) {
+    final profileImage = authController.currentUser?.profileImage;
+
+    if (profileImage != null && profileImage.isNotEmpty) {
+      // Check if it's already a full URL or relative path
+      String imageUrl;
+      if (profileImage.startsWith('http')) {
+        imageUrl = profileImage;
+      } else {
+        // Remove any double slashes
+        final cleanPath = profileImage.startsWith('/') ? profileImage : '/$profileImage';
+        imageUrl = '$staticBaseUrl$cleanPath';
+      }
+
+      debugPrint('Loading profile image from: $imageUrl');
+
+      return ClipOval(
+        child: Image.network(
+          imageUrl,
+          width: 70,
+          height: 70,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const CircularProgressIndicator();
+          },
+          errorBuilder: (_, __, ___) => _buildDefaultAvatar(authController),
+        ),
+      );
+    }
+
+    return _buildDefaultAvatar(authController);
+  }
+
+  Widget _buildDefaultAvatar(AuthController authController) {
+    return CircleAvatar(
+      backgroundColor: Colors.white,
+      child: Text(
+        authController.currentUser?.fullName.isNotEmpty == true
+            ? authController.currentUser!.fullName[0].toUpperCase()
+            : 'A',
+        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
       ),
     );
   }

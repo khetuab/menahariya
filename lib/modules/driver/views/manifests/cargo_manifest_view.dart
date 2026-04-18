@@ -37,118 +37,133 @@ class CargoManifestView extends GetView<CargoListController> {
             },
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(160),
-          child: Column(
-            children: [
-              // Summary Stats
-              Obx(() => Container(
-                padding: const EdgeInsets.all(AppDimens.padding16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        context,
-                        title: 'Total Items',
-                        value: controller.totalCount.toString(),
-                        icon: Icons.inventory_2_rounded,
-                        color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                      ),
-                    ),
-                    const SizedBox(width: AppDimens.margin12),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        context,
-                        title: 'Total Weight',
-                        value: '${controller.totalWeight.toStringAsFixed(1)} kg',
-                        icon: Icons.monitor_weight_rounded,
-                        color: isDark ? AppColors.infoLight : AppColors.info,
-                      ),
-                    ),
-                    const SizedBox(width: AppDimens.margin12),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        context,
-                        title: 'Total Value',
-                        value: CurrencyFormatter.format(controller.totalValue, useShortSymbol: true),
-                        icon: Icons.attach_money_rounded,
-                        color: isDark ? AppColors.successLight : AppColors.success,
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-              // Filter Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(
-                  left: AppDimens.padding16,
-                  right: AppDimens.padding16,
-                  bottom: AppDimens.padding12,
-                ),
-                child: Obx(() => Row(
-                  children: CargoFilter.values.map((filter) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: AppDimens.padding8),
-                      child: FilterChip(
-                        label: Text(filter.displayName),
-                        selected: controller.selectedFilter == filter,
-                        onSelected: (_) => controller.setFilter(filter),
-                        selectedColor: isDark
-                            ? AppColors.primaryGreen.withOpacity(0.3)
-                            : AppColors.primaryGreen.withOpacity(0.1),
-                        checkmarkColor: isDark
-                            ? AppColors.primaryGreenLight
-                            : AppColors.primaryGreen,
-                      ),
-                    );
-                  }).toList(),
-                )),
-              ),
-              // Search Bar
-              Padding(
-                padding: const EdgeInsets.all(AppDimens.padding12),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search cargo...',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimens.radius8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.padding16,
-                      vertical: AppDimens.padding12,
-                    ),
-                  ),
-                  onChanged: controller.setSearchQuery,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
-      body: Obx(() {
-        if (controller.isLoading && controller.cargoList.isEmpty) {
-          return _buildLoadingShimmer();
-        }
-
-        if (controller.cargoList.isEmpty) {
-          return _buildEmptyState(context);
-        }
-
-        return RefreshIndicator(
-          onRefresh: controller.refreshList,
-          child: ListView.separated(
-            padding: const EdgeInsets.all(AppDimens.padding16),
-            itemCount: controller.cargoList.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppDimens.margin8),
-            itemBuilder: (context, index) {
-              final cargo = controller.cargoList[index];
-              return _buildCargoCard(context, cargo);
-            },
+      body: Column(
+        children: [
+          // Header Content (moved from AppBar.bottom)
+          Container(
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Summary Stats
+                Obx(() => Container(
+                  padding: const EdgeInsets.all(AppDimens.padding12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildSummaryCard(
+                          context,
+                          title: 'Total Items',
+                          value: controller.totalCount.toString(),
+                          icon: Icons.inventory_2_rounded,
+                          color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimens.margin8),
+                      Expanded(
+                        child: _buildSummaryCard(
+                          context,
+                          title: 'Total Weight',
+                          value: '${controller.totalWeight.toStringAsFixed(1)} kg',
+                          icon: Icons.monitor_weight_rounded,
+                          color: isDark ? AppColors.infoLight : AppColors.info,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimens.margin8),
+                      Expanded(
+                        child: _buildSummaryCard(
+                          context,
+                          title: 'Total Value',
+                          value: CurrencyFormatter.format(controller.totalValue, useShortSymbol: true),
+                          icon: Icons.attach_money_rounded,
+                          color: isDark ? AppColors.successLight : AppColors.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+                // Filter Chips
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(
+                    left: AppDimens.padding16,
+                    right: AppDimens.padding16,
+                    bottom: AppDimens.padding8,
+                  ),
+                  child: Obx(() => Row(
+                    children: CargoFilter.values.map((filter) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: AppDimens.padding8),
+                        child: FilterChip(
+                          label: Text(filter.displayName),
+                          selected: controller.selectedFilter == filter,
+                          onSelected: (_) => controller.setFilter(filter),
+                          selectedColor: isDark
+                              ? AppColors.primaryGreen.withOpacity(0.3)
+                              : AppColors.primaryGreen.withOpacity(0.1),
+                          checkmarkColor: isDark
+                              ? AppColors.primaryGreenLight
+                              : AppColors.primaryGreen,
+                        ),
+                      );
+                    }).toList(),
+                  )),
+                ),
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.all(AppDimens.padding12),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search cargo...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppDimens.radius8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.padding12,
+                        vertical: AppDimens.padding8,
+                      ),
+                      isDense: true,
+                    ),
+                    onChanged: controller.setSearchQuery,
+                  ),
+                ),
+              ],
+            ),
           ),
-        );
-      }),
+          // Divider
+          Divider(
+            height: 1,
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+          // Cargo List
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading && controller.cargoList.isEmpty) {
+                return _buildLoadingShimmer();
+              }
+
+              if (controller.cargoList.isEmpty) {
+                return _buildEmptyState(context);
+              }
+
+              return RefreshIndicator(
+                onRefresh: controller.refreshList,
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(AppDimens.padding16),
+                  itemCount: controller.cargoList.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: AppDimens.margin8),
+                  itemBuilder: (context, index) {
+                    final cargo = controller.cargoList[index];
+                    return _buildCargoCard(context, cargo);
+                  },
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 
@@ -157,24 +172,26 @@ class CargoManifestView extends GetView<CargoListController> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.all(AppDimens.padding8),
+      padding: const EdgeInsets.all(AppDimens.padding6),
       decoration: BoxDecoration(
         color: isDark ? AppColors.grey800 : AppColors.grey50,
         borderRadius: BorderRadius.circular(AppDimens.radius8),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: AppDimens.margin4),
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: AppDimens.margin2),
           Text(
             value,
-            style: theme.textTheme.bodyLarge?.copyWith(
+            style: theme.textTheme.bodySmall?.copyWith(
               fontWeight: AppFonts.bold,
             ),
           ),
           Text(
             title,
-            style: theme.textTheme.bodySmall,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 10,
+            ),
           ),
         ],
       ),
@@ -203,8 +220,10 @@ class CargoManifestView extends GetView<CargoListController> {
                       borderRadius: BorderRadius.circular(AppDimens.radius4),
                     ),
                     child: Icon(
-                      cargo.isFragile ? Icons.inventory_2_rounded : Icons.inventory_2_rounded,
-                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      cargo.isFragile ? Icons.warning_amber_rounded : Icons.inventory_2_rounded,
+                      color: cargo.isFragile
+                          ? (isDark ? AppColors.warningLight : AppColors.warning)
+                          : (isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen),
                       size: 16,
                     ),
                   ),

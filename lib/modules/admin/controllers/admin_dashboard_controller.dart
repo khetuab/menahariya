@@ -41,14 +41,10 @@ class AdminDashboardController extends GetxController {
   }
 
   void _setupSocketListeners() {
-    _socketService.on('dashboard_update', _handleDashboardUpdate);
+    _socketService.on('dashboard_update', (_) => loadDashboardData(refresh: true));
     _socketService.on('new_booking', (_) => loadDashboardData(refresh: true));
     _socketService.on('new_cargo', (_) => loadDashboardData(refresh: true));
     _socketService.on('payment_completed', (_) => loadDashboardData(refresh: true));
-  }
-
-  void _handleDashboardUpdate(dynamic data) {
-    loadDashboardData(refresh: true);
   }
 
   Future<void> loadDashboardData({bool refresh = false}) async {
@@ -59,7 +55,6 @@ class AdminDashboardController extends GetxController {
     }
 
     try {
-      // Load all dashboard data in parallel
       await Future.wait([
         _loadStats(),
         _loadRevenueChart(),
@@ -167,12 +162,12 @@ class AdminDashboardController extends GetxController {
   }
 
   Future<void> refreshDashboard() async {
-    loadDashboardData(refresh: true);
+    await loadDashboardData(refresh: true);
   }
 
   @override
   void onClose() {
-    _socketService.off('dashboard_update', _handleDashboardUpdate);
+    _socketService.off('dashboard_update');
     super.onClose();
   }
 }

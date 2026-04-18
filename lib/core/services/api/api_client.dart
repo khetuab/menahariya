@@ -71,7 +71,56 @@ class ApiClient extends getx.GetxService {
     _dio.options.headers['Authorization'] = 'Bearer $token';
     print('🔐 Auth token set successfully');
   }
+  final SecureStorage _secureStorage = SecureStorage();
+  // Add this new method for multipart file uploads
+  Future<dynamic> postMultipart(
+      String endpoint, {
+        required FormData formData,
+        Function(int, int)? onSendProgress,
+        bool requiresAuth = true,
+      }) async {
+    try {
+      final url = endpoint.startsWith('http') ? endpoint : endpoint;
 
+      if (requiresAuth) {
+        final token = await _secureStorage.read('token');
+        if (token != null) {
+          _dio.options.headers['Authorization'] = 'Bearer $token';
+        }
+      }
+
+      // Remove Content-Type header for multipart (Dio will set it automatically)
+      _dio.options.headers.remove('Content-Type');
+
+      final response = await _dio.post(
+        url,
+        data: formData,
+        onSendProgress: onSendProgress,
+      );
+
+      // Restore Content-Type header
+      _dio.options.headers['Content-Type'] = 'application/json';
+
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+  dynamic _handleError(DioException e) {
+    if (e.response != null) {
+      final data = e.response!.data;
+      final message = data['message'] ?? 'Something went wrong';
+      return ApiException(message:'', statusCode: e.response!.statusCode);
+    } else if (e.type == DioExceptionType.connectionTimeout) {
+      return ApiException(message: 'Connection timeout');
+    } else if (e.type == DioExceptionType.receiveTimeout) {
+      return ApiException(message: 'Receive timeout');
+    } else if (e.type == DioExceptionType.connectionError) {
+      return ApiException(message: 'No internet connection');
+    } else {
+      return ApiException(message: e.message ?? 'Network error');
+    }
+  }
   /// Clear authentication token
   void clearAuthToken() {
     _dio.options.headers.remove('Authorization');

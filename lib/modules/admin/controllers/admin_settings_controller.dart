@@ -1,4 +1,4 @@
-// lib/modules/admin/controllers/admin_settings_controller.dart
+//  lib/modules/admin/controllers/admin_settings_controller.dart
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -38,9 +38,6 @@ class AdminSettingsController extends GetxController {
   late final TextEditingController walletMaxBalanceController;
   late final TextEditingController paymentTimeoutController;
   late final TextEditingController refundProcessingDaysController;
-
-  // Notification Settings
-  late final RxMap<String, TextEditingController> notificationTypeControllers = <String, TextEditingController>{}.obs;
 
   // Security Settings
   late final TextEditingController sessionTimeoutController;
@@ -140,13 +137,66 @@ class AdminSettingsController extends GetxController {
       if (response != null && response['data'] != null) {
         _settings.value = SystemSettings.fromJson(response['data']);
         _populateFormFields();
+      } else {
+        // Load default settings if API returns nothing
+        _loadDefaultSettings();
       }
     } catch (e) {
       print('Error fetching settings: $e');
-      AppSnackbar.show('Error', 'Failed to load settings');
+      AppSnackbar.show('Error', 'Failed to load settings. Loading defaults.');
+      _loadDefaultSettings();
     } finally {
       _isLoading.value = false;
     }
+  }
+
+  void _loadDefaultSettings() {
+    final defaultSettings = SystemSettings(
+      booking: BookingSettings(
+        maxSeatsPerBooking: 10,
+        seatLockDurationMinutes: 5,
+        cancellationWindowHours: 2,
+        cancellationFeePercentage: 10,
+        enableInsurance: true,
+        insuranceRate: 0.05,
+      ),
+      cargo: CargoSettings(
+        baseRatePerKg: 5,
+        fragileSurcharge: 0.2,
+        perishableSurcharge: 0.15,
+        refrigerationSurcharge: 0.25,
+        minFee: 50,
+        maxWeightPerTrip: 500,
+        requireDimensions: false,
+      ),
+      payment: PaymentSettings(
+        enabledMethods: ['telebirr', 'cbe_birr', 'wallet', 'cash'],
+        walletMinBalance: 0,
+        walletMaxBalance: 10000,
+        paymentTimeoutMinutes: 30,
+        autoConfirmPayments: true,
+        refundProcessingDays: 3,
+      ),
+      notification: NotificationSettingsConfig(
+        enableSms: true,
+        enableEmail: false,
+        enablePush: true,
+      ),
+      security: SecuritySettings(
+        sessionTimeoutMinutes: 30,
+        maxLoginAttempts: 5,
+        passwordExpiryDays: 90,
+        requireMfaForAdmin: false,
+        enableAuditLogging: true,
+      ),
+      maintenance: MaintenanceSettings(
+        maintenanceMode: false,
+        maintenanceMessage: null,
+        estimatedDurationMinutes: 60,
+      ),
+    );
+    _settings.value = defaultSettings;
+    _populateFormFields();
   }
 
   void _populateFormFields() {
@@ -197,6 +247,9 @@ class AdminSettingsController extends GetxController {
   }
 
   Future<void> saveSettings() async {
+    // Validate inputs
+    if (!_validateSettings()) return;
+
     try {
       _isSaving.value = true;
 
@@ -210,6 +263,8 @@ class AdminSettingsController extends GetxController {
       if (response != null && response['success'] == true) {
         await fetchSettings();
         AppSnackbar.show('Success', 'Settings saved successfully');
+      } else {
+        AppSnackbar.show('Error', response?['message'] ?? 'Failed to save settings');
       }
     } catch (e) {
       print('Error saving settings: $e');
@@ -217,6 +272,51 @@ class AdminSettingsController extends GetxController {
     } finally {
       _isSaving.value = false;
     }
+  }
+
+  bool _validateSettings() {
+    // Validate booking settings
+    final maxSeats = int.tryParse(maxSeatsPerBookingController.text);
+    if (maxSeats == null || maxSeats < 1 || maxSeats > 20) {
+      AppSnackbar.show('Error', 'Max seats per booking must be between 1 and 20');
+      return false;
+    }
+
+    final seatLockDuration = int.tryParse(seatLockDurationController.text);
+    if (seatLockDuration == null || seatLockDuration < 1 || seatLockDuration > 30) {
+      AppSnackbar.show('Error', 'Seat lock duration must be between 1 and 30 minutes');
+      return false;
+    }
+
+    final cancellationFee = double.tryParse(cancellationFeeController.text);
+    if (cancellationFee == null || cancellationFee < 0 || cancellationFee > 100) {
+      AppSnackbar.show('Error', 'Cancellation fee must be between 0 and 100 percent');
+      return false;
+    }
+
+    // Validate cargo settings
+    final baseRate = double.tryParse(baseRatePerKgController.text);
+    if (baseRate == null || baseRate < 0) {
+      AppSnackbar.show('Error', 'Base rate must be a positive number');
+      return false;
+    }
+
+    // Validate payment settings
+    final walletMin = double.tryParse(walletMinBalanceController.text);
+    final walletMax = double.tryParse(walletMaxBalanceController.text);
+    if (walletMin == null || walletMax == null || walletMin < 0 || walletMax < walletMin) {
+      AppSnackbar.show('Error', 'Wallet balance settings are invalid');
+      return false;
+    }
+
+    // Validate security settings
+    final sessionTimeout = int.tryParse(sessionTimeoutController.text);
+    if (sessionTimeout == null || sessionTimeout < 5 || sessionTimeout > 480) {
+      AppSnackbar.show('Error', 'Session timeout must be between 5 and 480 minutes');
+      return false;
+    }
+
+    return true;
   }
 
   Map<String, dynamic> _buildSettingsUpdate() {
@@ -244,7 +344,7 @@ class AdminSettingsController extends GetxController {
         'walletMaxBalance': double.tryParse(walletMaxBalanceController.text) ?? 10000,
         'paymentTimeoutMinutes': int.tryParse(paymentTimeoutController.text) ?? 30,
         'autoConfirmPayments': _autoConfirmPayments.value,
-        'refundProcessingDays': double.tryParse(refundProcessingDaysController.text) ?? 3,
+        'refundProcessingDays': int.tryParse(refundProcessingDaysController.text) ?? 3,
       },
       'notification': {
         'enableSms': _enableSms.value,
@@ -274,7 +374,7 @@ class AdminSettingsController extends GetxController {
     } else {
       _enabledPaymentMethods.remove(method);
     }
-    _enabledPaymentMethods.refresh(); // Force UI update
+    _enabledPaymentMethods.refresh();
   }
 
   void toggleEnableInsurance(bool value) => _enableInsurance.value = value;
@@ -314,7 +414,6 @@ class AdminSettingsController extends GetxController {
       if (confirm != true) return;
 
       await _apiClient.post('/admin/system/clear-cache');
-
       AppSnackbar.show('Success', 'Cache cleared successfully');
     } catch (e) {
       print('Error clearing cache: $e');
@@ -328,24 +427,14 @@ class AdminSettingsController extends GetxController {
 
       final response = await _apiClient.post('/admin/system/backup');
 
-      if (response != null && response['data'] != null) {
-        final backupUrl = response['data']['url'];
-        await downloadBackup(backupUrl);
+      if (response != null && response['success'] == true) {
+        AppSnackbar.show('Success', 'Backup created successfully');
       }
     } catch (e) {
       print('Error backing up database: $e');
       AppSnackbar.show('Error', 'Failed to create backup');
     } finally {
       _isLoading.value = false;
-    }
-  }
-
-  Future<void> downloadBackup(String url) async {
-    try {
-      // Implementation for downloading backup
-      AppSnackbar.show('Success', 'Backup created successfully');
-    } catch (e) {
-      print('Error downloading backup: $e');
     }
   }
 

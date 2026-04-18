@@ -2,8 +2,8 @@
 
 class ApiEndpoints {
   // Base URL - Will be replaced by environment config
-  static const String baseUrl = 'http://10.194.117.58/api/v1';
-  static const String socketUrl = 'https://10.194.117.58:3000';
+  static const String baseUrl = 'http://10.156.108.200/api/v1';
+  static const String socketUrl = 'https://10.156.108.200:3000';
 
   // Auth Endpoints
   static const String auth = '/auth';

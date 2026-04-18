@@ -318,29 +318,29 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
       children: [
         _buildSectionCard(
           title: 'Payment Methods',
-          children: controller.availablePaymentMethods.map((method) {
-            return Obx(() => _buildToggleTile(
-              title: _getPaymentMethodName(method),
-              value: RxBool(controller.enabledPaymentMethodsList.contains(method)),
-              onChanged: (value) => controller.togglePaymentMethod(method, value),
-            ));
-          }).toList(),
+          children: [
+            ...controller.availablePaymentMethods.map((method) {
+              return Obx(() => _buildToggleTile(
+                title: _getPaymentMethodName(method),
+                value: RxBool(controller.enabledPaymentMethodsList.contains(method)),
+                onChanged: (value) => controller.togglePaymentMethod(method, value),
+              ));
+            }).toList(),
+          ],
         ),
         const SizedBox(height: AppDimens.margin16),
         _buildSectionCard(
           title: 'Wallet Settings',
           children: [
             _buildNumberField(
-              label: 'Min Balance',
+              label: 'Min Balance (ETB)',
               controller: controller.walletMinBalanceController,
               icon: Icons.account_balance_wallet_rounded,
-              prefix: 'ETB',
             ),
             _buildNumberField(
-              label: 'Max Balance',
+              label: 'Max Balance (ETB)',
               controller: controller.walletMaxBalanceController,
               icon: Icons.account_balance_wallet_rounded,
-              prefix: 'ETB',
             ),
           ],
         ),
