@@ -355,7 +355,7 @@ class AppPages {
     GetPage(
       name: AppRoutes.passengerPaymentSuccess,
       page: () => const PaymentSuccessView(),
-      binding: PassengerBinding(),
+      //binding: PassengerBinding(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
       middlewares: [AuthMiddleware(role: 'passenger')],

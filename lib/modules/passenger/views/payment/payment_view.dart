@@ -37,6 +37,32 @@ class PaymentView extends GetView<PassengerPaymentController> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // Show error if amount is invalid
+        if (controller.amount <= 0) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 64,
+                  color: isDark ? AppColors.errorLight : AppColors.error,
+                ),
+                const SizedBox(height: AppDimens.margin16),
+                Text(
+                  'Payment information not available',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppDimens.margin24),
+                ElevatedButton(
+                  onPressed: () => Get.back(),
+                  child: const Text('Go Back'),
+                ),
+              ],
+            ),
+          );
+        }
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(AppDimens.padding16),
           child: Column(
@@ -119,6 +145,8 @@ class PaymentView extends GetView<PassengerPaymentController> {
                     return _buildCardForm(context);
                   case 'wallet':
                     return _buildWalletPayment(context);
+                  case 'cash':
+                    return _buildCashPaymentForm(context);
                   default:
                     return const SizedBox();
                 }
@@ -215,7 +243,7 @@ class PaymentView extends GetView<PassengerPaymentController> {
   }
 
   // Helper method to build payment icon with proper asset path
-  Widget _buildPaymentIcon(PaymentMethod method,BuildContext context) {
+  Widget _buildPaymentIcon(PaymentMethod method, BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (method.icon == null) {
@@ -244,8 +272,6 @@ class PaymentView extends GetView<PassengerPaymentController> {
     // Remove any double slashes
     iconPath = iconPath.replaceAll('//', '/');
 
-    //print('📁 Loading icon from: $iconPath');
-
     return Image.asset(
       iconPath,
       width: 34,
@@ -257,6 +283,92 @@ class PaymentView extends GetView<PassengerPaymentController> {
           color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
         );
       },
+    );
+  }
+
+  Widget _buildCashPaymentForm(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppDimens.padding16),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.grey800 : AppColors.grey50,
+            borderRadius: BorderRadius.circular(AppDimens.radius12),
+            border: Border.all(
+              color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.store_rounded,
+                    color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                    size: 32,
+                  ),
+                  const SizedBox(width: AppDimens.margin12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pay at Station',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: AppFonts.bold,
+                            color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                          ),
+                        ),
+                        Text(
+                          'You will pay at the bus station counter',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppDimens.margin16),
+              CustomTextField(
+                controller: controller.stationNameController,
+                label: 'Station Name (Optional)',
+                hint: 'e.g., Megenagna Bus Station',
+                prefixIcon: Icons.location_on_rounded,
+              ),
+              const SizedBox(height: AppDimens.margin12),
+              Container(
+                padding: const EdgeInsets.all(AppDimens.padding12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.info.withOpacity(0.1) : AppColors.info.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(AppDimens.radius8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_rounded,
+                      color: isDark ? AppColors.infoLight : AppColors.info,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppDimens.margin8),
+                    Expanded(
+                      child: Text(
+                        'Your seat will be reserved. Please complete payment at the station at least 1 hour before departure.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isDark ? AppColors.infoLight : AppColors.info,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

@@ -1,5 +1,3 @@
-// lib/modules/passenger/views/payment/payment_success_view.dart
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/app_colors.dart';
@@ -8,15 +6,43 @@ import 'package:menahariya/core/constants/app_fonts.dart';
 import 'package:menahariya/core/widgets/buttons/primary_button.dart';
 import 'package:menahariya/core/widgets/buttons/secondary_button.dart';
 import 'package:menahariya/core/utils/formatters/currency_formatter.dart';
-import 'package:menahariya/modules/passenger/controllers/payment_controller.dart';
+import 'package:menahariya/data/models/booking/booking_model.dart';
+import 'package:menahariya/data/models/payment/payment_model.dart';
 
-class PaymentSuccessView extends GetView<PassengerPaymentController> {
+import '../../../../core/services/payment/payment_service.dart';
+
+class PaymentSuccessView extends StatefulWidget {
   const PaymentSuccessView({Key? key}) : super(key: key);
+
+  @override
+  State<PaymentSuccessView> createState() => _PaymentSuccessViewState();
+}
+
+class _PaymentSuccessViewState extends State<PaymentSuccessView> {
+  @override
+  void initState() {
+    super.initState();
+    // Auto‑redirect to home after 3 seconds (adjust as needed)
+    Future.delayed(const Duration(seconds: 30), () {
+      if (mounted) Get.offAllNamed('/passenger/dashboard');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // Read arguments directly – no controller!
+    final args = Get.arguments;
+    final amount = (args?['amount'] ?? args?['finalTotal'] ?? 0).toDouble();
+    final payment = args?['payment'] as PaymentModel?;
+    final selectedMethod = args?['selectedMethod'] as PaymentMethod?;
+
+    final formattedAmount = CurrencyFormatter.format(amount);
+    final paymentMethodName = selectedMethod?.name ?? payment?.method ?? 'Cash';
+    final transactionId = payment?.transactionId ?? 'N/A';
+    final dateTime = DateTime.now().toString().substring(0, 16);
 
     return Scaffold(
       body: SafeArea(
@@ -25,7 +51,6 @@ class PaymentSuccessView extends GetView<PassengerPaymentController> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Success Animation (you can add Lottie here)
               Container(
                 width: 120,
                 height: 120,
@@ -42,35 +67,21 @@ class PaymentSuccessView extends GetView<PassengerPaymentController> {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  color: Colors.white,
-                  size: 60,
-                ),
+                child: const Icon(Icons.check_rounded, color: Colors.white, size: 60),
               ),
-
               const SizedBox(height: AppDimens.margin32),
-
-              // Success Message
               Text(
                 'Payment Successful!',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: AppFonts.bold,
-                ),
+                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: AppFonts.bold),
               ),
-
               const SizedBox(height: AppDimens.margin8),
-
               Text(
                 'Your booking has been confirmed',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                 ),
               ),
-
               const SizedBox(height: AppDimens.margin32),
-
-              // Payment Details
               Container(
                 padding: const EdgeInsets.all(AppDimens.padding20),
                 decoration: BoxDecoration(
@@ -79,89 +90,66 @@ class PaymentSuccessView extends GetView<PassengerPaymentController> {
                 ),
                 child: Column(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Amount Paid'),
-                        Text(
-                          controller.formattedAmount,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                            fontWeight: AppFonts.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildInfoRow(theme, isDark, 'Amount Paid', formattedAmount, isTotal: true),
                     const SizedBox(height: AppDimens.margin12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Payment Method'),
-                        Text(
-                          controller.selectedMethod?.name ?? '',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: AppFonts.medium,
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildInfoRow(theme, isDark, 'Payment Method', paymentMethodName),
                     const SizedBox(height: AppDimens.margin12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Transaction ID'),
-                        Text(
-                          controller.payment?.transactionId ?? '',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildInfoRow(theme, isDark, 'Transaction ID', transactionId, isMonospace: true),
                     const SizedBox(height: AppDimens.margin12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Date & Time'),
-                        Text(
-                          DateTime.now().toString().substring(0, 16),
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
+                    _buildInfoRow(theme, isDark, 'Date & Time', dateTime),
                   ],
                 ),
               ),
-
               const SizedBox(height: AppDimens.margin32),
-
-              // Action Buttons
               PrimaryButton(
                 text: 'View My Tickets',
-                onPressed: () => Get.offAllNamed('/passenger/tickets'),
+                onPressed: () => Get.offAllNamed('/passenger/my-tickets'),
                 icon: Icons.confirmation_number_rounded,
               ),
-
               const SizedBox(height: AppDimens.margin12),
-
               SecondaryButton(
                 text: 'Back to Home',
-                onPressed: () => Get.offAllNamed('/passenger/dashboard'),
+                onPressed: () => Get.offAllNamed('/passenger/home'),
                 icon: Icons.home_rounded,
               ),
-
               const SizedBox(height: AppDimens.margin12),
-
-              TextButton(
-                onPressed: () {
-                  // Download receipt
-                },
-                child: const Text('Download Receipt'),
+              TextButton(onPressed: () {}, child: const Text('Download Receipt')),
+              const SizedBox(height: AppDimens.margin16),
+              Text(
+                'Redirecting to home in a few seconds...',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
+                ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoRow(ThemeData theme, bool isDark, String label, String value,
+      {bool isTotal = false, bool isMonospace = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: theme.textTheme.bodyMedium),
+        // Wrap the value with Expanded to prevent overflow
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: isTotal
+                ? theme.textTheme.titleLarge?.copyWith(
+              color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+              fontWeight: AppFonts.bold,
+            )
+                : theme.textTheme.bodyMedium?.copyWith(
+              fontFamily: isMonospace ? 'monospace' : null,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

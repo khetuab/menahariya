@@ -121,7 +121,7 @@ class AdminCargoView extends GetView<AdminCargoController> {
           const SizedBox(width: AppDimens.margin12),
           _buildStatCard(context, 'Delivered', controller.deliveredCargo.toString(), Colors.green, Icons.check_circle_rounded),
           const SizedBox(width: AppDimens.margin12),
-          _buildStatCard(context, 'Revenue', 'ETB ${controller.totalRevenue.toStringAsFixed(0)}', Colors.teal, Icons.attach_money_rounded),
+          _buildStatCard(context, 'Revenue', 'ETB ${controller.statsRevenue.toStringAsFixed(0)}', Colors.teal, Icons.attach_money_rounded),
         ],
       ),
     );
@@ -206,7 +206,7 @@ class AdminCargoView extends GetView<AdminCargoController> {
           ),
           const SizedBox(width: AppDimens.margin8),
           Container(
-            width: 120,
+            width: 155,
             child: DropdownButtonFormField<String>(
               value: controller.statusFilter.isEmpty ? null : controller.statusFilter,
               decoration: InputDecoration(

@@ -1,5 +1,3 @@
-// lib/modules/passenger/controllers/search_controller.dart
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/api_endpoints.dart';
@@ -99,47 +97,37 @@ class PassengerSearchController extends GetxController {
     _selectedTo.value = tempFrom;
     toController.text = tempFromText;
   }
+
   void _setupFocusListeners() {
-    fromFocusNode.addListener(_onFromFocusChange);
-    toFocusNode.addListener(_onToFocusChange);
-  }
-  void _onFromFocusChange() {
-    showFromSuggestions.value = fromFocusNode.hasFocus;
-    if (!fromFocusNode.hasFocus) {
-      // Clear suggestions when losing focus
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (!fromFocusNode.hasFocus && !toFocusNode.hasFocus) {
-          _suggestions.clear();
-        }
-      });
-    }
-  }
+    fromFocusNode.addListener(() {
+      showFromSuggestions.value = fromFocusNode.hasFocus;
+      if (fromFocusNode.hasFocus && fromController.text.isNotEmpty) {
+        getSuggestions(fromController.text);
+      }
+    });
 
-  void _onToFocusChange() {
-    showToSuggestions.value = toFocusNode.hasFocus;
-    if (!toFocusNode.hasFocus) {
-      // Clear suggestions when losing focus
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (!toFocusNode.hasFocus && !fromFocusNode.hasFocus) {
-          _suggestions.clear();
-        }
-      });
-    }
+    toFocusNode.addListener(() {
+      showToSuggestions.value = toFocusNode.hasFocus;
+      if (toFocusNode.hasFocus && toController.text.isNotEmpty) {
+        getSuggestions(toController.text);
+      }
+    });
   }
-
 
   void setFromLocation(Place place) {
     _selectedFrom.value = place;
     fromController.text = place.name;
-    // Clear suggestions after selection
     _suggestions.clear();
+    showFromSuggestions.value = false;
+    fromFocusNode.unfocus();
   }
 
   void setToLocation(Place place) {
     _selectedTo.value = place;
     toController.text = place.name;
-    // Clear suggestions after selection
     _suggestions.clear();
+    showToSuggestions.value = false;
+    toFocusNode.unfocus();
   }
 
   void setDate(DateTime date) {
@@ -182,15 +170,25 @@ class PassengerSearchController extends GetxController {
       _isLoading.value = true;
       _searchResults.clear();
 
+      // Build query parameters correctly
+      final Map<String, dynamic> params = {
+        'origin': _selectedFrom.value?.name,
+        'destination': _selectedTo.value?.name,
+        'date': DateFormatter.toApiDate(_selectedDate.value!),
+        'passengers': _passengerCount.value,
+      };
+
+      // Add filter parameters
+      params.addAll(_appliedFilters.value.toQueryParams());
+
+      // Remove null values
+      params.removeWhere((key, value) => value == null || value == '');
+
+      print('🔍 Search params: $params');
+
       final response = await _apiClient.get(
         ApiEndpoints.tripsSearch,
-        queryParameters: {
-          'origin': _selectedFrom.value?.name,
-          'destination': _selectedTo.value?.name,
-          'date': DateFormatter.toApiDate(_selectedDate.value!),
-          'passengers': _passengerCount.value,
-          ..._appliedFilters.value.toQueryParams(),
-        },
+        queryParameters: params,
       );
 
       if (response != null && response['data'] != null) {
@@ -205,7 +203,7 @@ class PassengerSearchController extends GetxController {
       }
     } catch (e) {
       print('❌ Search error: $e');
-      AppSnackbar.show('Error', 'Failed to search trips. Please try again.');
+      AppSnackbar.show('Error', 'Failed to search trips. Please try again. ');
     } finally {
       _isLoading.value = false;
     }
@@ -218,24 +216,37 @@ class PassengerSearchController extends GetxController {
     }
 
     try {
+      print('🔍 Getting suggestions for: $query');
+
       final response = await _apiClient.get(
         '/places/suggest',
         queryParameters: {'q': query},
       );
 
+      print('📥 Suggestions response: $response');
+
+      // FIX: response is already the parsed body, not the raw HTTP response
+      // So response['data'] contains the places array
       if (response != null && response['data'] != null) {
         final List<dynamic> placesData = response['data'];
-        _suggestions.value = placesData
-            .map((p) => Place.fromJson(p))
-            .toList();
+        if (placesData.isNotEmpty) {
+          _suggestions.value = placesData
+              .map((p) => Place.fromJson(p as Map<String, dynamic>))
+              .toList();
+          print('✅ Loaded ${_suggestions.length} suggestions');
+        } else {
+          _suggestions.clear();
+          print('⚠️ No suggestions found');
+        }
+      } else {
+        _suggestions.clear();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Error getting suggestions: $e');
-      // Don't show error to user, just clear suggestions
+      print('📚 Stack trace: $stackTrace');
       _suggestions.clear();
     }
   }
-
   void _saveRecentSearch() {
     if (_selectedFrom.value == null || _selectedTo.value == null) return;
 
@@ -261,21 +272,15 @@ class PassengerSearchController extends GetxController {
     if (_recentSearches.length > 5) {
       _recentSearches.removeLast();
     }
-
-    // TODO: Save to local storage (SharedPreferences)
   }
 
   void _loadRecentSearches() {
-    // TODO: Load from local storage (SharedPreferences)
-    // For now, just initialize empty list
     _recentSearches.clear();
   }
 
   void applyFilters(FilterOptions filters) {
     _appliedFilters.value = filters;
-    if (_searchResults.isNotEmpty) {
-      searchTrips();
-    }
+    searchTrips();
   }
 
   void toggleFilters() {
@@ -307,14 +312,10 @@ class PassengerSearchController extends GetxController {
 
   @override
   void onClose() {
-    fromFocusNode.removeListener(_onFromFocusChange);
-    toFocusNode.removeListener(_onToFocusChange);
     fromController.dispose();
     toController.dispose();
     dateController.dispose();
     passengersController.dispose();
-    fromFocusNode.dispose();
-    toFocusNode.dispose();
     fromFocusNode.dispose();
     toFocusNode.dispose();
     dateFocusNode.dispose();
@@ -322,6 +323,7 @@ class PassengerSearchController extends GetxController {
     super.onClose();
   }
 }
+
 class Place {
   final String id;
   final String name;
@@ -337,10 +339,10 @@ class Place {
 
   factory Place.fromJson(Map<String, dynamic> json) {
     return Place(
-      id: json['id'] ?? json['_id'] ?? '',
-      name: json['name'] ?? '',
-      city: json['city'],
-      station: json['station'],
+      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      city: json['city']?.toString(),
+      station: json['station']?.toString(),
     );
   }
 

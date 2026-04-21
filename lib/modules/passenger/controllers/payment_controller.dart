@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/services/socket/socket_service.dart';
@@ -17,37 +18,42 @@ class PassengerPaymentController extends GetxController {
   final SocketService _socketService = SocketService.instance;
   final PaymentService _paymentService = PaymentService.instance;
 
-  // Payment data from arguments
-  late final BookingModel booking;
-  late final double amount;
+  // Payment data from arguments - Use Rx for reactive updates
+  final _booking = Rxn<BookingModel>();
+  final _amount = 0.0.obs;
+  final _payment = Rxn<PaymentModel>();
+  final _selectedMethod = Rxn<PaymentMethod>();
+
+  BookingModel? get booking => _booking.value;
+  double get amount => _amount.value;
+  PaymentModel? get payment => _payment.value;
+  PaymentMethod? get selectedMethod => _selectedMethod.value;
 
   // Observables
   final _isLoading = false.obs;
   final _isProcessing = false.obs;
   final _paymentStatus = PaymentStatus.processing.obs;
   final _paymentMethods = <PaymentMethod>[].obs;
-  final _selectedMethod = Rxn<PaymentMethod>();
-  final _payment = Rxn<PaymentModel>();
-  final _countdownSeconds = 300.obs; // 5 minutes countdown
+  final _countdownSeconds = 300.obs;
   Timer? _countdownTimer;
   Timer? _statusChecker;
 
-  // Form controllers for card payment
+  // Form controllers
   late final TextEditingController cardNumberController;
   late final TextEditingController cardExpiryController;
   late final TextEditingController cardCvvController;
   late final TextEditingController cardNameController;
-
-  // Mobile money fields
   late final TextEditingController mobileMoneyPhoneController;
+  late final TextEditingController stationNameController;
+
+  // Flags
+  bool _isNavigating = false;
 
   // Getters
   bool get isLoading => _isLoading.value;
   bool get isProcessing => _isProcessing.value;
   PaymentStatus get paymentStatus => _paymentStatus.value;
   List<PaymentMethod> get paymentMethods => _paymentMethods;
-  PaymentMethod? get selectedMethod => _selectedMethod.value;
-  PaymentModel? get payment => _payment.value;
   int get countdownSeconds => _countdownSeconds.value;
   String get formattedAmount => CurrencyFormatter.format(amount);
 
@@ -69,24 +75,44 @@ class PassengerPaymentController extends GetxController {
 
   void _getArguments() {
     final args = Get.arguments;
+    print('📦 PaymentView arguments: $args');
+
     if (args != null) {
-      booking = args['booking'];
-      amount = args['finalTotal'];
-    } else {
-      Get.back();
-      Get.snackbar(
-        'Error',
-        'Payment information not found',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (args['booking'] != null) {
+        _booking.value = args['booking'];
+      }
+      // ✅ Support both 'finalTotal' (from booking summary) and 'amount' (from success navigation)
+      if (args['finalTotal'] != null) {
+        _amount.value = args['finalTotal'].toDouble();
+      } else if (args['amount'] != null) {
+        _amount.value = args['amount'].toDouble();
+      }
+      if (args['payment'] != null) {
+        _payment.value = args['payment'];
+      }
+      if (args['selectedMethod'] != null) {
+        _selectedMethod.value = args['selectedMethod'];
+      }
     }
   }
 
-  // Handle payment confirmation from socket
-  void handlePaymentConfirmation(Map<String, dynamic> data) {
+  void _initializeControllers() {
+    cardNumberController = TextEditingController();
+    cardExpiryController = TextEditingController();
+    cardCvvController = TextEditingController();
+    cardNameController = TextEditingController();
+    mobileMoneyPhoneController = TextEditingController();
+    stationNameController = TextEditingController();
+  }
+
+  void _setupSocketListeners() {
+    _socketService.on('payment_confirmed', _handlePaymentConfirmed);
+    _socketService.on('payment_failed', _handlePaymentFailed);
+  }
+
+  void handlePaymentConfirmed(Map<String, dynamic> data) {
     if (data['paymentId'] == _payment.value?.id) {
       final String status = data['status'];
-
       if (status == 'completed') {
         _paymentStatus.value = PaymentStatus.completed;
         _countdownTimer?.cancel();
@@ -103,31 +129,37 @@ class PassengerPaymentController extends GetxController {
     }
   }
 
-  void _initializeControllers() {
-    cardNumberController = TextEditingController();
-    cardExpiryController = TextEditingController();
-    cardCvvController = TextEditingController();
-    cardNameController = TextEditingController();
-    mobileMoneyPhoneController = TextEditingController();
-  }
-
-  void _setupSocketListeners() {
-    _socketService.on('payment_confirmed', _handlePaymentConfirmed);
-    _socketService.on('payment_failed', _handlePaymentFailed);
-  }
-
   Future<void> _loadPaymentMethods() async {
     try {
       _isLoading.value = true;
       final methods = await _paymentService.getPaymentMethods();
-      _paymentMethods.value = methods;
 
-      // Select first available method by default
-      if (methods.isNotEmpty) {
+      if (!methods.any((m) => m.code == 'cash')) {
+        methods.add(PaymentMethod(
+          id: 'cash',
+          name: 'Pay at Station',
+          code: 'cash',
+          icon: null,
+          minAmount: 1,
+          maxAmount: 100000,
+          isActive: true,
+        ));
+      }
+
+      _paymentMethods.value = methods;
+      if (methods.isNotEmpty && _selectedMethod.value == null) {
         _selectedMethod.value = methods.first;
       }
     } catch (e) {
       print('Error loading payment methods: $e');
+      _paymentMethods.value = [
+        PaymentMethod(id: 'telebirr', name: 'Telebirr', code: 'telebirr', icon: null, minAmount: 1, maxAmount: 50000, isActive: true),
+        PaymentMethod(id: 'cbe_birr', name: 'CBE Birr', code: 'cbe_birr', icon: null, minAmount: 1, maxAmount: 50000, isActive: true),
+        PaymentMethod(id: 'cash', name: 'Pay at Station', code: 'cash', icon: null, minAmount: 1, maxAmount: 100000, isActive: true),
+      ];
+      if (_paymentMethods.isNotEmpty && _selectedMethod.value == null) {
+        _selectedMethod.value = _paymentMethods.first;
+      }
     } finally {
       _isLoading.value = false;
     }
@@ -147,7 +179,6 @@ class PassengerPaymentController extends GetxController {
     _countdownTimer?.cancel();
     _statusChecker?.cancel();
     _paymentStatus.value = PaymentStatus.timeout;
-
     Get.snackbar(
       'Payment Timeout',
       'The payment session has expired. Please try again.',
@@ -162,71 +193,75 @@ class PassengerPaymentController extends GetxController {
 
   Future<void> initiatePayment() async {
     if (_selectedMethod.value == null) {
-      Get.snackbar(
-        'No Payment Method',
-        'Please select a payment method',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('No Payment Method', 'Please select a payment method', snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+
+    if (booking == null) {
+      Get.snackbar('Error', 'Booking information not available', snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
     try {
       _isProcessing.value = true;
-
       PaymentModel? payment;
 
       switch (_selectedMethod.value!.code) {
         case 'telebirr':
+        case 'cbe_birr':
+          if (mobileMoneyPhoneController.text.isEmpty) {
+            Get.snackbar('Phone Required', 'Please enter your phone number', snackPosition: SnackPosition.BOTTOM);
+            _isProcessing.value = false;
+            return;
+          }
           payment = await _paymentService.initiateTelebirrPayment(
             amount: amount,
             phone: mobileMoneyPhoneController.text,
-            reference: booking.id,
-            metadata: {'bookingId': booking.id},
+            reference: booking!.id,
+            metadata: {'bookingId': booking!.id},
           );
           break;
-
-        case 'cbe_birr':
-          payment = await _paymentService.initiateCbeBirrPayment(
-            amount: amount,
-            phone: mobileMoneyPhoneController.text,
-            reference: booking.id,
-            metadata: {'bookingId': booking.id},
-          );
-          break;
-
         case 'card':
+          if (cardNumberController.text.isEmpty || cardExpiryController.text.isEmpty ||
+              cardCvvController.text.isEmpty || cardNameController.text.isEmpty) {
+            Get.snackbar('Required Fields', 'Please fill all card details', snackPosition: SnackPosition.BOTTOM);
+            _isProcessing.value = false;
+            return;
+          }
           payment = await _paymentService.initiateCardPayment(
             amount: amount,
             cardNumber: cardNumberController.text,
             expiryMonth: cardExpiryController.text.split('/').first,
             expiryYear: '20${cardExpiryController.text.split('/').last}',
             cvv: cardCvvController.text,
-            reference: booking.id,
-            metadata: {
-              'bookingId': booking.id,
-              'cardHolder': cardNameController.text,
-            },
+            reference: booking!.id,
+            metadata: {'bookingId': booking!.id, 'cardHolder': cardNameController.text},
           );
           break;
-
         case 'wallet':
           payment = await _processWalletPayment();
+          break;
+        case 'cash':
+          payment = await _processCashPayment();
           break;
       }
 
       if (payment != null) {
         _payment.value = payment;
-        _paymentStatus.value = PaymentStatus.pending;
-        _startStatusChecking(payment.id);
+        if (_selectedMethod.value!.code == 'cash') {
+          _paymentStatus.value = PaymentStatus.completed;
+          _countdownTimer?.cancel();
+          _statusChecker?.cancel();
+          await _handlePaymentSuccess();
+        } else {
+          _paymentStatus.value = PaymentStatus.pending;
+          _startStatusChecking(payment.id);
+        }
       }
     } catch (e) {
       print('Payment initiation error: $e');
       _paymentStatus.value = PaymentStatus.failed;
-      Get.snackbar(
-        'Payment Failed',
-        'Failed to initiate payment. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('Payment Failed', 'Failed to initiate payment. Please try again.', snackPosition: SnackPosition.BOTTOM);
     } finally {
       _isProcessing.value = false;
     }
@@ -234,38 +269,59 @@ class PassengerPaymentController extends GetxController {
 
   Future<PaymentModel?> _processWalletPayment() async {
     try {
-      final response = await _apiClient.post(
-        '/payments/wallet',
-        data: {
-          'bookingId': booking.id,
-          'amount': amount,
-        },
-      );
-
-      if (response != null && response['data'] != null) {
-        return PaymentModel.fromJson(response['data']);
-      }
-      return null;
+      final response = await _apiClient.post('/payments/wallet', data: {
+        'bookingId': booking!.id,
+        'amount': amount
+      });
+      return response != null && response['data'] != null ? PaymentModel.fromJson(response['data']) : null;
     } catch (e) {
       print('Wallet payment error: $e');
       return null;
     }
   }
 
+  Future<PaymentModel?> _processCashPayment() async {
+    try {
+      final response = await _apiClient.post('/payments/cash', data: {
+        'bookingId': booking!.id,
+        'amount': amount,
+        'station': stationNameController.text.isNotEmpty ? stationNameController.text : 'Bus Station',
+      });
+
+      if (response != null && response['data'] != null) {
+        print('✅ Cash payment recorded in backend');
+        return PaymentModel.fromJson(response['data']);
+      }
+      return null;
+    } catch (e) {
+      print('Cash payment error: $e');
+      return PaymentModel(
+        id: 'cash_${DateTime.now().millisecondsSinceEpoch}',
+        bookingId: booking!.id,
+        userId: booking!.userId,
+        amount: amount,
+        currency: 'ETB',
+        method: 'cash',
+        status: 'completed',
+        transactionId: 'CASH_${DateTime.now().millisecondsSinceEpoch}',
+        reference: booking!.reference ?? booking!.id,
+        createdAt: DateTime.now(),
+        completedAt: DateTime.now(),
+      );
+    }
+  }
+
   void _startStatusChecking(String paymentId) {
     int attempts = 0;
-    const maxAttempts = 30; // 30 attempts * 2 seconds = 1 minute
-
+    const maxAttempts = 30;
     _statusChecker = Timer.periodic(const Duration(seconds: 2), (timer) async {
       attempts++;
-
       final status = await _paymentService.verifyPayment(paymentId);
-
       if (status == PaymentStatus.completed) {
         timer.cancel();
         _countdownTimer?.cancel();
         _paymentStatus.value = PaymentStatus.completed;
-        _handlePaymentSuccess();
+        await _handlePaymentSuccess();
       } else if (status == PaymentStatus.failed || attempts >= maxAttempts) {
         timer.cancel();
         _paymentStatus.value = PaymentStatus.failed;
@@ -285,26 +341,41 @@ class PassengerPaymentController extends GetxController {
   void _handlePaymentFailed(dynamic data) {
     if (data['paymentId'] == _payment.value?.id) {
       _paymentStatus.value = PaymentStatus.failed;
-      Get.snackbar(
-        'Payment Failed',
-        data['message'] ?? 'Transaction failed. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('Payment Failed', data['message'] ?? 'Transaction failed. Please try again .', snackPosition: SnackPosition.BOTTOM);
     }
   }
 
-  void _handlePaymentSuccess() {
-    Get.offAllNamed(
-      '/passenger/payment/success',
-      arguments: {
-        'booking': booking,
-        'payment': _payment.value,
-      },
-    );
+  Future<void> _handlePaymentSuccess() async {
+    if (_isNavigating) return;
+    _isNavigating = true;
+
+    // Show loading
+    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+
+    await _confirmBooking();
+
+    if (Get.isDialogOpen ?? false) Get.back();
+
+    Get.offAllNamed('/passenger/payment/success', arguments: {
+      'booking': booking,
+      'payment': _payment.value,
+      'amount': amount,           // ✅ Use 'amount' key
+      'selectedMethod': _selectedMethod.value,
+    });
+  }
+
+  Future<void> _confirmBooking() async {
+    if (booking == null) return;
+    try {
+      await _apiClient.post('/bookings/confirm', data: {'bookingId': booking!.id});
+      print('✅ Booking confirmed successfully');
+    } catch (e) {
+      print('⚠️ Error confirming booking: $e');
+    }
   }
 
   void retryPayment() {
-    _paymentStatus.value = ProcessingStatus.processing as PaymentStatus;
+    _paymentStatus.value = PaymentStatus.processing;
     _countdownSeconds.value = 300;
     _startCountdown();
     initiatePayment();
@@ -314,62 +385,37 @@ class PassengerPaymentController extends GetxController {
     _countdownTimer?.cancel();
     _statusChecker?.cancel();
     Get.back();
-    Get.snackbar(
-      'Payment Cancelled',
-      'Your payment has been cancelled',
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    Get.snackbar('Payment Cancelled', 'Your payment has been cancelled', snackPosition: SnackPosition.BOTTOM);
   }
 
-  // Card input formatters
   void formatCardNumber(String value) {
-    // Remove all non-digits
     String digits = value.replaceAll(RegExp(r'\D'), '');
-
-    // Add spaces every 4 digits
     String formatted = '';
     for (int i = 0; i < digits.length; i++) {
-      if (i > 0 && i % 4 == 0) {
-        formatted += ' ';
-      }
+      if (i > 0 && i % 4 == 0) formatted += ' ';
       formatted += digits[i];
     }
-
-    cardNumberController.value = cardNumberController.value.copyWith(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
+    cardNumberController.value = cardNumberController.value.copyWith(text: formatted, selection: TextSelection.collapsed(offset: formatted.length));
   }
 
   void formatExpiry(String value) {
-    // Remove all non-digits
     String digits = value.replaceAll(RegExp(r'\D'), '');
-
     if (digits.length >= 2) {
       String month = digits.substring(0, 2);
-      if (int.parse(month) > 12) {
-        month = '12';
-      }
-
+      if (int.parse(month) > 12) month = '12';
       String formatted = month;
       if (digits.length > 2) {
         String year = digits.substring(2, digits.length > 4 ? 4 : digits.length);
         formatted += '/$year';
       }
-
-      cardExpiryController.value = cardExpiryController.value.copyWith(
-        text: formatted,
-        selection: TextSelection.collapsed(offset: formatted.length),
-      );
+      cardExpiryController.value = cardExpiryController.value.copyWith(text: formatted, selection: TextSelection.collapsed(offset: formatted.length));
     } else {
       cardExpiryController.text = digits;
     }
   }
 
   void formatCvv(String value) {
-    if (value.length > 3) {
-      cardCvvController.text = value.substring(0, 3);
-    }
+    if (value.length > 3) cardCvvController.text = value.substring(0, 3);
   }
 
   @override
@@ -381,6 +427,7 @@ class PassengerPaymentController extends GetxController {
     cardCvvController.dispose();
     cardNameController.dispose();
     mobileMoneyPhoneController.dispose();
+    stationNameController.dispose();
     _socketService.off('payment_confirmed', _handlePaymentConfirmed);
     _socketService.off('payment_failed', _handlePaymentFailed);
     super.onClose();
@@ -393,11 +440,4 @@ enum PaymentStatus {
   completed,
   failed,
   timeout,
-}
-
-enum ProcessingStatus {
-  idle,
-  processing,
-  completed,
-  failed,
 }

@@ -284,7 +284,7 @@ class SocketService extends GetxService {
   void _handlePaymentConfirm(dynamic data) {
     print('💰 Payment confirmation received: $data');
     if (Get.isRegistered<passenger_payment.PassengerPaymentController>()) {
-      Get.find<passenger_payment.PassengerPaymentController>().handlePaymentConfirmation(data);
+      Get.find<passenger_payment.PassengerPaymentController>().handlePaymentConfirmed(data);
     }
   }
 

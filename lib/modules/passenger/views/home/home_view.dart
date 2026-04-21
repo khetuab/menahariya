@@ -221,7 +221,7 @@ class HomeView extends GetView<HomeController> {
             );
           }
           return SizedBox(
-            height: 100,
+            height: 130,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: controller.popularRoutes.length,
@@ -352,7 +352,7 @@ class HomeView extends GetView<HomeController> {
               ),
           ],
         ),
-        const SizedBox(height: AppDimens.margin12),
+        const SizedBox(height: 50),
         Obx(() {
           if (controller.recentSearches.isEmpty) {
             return _buildEmptyState(

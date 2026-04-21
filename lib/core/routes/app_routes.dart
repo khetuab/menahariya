@@ -30,7 +30,7 @@ class AppRoutes {
   static const String passengerSeatSelection = '/passenger/seat-selection';
   static const String passengerBookingSummary = '/passenger/booking-summary';
   static const String passengerPayment = '/passenger/payment';
-  static const String passengerPaymentSuccess = '/passenger/payment-success';
+  static const String passengerPaymentSuccess = '/passenger/payment/success';
   static const String passengerMyTickets = '/passenger/my-tickets';
   static const String passengerTicketDetail = '/passenger/ticket-detail';
   static const String passengerTicketQR = '/passenger/ticket-qr';

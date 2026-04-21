@@ -14,6 +14,7 @@ class AdminCargoController extends GetxController {
   final ApiClient _apiClient = ApiClient.instance;
 
   final searchController = TextEditingController();
+
   // Observables
   final _isLoading = false.obs;
   final _isRefreshing = false.obs;
@@ -37,6 +38,17 @@ class AdminCargoController extends GetxController {
   late final TextEditingController locationController;
   late final TextEditingController notesController;
 
+  // Statistics
+  final _statsTotal = 0.obs;
+  final _statsRegistered = 0.obs;
+  final _statsLoaded = 0.obs;
+  final _statsInTransit = 0.obs;
+  final _statsDelivered = 0.obs;
+  final _statsCancelled = 0.obs;
+  final _statsRevenue = 0.0.obs;
+  final _statsWeight = 0.0.obs;
+
+
   // Getters
   bool get isLoading => _isLoading.value;
   bool get isRefreshing => _isRefreshing.value;
@@ -49,15 +61,17 @@ class AdminCargoController extends GetxController {
   bool get hasMorePages => _hasMorePages.value;
   int get totalCount => _totalCount.value;
   double get totalRevenue => _totalRevenue.value;
+  double get statsRevenue => _statsRevenue.value;
+  double get statsWeight => _statsWeight.value;
   double get totalWeight => _totalWeight.value;
 
-  // Statistics
-  int get totalCargo => _cargoList.length;
-  int get registeredCargo => _cargoList.where((c) => c.isRegistered).length;
-  int get loadedCargo => _cargoList.where((c) => c.isLoaded).length;
-  int get inTransitCargo => _cargoList.where((c) => c.isInTransit).length;
-  int get deliveredCargo => _cargoList.where((c) => c.isDelivered).length;
-  int get cancelledCargo => _cargoList.where((c) => c.isCancelled).length;
+  // Statistics getters
+  int get totalCargo => _statsTotal.value;
+  int get registeredCargo => _statsRegistered.value;
+  int get loadedCargo => _statsLoaded.value;
+  int get inTransitCargo => _statsInTransit.value;
+  int get deliveredCargo => _statsDelivered.value;
+  int get cancelledCargo => _statsCancelled.value;
 
   // Available statuses for filter
   final List<String> availableStatuses = [
@@ -74,12 +88,32 @@ class AdminCargoController extends GetxController {
     super.onInit();
     _initializeControllers();
     fetchCargoList();
+    fetchStatistics();
   }
 
   void _initializeControllers() {
     statusController = TextEditingController();
     locationController = TextEditingController();
     notesController = TextEditingController();
+  }
+
+  Future<void> fetchStatistics() async {
+    try {
+      final response = await _apiClient.get('/admin/cargo/stats');
+      if (response != null && response['data'] != null) {
+        final data = response['data'];
+        _statsTotal.value = data['totalCargo'] ?? 0;
+        _statsRegistered.value = data['registeredCargo'] ?? 0;
+        _statsLoaded.value = data['loadedCargo'] ?? 0;
+        _statsInTransit.value = data['inTransitCargo'] ?? 0;
+        _statsDelivered.value = data['deliveredCargo'] ?? 0;
+        _statsCancelled.value = data['cancelledCargo'] ?? 0;
+        _statsRevenue.value = data['totalRevenue']?.toDouble() ?? 0;
+        _statsWeight.value = data['totalWeight']?.toDouble() ?? 0;
+      }
+    } catch (e) {
+      print('Error fetching cargo stats: $e');
+    }
   }
 
   Future<void> fetchCargoList({bool refresh = false}) async {
@@ -103,11 +137,13 @@ class AdminCargoController extends GetxController {
       if (_statusFilter.value.isNotEmpty && _statusFilter.value != 'all') {
         params['status'] = _statusFilter.value;
       }
-      if (_dateFilter.value != null) params['date'] = _dateFilter.value!.toIso8601String();
+      if (_dateFilter.value != null) {
+        params['date'] = _dateFilter.value!.toIso8601String().split('T')[0];
+      }
       if (_destinationFilter.value.isNotEmpty) params['destination'] = _destinationFilter.value;
 
       final response = await _apiClient.get(
-        ApiEndpoints.cargoHistory,
+        '/admin/cargo',
         queryParameters: params,
       );
 
@@ -181,7 +217,6 @@ class AdminCargoController extends GetxController {
         final cargo = CargoModel.fromJson(response['data']);
         _selectedCargo.value = cargo;
 
-        // Populate form controllers
         statusController.text = cargo.status;
         locationController.text = cargo.location ?? '';
         notesController.text = cargo.notes ?? '';
@@ -202,7 +237,7 @@ class AdminCargoController extends GetxController {
       _isLoading.value = true;
 
       final response = await _apiClient.patch(
-        '${ApiEndpoints.cargo}/$cargoId/status',
+        '/admin/cargo/$cargoId/status',
         data: {
           'status': status,
           'location': location,
@@ -212,6 +247,7 @@ class AdminCargoController extends GetxController {
 
       if (response != null && response['success'] == true) {
         await fetchCargoList(refresh: true);
+        await fetchStatistics();
         AppSnackbar.show('Success', 'Cargo status updated successfully');
         return true;
       }
@@ -249,10 +285,11 @@ class AdminCargoController extends GetxController {
 
       _isLoading.value = true;
 
-      final response = await _apiClient.delete('${ApiEndpoints.cargo}/$cargoId');
+      final response = await _apiClient.delete('/admin/cargo/$cargoId');
 
       if (response != null && response['success'] == true) {
         await fetchCargoList(refresh: true);
+        await fetchStatistics();
         AppSnackbar.show('Success', 'Cargo deleted successfully');
         return true;
       }
@@ -299,6 +336,7 @@ class AdminCargoController extends GetxController {
   Future<void> refreshCargo() async {
     _isRefreshing.value = true;
     await fetchCargoList(refresh: true);
+    await fetchStatistics();
     _isRefreshing.value = false;
   }
 
