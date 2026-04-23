@@ -126,7 +126,7 @@ class MenahariyaSmartApp extends StatelessWidget {
       initialBinding: InitialBinding(),
 
       // Other Configurations
-      defaultTransition: Transition.rightToLeft,
+      defaultTransition: Transition.cupertinoDialog,
       transitionDuration: const Duration(milliseconds: 300),
       //
       // // Builder for environment badge in development

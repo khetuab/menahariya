@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/app_colors.dart';
 import 'package:menahariya/core/constants/app_dimens.dart';
-import 'package:menahariya/core/constants/app_fonts.dart';
 import 'package:menahariya/core/constants/app_constants.dart';
 import 'package:menahariya/core/constants/app_strings.dart';
 import 'package:menahariya/core/routes/app_routes.dart';
