@@ -71,7 +71,7 @@ class DriverDashboardController extends GetxController {
     'Dashboard',
     'Trips',
     'Boarding',
-    'Validate',
+    // 'Validate',
     'Profile',
   ];
 
@@ -79,7 +79,7 @@ class DriverDashboardController extends GetxController {
     Icons.dashboard_rounded,
     Icons.route_rounded,
     Icons.airport_shuttle_rounded,
-    Icons.qr_code_scanner_rounded,
+    //Icons.qr_code_scanner_rounded,
     Icons.person_rounded,
   ];
 
@@ -158,6 +158,54 @@ class DriverDashboardController extends GetxController {
     }
   }
 
+
+  Future<void> _loadTodayStats() async {
+    try {
+      final response = await _apiClient.get(
+        '/driver/today-stats',
+      );
+
+      if (response != null && response['data'] != null) {
+        _todayTrips.value = response['data']['todayTrips'] ?? 0;
+        _completedTrips.value = response['data']['completedTrips'] ?? 0;
+        _totalPassengers.value = response['data']['totalPassengers'] ?? 0;
+        // Fix: Get cargo count from the response
+        _totalCargo.value = response['data']['totalCargo'] ?? 0;
+
+        print('📊 Driver stats - Cargo: ${_totalCargo.value}, Passengers: ${_totalPassengers.value}');
+      }
+    } catch (e) {
+      print('Error loading today stats: $e');
+      // If API fails, try to get from assigned trips
+      await _loadCargoFromTrips();
+    }
+  }
+
+// Add this method to fetch cargo from assigned trips
+  Future<void> _loadCargoFromTrips() async {
+    try {
+      final response = await _apiClient.get(
+        ApiEndpoints.driverAssignedTrips,
+        queryParameters: {'status': 'scheduled', 'limit': 10},
+      );
+
+      if (response != null && response['data'] != null) {
+        final List<dynamic> trips = response['data'];
+        int totalCargo = 0;
+        for (var trip in trips) {
+          final tripId = trip['_id'];
+          final cargoResponse = await _apiClient.get('/driver/cargo-list/$tripId');
+          if (cargoResponse != null && cargoResponse['data'] != null) {
+            totalCargo += (cargoResponse['data'] as List).length;
+          }
+        }
+        _totalCargo.value = totalCargo;
+      }
+    } catch (e) {
+      print('Error loading cargo from trips: $e');
+    }
+  }
+
   Future<void> _loadDriverData() async {
     try {
       _isLoading.value = true;
@@ -186,22 +234,7 @@ class DriverDashboardController extends GetxController {
     _socketService.on('boarding_update', _handleBoardingUpdate);
   }
 
-  Future<void> _loadTodayStats() async {
-    try {
-      final response = await _apiClient.get(
-        '/driver/today-stats',
-      );
 
-      if (response != null && response['data'] != null) {
-        _todayTrips.value = response['data']['todayTrips'] ?? 0;
-        _completedTrips.value = response['data']['completedTrips'] ?? 0;
-        _totalPassengers.value = response['data']['totalPassengers'] ?? 0;
-        _totalCargo.value = response['data']['totalCargo'] ?? 0;
-      }
-    } catch (e) {
-      print('Error loading today stats: $e');
-    }
-  }
 
   Future<void> _loadCurrentTrip() async {
     try {

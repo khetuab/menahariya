@@ -218,7 +218,33 @@ class AuthController extends GetxController {
     }
   }
 
+  Future<void> updateUser(UserModel updatedUser) async {
+    // Update the current user observable
+    _currentUser.value = updatedUser;
 
+    // Update stored user data
+    await _secureStorage.writeObject(AppConstants.prefKeyUser, updatedUser.toJson());
+
+    print('✅ User data updated successfully ');
+  }
+
+  // Alternative: Update specific fields
+  Future<void> updateUserFields(Map<String, dynamic> updates) async {
+    if (_currentUser.value != null) {
+      final updatedUser = _currentUser.value!.copyWith(
+        fullName: updates['fullName'] ?? _currentUser.value!.fullName,
+        phone: updates['phone'] ?? _currentUser.value!.phone,
+        email: updates['email'] ?? _currentUser.value!.email,
+        licenseNumber: updates['licenseNumber'] ?? _currentUser.value!.licenseNumber,
+        licenseExpiry: updates['licenseExpiry'] != null
+            ? DateTime.parse(updates['licenseExpiry'])
+            : _currentUser.value!.licenseExpiry,
+      );
+
+      _currentUser.value = updatedUser;
+      await _secureStorage.writeObject('user', updatedUser.toJson());
+    }
+  }
 // Verify OTP
   Future<bool> verifyOTP(String phone, String otp, {String? userId}) async {
     try {

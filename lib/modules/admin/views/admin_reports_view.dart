@@ -10,10 +10,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimens.dart';
 import '../../../core/constants/app_fonts.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
-import '../../../core/widgets/buttons/secondary_button.dart';
-import '../../../core/widgets/inputs/custom_textfield.dart';
-import '../../../core/widgets/loading/shimmer_loading.dart';
-import '../../auth/controllers/auth_controller.dart';
 import '../controllers/admin_report_controller.dart';
 
 class AdminReportsView extends GetView<AdminReportController> {

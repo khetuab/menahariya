@@ -370,6 +370,7 @@ class AdminTripsView extends GetView<AdminTripController> {
                   child: _buildInfoTile(
                     icon: Icons.directions_bus_rounded,
                     label: 'Vehicle',
+                    // Use vehicle object if available, fallback to vehicleId
                     value: trip.vehicle?.plateNumber ?? 'N/A',
                   ),
                 ),
@@ -377,6 +378,7 @@ class AdminTripsView extends GetView<AdminTripController> {
                   child: _buildInfoTile(
                     icon: Icons.person_rounded,
                     label: 'Driver',
+                    // Use driver object if available, fallback to driverId
                     value: trip.driver?.fullName?.split(' ').first ?? 'Not Assigned',
                   ),
                 ),
@@ -1054,7 +1056,10 @@ class AdminTripsView extends GetView<AdminTripController> {
     );
   }
 
-  void _showEditTripDialog(dynamic trip) {
+  void _showEditTripDialog(dynamic trip) async {
+    final theme = Get.context!.theme;
+    final isDark = theme.brightness == Brightness.dark;
+
     // Pre-fill controllers
     controller.routeIdController.text = trip.routeId;
     controller.vehicleIdController.text = trip.vehicleId;
@@ -1064,7 +1069,256 @@ class AdminTripsView extends GetView<AdminTripController> {
     controller.priceController.text = trip.price.toString();
     controller.notesController.text = trip.notes ?? '';
 
-    Get.snackbar('Info', 'Edit functionality - implement similar to create dialog with pre-filled values');
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimens.radius20)),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppDimens.padding20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Edit Trip',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: AppFonts.bold,
+                        fontSize: 22,
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.grey800 : AppColors.grey100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () => Get.back(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppDimens.margin24),
+
+                // Route Selection (read-only in edit)
+                _buildFormField(
+                  label: 'Route',
+                  child: DropdownButtonFormField<String>(
+                    value: controller.routeIdController.text,
+                    decoration: _buildInputDecoration('Select route', Icons.route_rounded),
+                    items: controller.routes.map((route) {
+                      return DropdownMenuItem(
+                        value: route.id,
+                        child: Text(
+                          '${route.origin} → ${route.destination}',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) => controller.routeIdController.text = value ?? '',
+                  ),
+                ),
+
+                const SizedBox(height: AppDimens.margin16),
+
+                // Vehicle Selection
+                _buildFormField(
+                  label: 'Vehicle',
+                  child: DropdownButtonFormField<String>(
+                    value: controller.vehicleIdController.text,
+                    decoration: _buildInputDecoration('Select vehicle', Icons.directions_bus_rounded),
+                    items: controller.vehicles.map((vehicle) {
+                      return DropdownMenuItem(
+                        value: vehicle.id,
+                        child: Text(
+                          '${vehicle.plateNumber} - ${vehicle.model}',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) => controller.vehicleIdController.text = value ?? '',
+                  ),
+                ),
+
+                const SizedBox(height: AppDimens.margin16),
+
+                // Driver Selection
+                _buildFormField(
+                  label: 'Driver',
+                  child: Obx(() {
+                    if (controller.drivers.isEmpty) {
+                      return DropdownButtonFormField<String>(
+                        decoration: _buildInputDecoration('No drivers available', Icons.person_rounded),
+                        value: null,
+                        items: const [
+                          DropdownMenuItem(value: null, child: Text('No drivers available'))
+                        ],
+                        onChanged: null,
+                      );
+                    }
+                    return DropdownButtonFormField<String>(
+                      value: controller.driverIdController.text.isEmpty ? null : controller.driverIdController.text,
+                      decoration: _buildInputDecoration('Select driver', Icons.person_rounded),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('Select Driver')),
+                        ...controller.drivers.map((driver) {
+                          return DropdownMenuItem(
+                            value: driver.id,
+                            child: Text(
+                              driver.fullName ?? 'Unknown Driver',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (value) {
+                        controller.driverIdController.text = value ?? '';
+                      },
+                    );
+                  }),
+                ),
+
+                const SizedBox(height: AppDimens.margin16),
+
+                // Departure Time
+                _buildFormField(
+                  label: 'Departure Time',
+                  child: GestureDetector(
+                    onTap: () => _selectDateTime(Get.context!, isDeparture: true),
+                    child: AbsorbPointer(
+                      child: TextField(
+                        controller: controller.departureTimeController,
+                        style: const TextStyle(fontSize: 14),
+                        decoration: _buildInputDecoration('Select date and time', Icons.calendar_today_rounded),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: AppDimens.margin16),
+
+                // Arrival Time
+                _buildFormField(
+                  label: 'Arrival Time',
+                  child: GestureDetector(
+                    onTap: () => _selectDateTime(Get.context!, isDeparture: false),
+                    child: AbsorbPointer(
+                      child: TextField(
+                        controller: controller.arrivalTimeController,
+                        style: const TextStyle(fontSize: 14),
+                        decoration: _buildInputDecoration('Select date and time', Icons.calendar_today_rounded),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: AppDimens.margin16),
+
+                // Price
+                _buildFormField(
+                  label: 'Price',
+                  child: CustomTextField(
+                    controller: controller.priceController,
+                    hint: 'Enter price in ETB',
+                    keyboardType: TextInputType.number,
+                    prefixIcon: Icons.attach_money_rounded,
+                    label: 'Price',
+                  ),
+                ),
+
+                const SizedBox(height: AppDimens.margin16),
+
+                // Notes
+                _buildFormField(
+                  label: 'Notes (Optional)',
+                  child: CustomTextField(
+                    controller: controller.notesController,
+                    hint: 'Any additional information...',
+                    maxLines: 2,
+                    prefixIcon: Icons.note_rounded,
+                    label: 'Notes',
+                  ),
+                ),
+
+                const SizedBox(height: AppDimens.margin24),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        text: 'Cancel',
+                        onPressed: () => Get.back(),
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.margin12),
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Update Trip',
+                        onPressed: () async {
+                          // Validate
+                          if (controller.routeIdController.text.isEmpty) {
+                            Get.snackbar('Error', 'Please select a route',
+                                snackPosition: SnackPosition.TOP);
+                            return;
+                          }
+                          if (controller.vehicleIdController.text.isEmpty) {
+                            Get.snackbar('Error', 'Please select a vehicle',
+                                snackPosition: SnackPosition.TOP);
+                            return;
+                          }
+                          if (controller.driverIdController.text.isEmpty) {
+                            Get.snackbar('Error', 'Please select a driver',
+                                snackPosition: SnackPosition.TOP);
+                            return;
+                          }
+                          if (controller.departureTimeController.text.isEmpty) {
+                            Get.snackbar('Error', 'Please select departure time',
+                                snackPosition: SnackPosition.TOP);
+                            return;
+                          }
+                          if (controller.arrivalTimeController.text.isEmpty) {
+                            Get.snackbar('Error', 'Please select arrival time',
+                                snackPosition: SnackPosition.TOP);
+                            return;
+                          }
+                          if (controller.priceController.text.isEmpty) {
+                            Get.snackbar('Error', 'Please enter price',
+                                snackPosition: SnackPosition.TOP);
+                            return;
+                          }
+
+                          final success = await controller.updateTrip(trip.id, {
+                            'routeId': controller.routeIdController.text,
+                            'vehicleId': controller.vehicleIdController.text,
+                            'driverId': controller.driverIdController.text,
+                            'departureTime': controller.departureTimeController.text,
+                            'arrivalTime': controller.arrivalTimeController.text,
+                            'price': double.tryParse(controller.priceController.text) ?? 0,
+                            'notes': controller.notesController.text.isEmpty ? null : controller.notesController.text,
+                          });
+                          if (success) Get.back();
+                        },
+                        isLoading: controller.isLoading,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: AppDimens.margin8),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showCancelTripDialog(dynamic trip) async {
@@ -1073,7 +1327,7 @@ class AdminTripsView extends GetView<AdminTripController> {
     final confirmed = await AdminConfirmationDialog.show(
       title: 'Cancel Trip',
       message: 'Are you sure you want to cancel the trip from ${trip.origin} to ${trip.destination}?',
-      confirmText: 'Cancel Trip',
+      confirmText: 'Cancel',
     );
 
     if (confirmed) {

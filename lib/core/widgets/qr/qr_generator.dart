@@ -177,14 +177,14 @@ class TicketQRWidget extends StatelessWidget {
                   size: 180,
                   backgroundColor: Colors.white,
                   color: Colors.black,
-                  logo: Container(
-                    padding: const EdgeInsets.all(4),
-                    child: Image.asset(
-                      'assets/illustrations/onboarding2.png',
-                      width: 30,
-                      height: 30,
-                    ),
-                  ),
+                  // logo: Container(
+                  //   padding: const EdgeInsets.all(4),
+                  //   child: Image.asset(
+                  //     'assets/illustrations/onboarding2.png',
+                  //     width: 30,
+                  //     height: 30,
+                  //   ),
+                  // ),
                 ),
 
                 if (showDetails) ...[

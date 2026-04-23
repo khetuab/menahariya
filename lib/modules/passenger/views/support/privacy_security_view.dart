@@ -5,8 +5,6 @@ import 'package:get/get.dart';
 import 'package:menahariya/core/constants/app_colors.dart';
 import 'package:menahariya/core/constants/app_dimens.dart';
 import 'package:menahariya/core/constants/app_fonts.dart';
-import 'package:menahariya/core/widgets/buttons/primary_button.dart';
-import 'package:menahariya/core/widgets/buttons/secondary_button.dart';
 import 'package:menahariya/modules/passenger/controllers/profile_controller.dart';
 
 class PrivacySecurityView extends GetView<PassengerProfileController> {

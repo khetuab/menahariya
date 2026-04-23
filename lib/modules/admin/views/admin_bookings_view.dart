@@ -13,8 +13,6 @@ import '../../../core/constants/app_fonts.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/buttons/secondary_button.dart';
 import '../../../core/widgets/inputs/custom_textfield.dart';
-import '../../../core/widgets/loading/shimmer_loading.dart';
-import '../../auth/controllers/auth_controller.dart';
 import '../controllers/admin_booking_controller.dart';
 
 class AdminBookingsView extends GetView<AdminBookingController> {
@@ -42,7 +40,7 @@ class AdminBookingsView extends GetView<AdminBookingController> {
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: controller.refreshBookings,
-            tooltip: 'Refresh',
+            tooltip: 'Refresh ',
           ),
         ],
       ),

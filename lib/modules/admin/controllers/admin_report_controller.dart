@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../core/constants/api_endpoints.dart';
 import '../../../core/services/api/api_client.dart';
 import '../../../core/utils/app_snackbar.dart';
 import '../models/admin_models.dart';

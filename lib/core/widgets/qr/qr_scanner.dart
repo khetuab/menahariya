@@ -97,12 +97,12 @@ class _QRScannerState extends State<QRScanner> {
     return Container(
       color: Colors.black,
       child: Stack(
-        children: [
+         children: [
           // Scanner View
           MobileScanner(
             controller: _controller,
             onDetect: _handleBarcode,
-            errorBuilder: (context, error, child) {
+            errorBuilder: (context, error) {
               return Container(
                 color: Colors.black,
                 child: Center(
@@ -132,7 +132,6 @@ class _QRScannerState extends State<QRScanner> {
                       const SizedBox(height: AppDimens.margin16),
                       ElevatedButton(
                         onPressed: () {
-                          // Request permission again
                           _controller.start();
                         },
                         child: const Text('Request Permission'),

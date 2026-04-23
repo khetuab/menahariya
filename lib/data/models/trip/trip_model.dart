@@ -83,16 +83,57 @@ class TripModel {
       return field.toString();
     }
 
+    // Parse vehicle - could be object or string
+    VehicleModel? vehicle;
+    String? vehicleId;
+
+    if (json['vehicleId'] != null) {
+      if (json['vehicleId'] is Map<String, dynamic>) {
+        // It's a populated vehicle object
+        vehicle = VehicleModel.fromJson(json['vehicleId']);
+        vehicleId = vehicle.id;
+      } else if (json['vehicleId'] is String) {
+        vehicleId = json['vehicleId'];
+      }
+    }
+
+    // Parse driver - could be object or string
+    UserModel? driver;
+    String? driverId;
+
+    if (json['driverId'] != null) {
+      if (json['driverId'] is Map<String, dynamic>) {
+        // It's a populated driver object
+        driver = UserModel.fromJson(json['driverId']);
+        driverId = driver.id;
+      } else if (json['driverId'] is String) {
+        driverId = json['driverId'];
+      }
+    }
+
+    // Parse route - could be object or string
+    RouteModel? route;
+    String? routeId;
+
+    if (json['routeId'] != null) {
+      if (json['routeId'] is Map<String, dynamic>) {
+        route = RouteModel.fromJson(json['routeId']);
+        routeId = route.id;
+      } else if (json['routeId'] is String) {
+        routeId = json['routeId'];
+      }
+    }
+
     return TripModel(
       id: json['_id'] is Map
           ? (json['_id']['\$oid'] ?? json['_id'].toString())
           : (json['_id'] ?? json['id'] ?? '').toString(),
-      routeId: extractId(json['routeId']),
-      route: json['route'] != null ? RouteModel.fromJson(json['route']) : null,
-      vehicleId: extractId(json['vehicleId']),
-      vehicle: json['vehicle'] != null ? VehicleModel.fromJson(json['vehicle']) : null,
-      driverId: extractId(json['driverId']),
-      driver: json['driver'] != null ? UserModel.fromJson(json['driver']) : null,
+      routeId: routeId ?? extractId(json['routeId']),
+      route: route,
+      vehicleId: vehicleId ?? extractId(json['vehicleId']),
+      vehicle: vehicle,
+      driverId: driverId ?? extractId(json['driverId']),
+      driver: driver,
       departureTime: DateTime.parse(json['departureTime'] is Map
           ? json['departureTime']['\$date']
           : json['departureTime']),

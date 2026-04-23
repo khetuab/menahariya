@@ -4,15 +4,14 @@ import 'package:get/get.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/data/models/passenger/passenger_model.dart';
 
-class PassengerListController extends GetxController {
-  static PassengerListController get instance => Get.find();
+import '../../../core/utils/app_snackbar.dart';
 
+class PassengerListController extends GetxController {
   final ApiClient _apiClient = ApiClient.instance;
 
-  // Current trip ID
-  late final String tripId;
+  final _tripId = ''.obs;
+  String get tripId => _tripId.value;
 
-  // Observables
   final _isLoading = false.obs;
   final _passengers = <PassengerModel>[].obs;
   final _filteredPassengers = <PassengerModel>[].obs;
@@ -20,14 +19,12 @@ class PassengerListController extends GetxController {
   final _selectedFilter = PassengerFilter.all.obs;
   final _selectedPassenger = Rxn<PassengerModel>();
 
-  // Getters
   bool get isLoading => _isLoading.value;
   List<PassengerModel> get passengers => _filteredPassengers;
   String get searchQuery => _searchQuery.value;
   PassengerFilter get selectedFilter => _selectedFilter.value;
   PassengerModel? get selectedPassenger => _selectedPassenger.value;
 
-  // Statistics
   int get totalCount => _passengers.length;
   int get checkedInCount => _passengers.where((p) => p.checkedIn).length;
   int get pendingCount => _passengers.where((p) => !p.checkedIn).length;
@@ -35,35 +32,40 @@ class PassengerListController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _getTripId();
+    // Do not auto-load; wait for setTripId()
+  }
+
+  void setTripId(String id) {
+    if (_tripId.value == id) return;
+    _tripId.value = id;
     loadPassengerList();
   }
 
-  void _getTripId() {
-    final args = Get.arguments;
-    if (args != null && args['tripId'] != null) {
-      tripId = args['tripId'];
-    }
-  }
-
   Future<void> loadPassengerList() async {
+    if (_tripId.value.isEmpty) {
+      print('⚠️ Cannot load passenger list: tripId is empty');
+      return;
+    }
+
     try {
       _isLoading.value = true;
+      print('👥 Loading passenger list for trip: ${_tripId.value}');
 
-      final response = await _apiClient.get(
-        '/driver/passenger-list/$tripId',
-      );
+      final response = await _apiClient.get('/driver/boarding-list/${_tripId.value}');
 
       if (response != null && response['data'] != null) {
         final List<dynamic> passengers = response['data'];
         _passengers.value = passengers
-            .map((p) => PassengerModel.fromJson(p))
+            .map((p) => PassengerModel.fromJson(p as Map<String, dynamic>))
             .toList();
-
+        print('✅ Loaded ${_passengers.length} passengers');
         _applyFilters();
+      } else {
+        _passengers.value = [];
       }
     } catch (e) {
-      print('Error loading passenger list: $e');
+      print('❌ Error loading passenger list: $e');
+      _passengers.value = [];
     } finally {
       _isLoading.value = false;
     }
@@ -72,7 +74,6 @@ class PassengerListController extends GetxController {
   void _applyFilters() {
     var filtered = List<PassengerModel>.from(_passengers);
 
-    // Apply status filter
     switch (_selectedFilter.value) {
       case PassengerFilter.all:
         break;
@@ -87,7 +88,6 @@ class PassengerListController extends GetxController {
         break;
     }
 
-    // Apply search query
     if (_searchQuery.value.isNotEmpty) {
       final query = _searchQuery.value.toLowerCase();
       filtered = filtered.where((p) {
@@ -98,6 +98,7 @@ class PassengerListController extends GetxController {
     }
 
     _filteredPassengers.value = filtered;
+    print('👥 Filtered passengers: ${_filteredPassengers.length}');
   }
 
   void setFilter(PassengerFilter filter) {
@@ -109,15 +110,36 @@ class PassengerListController extends GetxController {
     _searchQuery.value = query;
     _applyFilters();
   }
+// lib/modules/driver/controllers/passenger_list_controller.dart
 
+  Future<void> markPassengerCheckedIn(String passengerId) async {
+    try {
+      await _apiClient.post(
+        '/driver/mark-checked-in',
+        data: {
+          'tripId': _tripId.value,
+          'passengerId': passengerId,
+        },
+      );
+
+      // Update local state
+      final index = _passengers.indexWhere((p) => p.id == passengerId);
+      if (index != -1) {
+        _passengers[index] = _passengers[index].copyWith(checkedIn: true);
+        _passengers.refresh();
+        _applyFilters();
+      }
+
+      AppSnackbar.show('Success', 'Passenger checked in successfully');
+    } catch (e) {
+      print('Error marking passenger checked in: $e');
+      AppSnackbar.show('Error', 'Failed to check in passenger');
+    }
+  }
   Future<void> selectPassenger(String passengerId) async {
     try {
       _isLoading.value = true;
-
-      final response = await _apiClient.get(
-        '/driver/passenger/$passengerId',
-      );
-
+      final response = await _apiClient.get('/driver/passenger/$passengerId');
       if (response != null && response['data'] != null) {
         _selectedPassenger.value = PassengerModel.fromJson(response['data']);
       }
@@ -133,24 +155,12 @@ class PassengerListController extends GetxController {
   }
 
   Future<void> refreshList() async {
-    loadPassengerList();
+    await loadPassengerList();
   }
 
-  List<PassengerModel> getPassengersBySeatRange(int start, int end) {
-    return _passengers
-        .where((p) {
-      final seatNum = int.tryParse(p.seatNumber.replaceAll(RegExp(r'[^0-9]'), ''));
-      return seatNum != null && seatNum >= start && seatNum <= end;
-    })
-        .toList();
-  }
-
-  Map<String, int> getSeatOccupancyStats() {
-    return {
-      'total': totalCount,
-      'occupied': checkedInCount,
-      'available': 50 - totalCount, // Assuming 50 seats per bus
-    };
+  @override
+  void onClose() {
+    super.onClose();
   }
 }
 

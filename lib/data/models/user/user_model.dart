@@ -61,6 +61,8 @@ class UserModel {
     this.loyaltyTier,
   });
 
+  // lib/data/models/user/user_model.dart
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     DateTime parseDate(dynamic dateValue) {
       if (dateValue == null) return DateTime.now();
@@ -77,32 +79,32 @@ class UserModel {
     }
 
     return UserModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      fullName: json['fullName'] ?? json['name'] ?? '',
-      phone: json['phone'] ?? '',
-      email: json['email'],
-      profileImage: json['profileImage'] ?? json['avatar'],
-      role: json['role'] ?? AppConstants.rolePassenger,
-      address: json['address'],
-      city: json['city'],
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      fullName: json['fullName']?.toString() ?? json['name']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      email: json['email']?.toString(),
+      profileImage: json['profileImage']?.toString() ?? json['avatar']?.toString(),
+      role: json['role']?.toString() ?? AppConstants.rolePassenger,
+      address: json['address']?.toString(),
+      city: json['city']?.toString(),
       dateOfBirth: json['dateOfBirth'] != null
-          ? DateTime.parse(json['dateOfBirth'])
+          ? DateTime.parse(json['dateOfBirth'].toString())
           : null,
-      gender: json['gender'],
+      gender: json['gender']?.toString(),
       isActive: json['isActive'] ?? true,
       isVerified: json['isVerified'] ?? false,
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
+          ? DateTime.parse(json['createdAt'].toString())
           : DateTime.now(),
       lastLogin: parseDate(json['lastLogin']),
       updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
+          ? DateTime.parse(json['updatedAt'].toString())
           : null,
-      metadata: json['metadata'],
+      metadata: json['metadata'] is Map ? Map<String, dynamic>.from(json['metadata']) : null,
       // Driver fields
-      licenseNumber: json['licenseNumber'],
+      licenseNumber: json['licenseNumber']?.toString(),
       licenseExpiry: json['licenseExpiry'] != null
-          ? DateTime.parse(json['licenseExpiry'])
+          ? DateTime.parse(json['licenseExpiry'].toString())
           : null,
       rating: json['rating']?.toDouble(),
       totalTrips: json['totalTrips'],
@@ -110,7 +112,7 @@ class UserModel {
       // Passenger fields
       walletBalance: json['walletBalance']?.toDouble(),
       loyaltyPoints: json['loyaltyPoints'],
-      loyaltyTier: json['loyaltyTier'],
+      loyaltyTier: json['loyaltyTier']?.toString(),
     );
   }
 

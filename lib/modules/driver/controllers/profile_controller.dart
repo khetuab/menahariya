@@ -13,6 +13,7 @@ import 'package:menahariya/core/utils/permissions/permission_handler.dart';
 import 'package:menahariya/core/utils/validators/auth_validator.dart';
 import 'package:menahariya/data/models/user/user_model.dart';
 import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
+import 'package:permission_handler/permission_handler.dart' as perm;
 
 import '../../../core/utils/app_snackbar.dart';
 
@@ -24,8 +25,9 @@ class DriverProfileController extends GetxController {
   final AuthController _authController = AuthController.instance;
   final ThemeController _themeController = ThemeController.to;
 
-  // User data
-  late final UserModel user;
+  // User data - make it observable and nullable initially
+  final _user = Rxn<UserModel>();
+  UserModel? get user => _user.value;
 
   // Form controllers
   late final TextEditingController nameController;
@@ -41,7 +43,7 @@ class DriverProfileController extends GetxController {
   final _profileImage = Rxn<File>();
   final _profileImageUrl = Rxn<String>();
   final _isEditing = false.obs;
-  final _driverStatus = true.obs; // online/offline
+  final _driverStatus = true.obs;
   final _totalTrips = 0.obs;
   final _totalDistance = 0.obs;
   final _rating = 0.0.obs;
@@ -81,26 +83,35 @@ class DriverProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadUserData();
     _initializeControllers();
+    _loadUserData(); // This will set _user.value
     _loadDriverStats();
     _loadPreferences();
   }
 
   void _loadUserData() {
-    user = _authController.currentUser!;
-    _profileImageUrl.value = user.profileImage;
-    _driverSince.value = user.createdAt;
+    final currentUser = _authController.currentUser;
+    if (currentUser != null) {
+      _user.value = currentUser;
+      _profileImageUrl.value = currentUser.profileImage;
+      _driverSince.value = currentUser.createdAt;
+
+      // Update controllers after user is loaded
+      nameController.text = currentUser.fullName;
+      emailController.text = currentUser.email ?? '';
+      phoneController.text = currentUser.phone;
+      licenseNumberController.text = currentUser.licenseNumber ?? '';
+      licenseExpiryController.text = currentUser.licenseExpiry?.toString().substring(0, 10) ?? '';
+    }
   }
 
   void _initializeControllers() {
-    nameController = TextEditingController(text: user.fullName);
-    emailController = TextEditingController(text: user.email ?? '');
-    phoneController = TextEditingController(text: user.phone);
-    licenseNumberController = TextEditingController(text: user.licenseNumber ?? '');
-    licenseExpiryController = TextEditingController(
-      text: user.licenseExpiry?.toString().substring(0, 10) ?? '',
-    );
+    // Initialize with empty values first, will be updated when user loads
+    nameController = TextEditingController();
+    emailController = TextEditingController();
+    phoneController = TextEditingController();
+    licenseNumberController = TextEditingController();
+    licenseExpiryController = TextEditingController();
   }
 
   Future<void> _loadDriverStats() async {
@@ -130,8 +141,16 @@ class DriverProfileController extends GetxController {
   }
 
   Future<void> pickImageFromCamera() async {
-    final granted = await PermissionHandler.requestCameraPermission();
-    if (!granted) return;
+    final status = await perm.Permission.camera.request();
+
+    if (!status.isGranted) {
+      if (status.isPermanentlyDenied) {
+        _showOpenSettingsDialog('Camera permission is permanently denied. Please enable it from app settings.');
+      } else {
+        AppSnackbar.show('Permission Required', 'Camera permission is needed to take photos');
+      }
+      return;
+    }
 
     try {
       final picker = ImagePicker();
@@ -148,16 +167,24 @@ class DriverProfileController extends GetxController {
       }
     } catch (e) {
       print('Error picking image from camera: $e');
-      AppSnackbar.show(
-        'Error',
-        'Failed to capture image',
-      );
+      AppSnackbar.show('Error', 'Failed to capture image');
     }
   }
 
   Future<void> pickImageFromGallery() async {
-    final granted = await PermissionHandler.requestStoragePermission();
-    if (!granted) return;
+    final granted = await PermissionHandler.requestImagePickerPermission();
+
+    if (!granted) {
+      Get.snackbar(
+        'Permission Required',
+        'Photos permission is needed to select images',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
 
     try {
       final picker = ImagePicker();
@@ -169,16 +196,138 @@ class DriverProfileController extends GetxController {
       );
 
       if (pickedFile != null) {
+        print('✅ Image selected: ${pickedFile.path}');
+        print('📏 File size: ${await pickedFile.length()} bytes');
         _profileImage.value = File(pickedFile.path);
         await _uploadProfileImage();
+      } else {
+        print('⚠️ No image selected by user');
       }
     } catch (e) {
-      print('Error picking image from gallery: $e');
-      AppSnackbar.show(
+      print('❌ Error picking image from gallery: $e');
+      Get.snackbar(
         'Error',
-        'Failed to pick image',
+        'Failed to pick image: ${e.toString().split('\n')[0]}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     }
+  }
+
+  Future<void> saveProfile() async {
+    if (user == null) {
+      AppSnackbar.show('Error', 'User data not loaded');
+      return;
+    }
+
+    if (nameController.text.trim().isEmpty) {
+      AppSnackbar.show('Error', 'Full name is required');
+      return;
+    }
+
+    if (phoneController.text.trim().isEmpty) {
+      AppSnackbar.show('Error', 'Phone number is required');
+      return;
+    }
+
+    final cleanPhone = phoneController.text.replaceAll(RegExp(r'\D'), '');
+    if (cleanPhone.length < 10) {
+      AppSnackbar.show('Error', 'Please enter a valid phone number');
+      return;
+    }
+
+    final email = emailController.text.trim();
+    if (email.isNotEmpty && !GetUtils.isEmail(email)) {
+      AppSnackbar.show('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    if (licenseNumberController.text.trim().isEmpty) {
+      AppSnackbar.show('Error', 'License number is required');
+      return;
+    }
+
+    if (licenseExpiryController.text.trim().isEmpty) {
+      AppSnackbar.show('Error', 'License expiry date is required');
+      return;
+    }
+
+    try {
+      _isSaving.value = true;
+
+      final updates = {
+        'fullName': nameController.text.trim(),
+        'phone': cleanPhone,
+        if (email.isNotEmpty) 'email': email,
+        'licenseNumber': licenseNumberController.text.trim(),
+        'licenseExpiry': licenseExpiryController.text.trim(),
+      };
+
+      final success = await _authController.updateProfile(updates);
+
+      if (success) {
+        final updatedUser = _authController.currentUser;
+        if (updatedUser != null) {
+          _user.value = updatedUser;
+          _profileImageUrl.value = updatedUser.profileImage;
+
+          nameController.text = updatedUser.fullName;
+          emailController.text = updatedUser.email ?? '';
+          phoneController.text = updatedUser.phone;
+          licenseNumberController.text = updatedUser.licenseNumber ?? '';
+          licenseExpiryController.text =
+              updatedUser.licenseExpiry?.toString().substring(0, 10) ?? '';
+        }
+
+        _isEditing.value = false;
+        AppSnackbar.show('Success', 'Profile updated successfully');
+        Get.back();
+      } else {
+        AppSnackbar.show('Error', 'Failed to update profile');
+      }
+    } catch (e) {
+      print('Error saving profile: $e');
+      AppSnackbar.show('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      _isSaving.value = false;
+    }
+  }
+
+  void toggleEditMode() {
+    if (user == null) return;
+
+    if (_isEditing.value) {
+      // Cancel editing - revert changes
+      nameController.text = user!.fullName;
+      emailController.text = user!.email ?? '';
+      phoneController.text = user!.phone;
+      licenseNumberController.text = user!.licenseNumber ?? '';
+      licenseExpiryController.text = user!.licenseExpiry?.toString().substring(0, 10) ?? '';
+    }
+    _isEditing.value = !_isEditing.value;
+  }
+
+  void _showOpenSettingsDialog(String message) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Permission Required'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              perm.openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _uploadProfileImage() async {
@@ -190,74 +339,48 @@ class DriverProfileController extends GetxController {
       final response = await _apiClient.uploadFile(
         ApiEndpoints.usersUpdateAvatar,
         _profileImage.value!.path,
+        fieldName: 'avatar',
       );
 
+      print('📥 Upload response: $response');
+
       if (response != null && response['data'] != null) {
-        _profileImageUrl.value = response['data']['url'];
+        String? imageUrl;
 
-        await _authController.updateProfile({
-          'profileImage': _profileImageUrl.value,
-        });
+        if (response['data']['url'] != null) {
+          imageUrl = response['data']['url'];
+        } else if (response['data']['imageUrl'] != null) {
+          imageUrl = response['data']['imageUrl'];
+        } else if (response['data']['profileImage'] != null) {
+          imageUrl = response['data']['profileImage'];
+        } else if (response['data']['avatar'] != null) {
+          imageUrl = response['data']['avatar'];
+        }
 
-        AppSnackbar.show(
-          'Success',
-          'Profile picture updated',
-        );
+        if (imageUrl != null) {
+          _profileImageUrl.value = imageUrl;
+
+          await _authController.updateProfile({
+            'profileImage': imageUrl,
+          });
+
+          // Update local user
+          if (_user.value != null) {
+            _user.value = _user.value!.copyWith(profileImage: imageUrl);
+          }
+
+          AppSnackbar.show('Success', 'Profile picture updated');
+        } else {
+          throw Exception('No URL found in response: ${response['data']}');
+        }
+      } else {
+        throw Exception('Invalid response: $response');
       }
     } catch (e) {
       print('Error uploading image: $e');
-      AppSnackbar.show(
-        'Error',
-        'Failed to upload image',
-      );
+      AppSnackbar.show('Error', 'Failed to upload image: ${e.toString().split('\n')[0]}');
     } finally {
       _isUploading.value = false;
-    }
-  }
-
-  void toggleEditMode() {
-    if (_isEditing.value) {
-      // Cancel editing
-      nameController.text = user.fullName;
-      emailController.text = user.email ?? '';
-      phoneController.text = user.phone;
-      licenseNumberController.text = user.licenseNumber ?? '';
-      licenseExpiryController.text = user.licenseExpiry?.toString().substring(0, 10) ?? '';
-    }
-    _isEditing.value = !_isEditing.value;
-  }
-
-  Future<void> saveProfile() async {
-    try {
-      _isSaving.value = true;
-
-      final updates = {
-        'fullName': nameController.text,
-        'email': emailController.text.isEmpty ? null : emailController.text,
-        'phone': phoneController.text,
-        'licenseNumber': licenseNumberController.text.isEmpty ? null : licenseNumberController.text,
-        'licenseExpiry': licenseExpiryController.text.isEmpty ? null : licenseExpiryController.text,
-      };
-
-      final success = await _authController.updateProfile(updates);
-
-      if (success) {
-        user = _authController.currentUser!;
-        _isEditing.value = false;
-
-        AppSnackbar.show(
-          'Success',
-          'Profile updated successfully',
-        );
-      }
-    } catch (e) {
-      print('Error saving profile: $e');
-      AppSnackbar.show(
-        'Error',
-        'Failed to update profile',
-      );
-    } finally {
-      _isSaving.value = false;
     }
   }
 
@@ -267,7 +390,6 @@ class DriverProfileController extends GetxController {
         '/driver/update-status',
         data: {'status': value ? 'online' : 'offline'},
       );
-
       _driverStatus.value = value;
     } catch (e) {
       print('Error toggling driver status: $e');

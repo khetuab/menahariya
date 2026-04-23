@@ -22,14 +22,11 @@ class DriverBinding extends Bindings {
     Get.lazyPut<DriverTripDetailController>(() => DriverTripDetailController(), fenix: true);
     Get.lazyPut<BoardingController>(() => BoardingController(), fenix: true);
     Get.lazyPut<ValidationController>(() => ValidationController(), fenix: true);
-    Get.lazyPut<PassengerListController>(() => PassengerListController(), fenix: true);
-    Get.lazyPut<CargoListController>(() => CargoListController(), fenix: true);
+    // Get.lazyPut<PassengerListController>(() => PassengerListController(), fenix: true);
+    // Get.lazyPut<CargoListController>(() => CargoListController(), fenix: true);
     Get.lazyPut<TripStatusController>(() => TripStatusController(), fenix: true);
     Get.lazyPut<IncidentController>(() => IncidentController(), fenix: true);
     Get.lazyPut<DriverProfileController>(() => DriverProfileController(), fenix: true);
     Get.lazyPut<DriverNotificationController>(() => DriverNotificationController(), fenix: true);
   }
 }
-
-// REMOVE or COMMENT OUT DriverInitialBinding entirely to prevent duplicates
-// class DriverInitialBinding extends Bindings { ... }  // DELETE THIS

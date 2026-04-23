@@ -108,8 +108,8 @@ class DriverDashboardView extends GetView<DriverDashboardController> {
             // Index 2: Boarding
             BoardingManagementView(),
 
-            // Index 3: Validate
-            ValidationView(),
+            // // Index 3: Validate
+            // ValidationView(),
 
             // Index 4: Profile
             DriverProfileView(),
@@ -125,7 +125,7 @@ class DriverDashboardView extends GetView<DriverDashboardController> {
           fontWeight: AppFonts.medium,
         ),
         unselectedLabelStyle: theme.textTheme.bodySmall,
-        items: List.generate(5, (index) {
+        items: List.generate(4, (index) {
           return BottomNavigationBarItem(
             icon: Icon(controller.screenIcons[index]),
             label: controller.screenTitles[index],

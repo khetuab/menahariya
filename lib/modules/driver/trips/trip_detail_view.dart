@@ -252,29 +252,34 @@ class DriverTripDetailView extends GetView<DriverTripDetailController> {
           ),
         ),
         const SizedBox(width: AppDimens.margin8),
+        // For Passenger Manifest - use arguments, not URL parameter
+        // In your trip detail view
+
+// For Passenger Manifest - use URL parameter
         Expanded(
           child: _buildActionButton(
             context,
             icon: Icons.people_rounded,
             label: 'Passengers',
             color: isDark ? AppColors.infoLight : AppColors.info,
-            onTap: () => Get.toNamed(
-              '/driver/passenger-manifest/${controller.tripId}',
-              arguments: {'tripId': controller.tripId},
-            ),
+            onTap: () {
+              print('🎯 Navigating to passenger manifest with tripId: ${controller.tripId}');
+              Get.toNamed('/driver/passenger-manifest/${controller.tripId}');
+            },
           ),
         ),
-        const SizedBox(width: AppDimens.margin8),
+
+// For Cargo Manifest - use URL parameter
         Expanded(
           child: _buildActionButton(
             context,
             icon: Icons.inventory_2_rounded,
             label: 'Cargo',
             color: isDark ? AppColors.warningLight : AppColors.warning,
-            onTap: () => Get.toNamed(
-              '/driver/cargo-manifest/${controller.tripId}',
-              arguments: {'tripId': controller.tripId},
-            ),
+            onTap: () {
+              print('🎯 Navigating to cargo manifest with tripId: ${controller.tripId}');
+              Get.toNamed('/driver/cargo-manifest/${controller.tripId}');
+            },
           ),
         ),
       ],

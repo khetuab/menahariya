@@ -68,6 +68,8 @@ import '../../modules/admin/views/admin_profile_view.dart';
 import '../../modules/auth/controllers/auth_controller.dart';
 import '../../modules/auth/views/forgot_password_view.dart';
 import '../../modules/driver/trips/assigned_trips_view.dart';
+import '../../modules/driver/views/profile/edit_profile_view.dart';
+import '../../modules/driver/views/support/support_view.dart';
 import '../../modules/driver/views/trip/update_trip_status_view.dart';
 import '../../modules/onboarding/bindings/onboarding_binding.dart';
 import '../../modules/onboarding/views/onboarding_view.dart';
@@ -252,6 +254,30 @@ class AppPages {
       middlewares: [AuthMiddleware(role: 'admin')],
     ),
 
+    // In app_pages.dart
+    GetPage(
+      name: '/driver/profile/edit',
+      page: () => const DriverEditProfileView(),
+      binding: DriverBinding(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+    GetPage(
+      name: '/driver/passenger-manifest/:tripId',
+      page: () => const PassengerManifestView(),
+      //binding: DriverBinding(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+
+    GetPage(
+      name: '/driver/cargo-manifest/:tripId',
+      page: () => const CargoManifestView(),
+      //binding: DriverBinding(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
     // ==================== PASSENGER ROUTES ====================
     GetPage(
       name: AppRoutes.passengerDashboard,
@@ -484,6 +510,10 @@ class AppPages {
     ),
 
     GetPage(
+      name: '/driver/support',
+      page: () => const SupportView(),
+    ),
+    GetPage(
       name: AppRoutes.driverTripStatus,
       page: () => const UpdateTripStatusView(),
       binding: DriverBinding(),
@@ -518,22 +548,22 @@ class AppPages {
       transitionDuration: const Duration(milliseconds: 300),
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
-    GetPage(
-      name: AppRoutes.driverPassengerManifest,
-      page: () => const PassengerManifestView(),
-      binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'driver')],
-    ),
-    GetPage(
-      name: AppRoutes.driverCargoManifest,
-      page: () => const CargoManifestView(),
-      binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'driver')],
-    ),
+    // GetPage(
+    //   name: AppRoutes.driverPassengerManifest,
+    //   page: () => const PassengerManifestView(),
+    //   binding: DriverBinding(),
+    //   transition: Transition.rightToLeft,
+    //   transitionDuration: const Duration(milliseconds: 300),
+    //   middlewares: [AuthMiddleware(role: 'driver')],
+    // ),
+    // GetPage(
+    //   name: AppRoutes.driverCargoManifest,
+    //   page: () => const CargoManifestView(),
+    //   binding: DriverBinding(),
+    //   transition: Transition.rightToLeft,
+    //   transitionDuration: const Duration(milliseconds: 300),
+    //   middlewares: [AuthMiddleware(role: 'driver')],
+    // ),
     GetPage(
       name: AppRoutes.driverUpdateTripStatus,
       page: () => const UpdateTripStatusView(),

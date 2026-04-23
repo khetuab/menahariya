@@ -19,7 +19,8 @@ class AppRoutes {
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
   static const String adminProfile = '/admin/profile';
-
+// In app_routes.dart, add
+  static const String driverEditProfile = '/driver/profile/edit';
   // Passenger Routes
   static const String passenger = '/passenger';
   static const String passengerDashboard = '/passenger/dashboard';

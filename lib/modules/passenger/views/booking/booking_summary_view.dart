@@ -56,10 +56,11 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
                     flex: 2,
                     child: PrimaryButton(
                       text: details.currentStep == 2 ? 'Confirm Booking' : 'Continue',
-                      onPressed: () {
+                      onPressed: () async {
                         if (details.currentStep == 2) {
                           // On the last step, create the booking
-                          controller.createBooking();
+                          print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+                          await controller.createBooking();
                         } else {
                           // Otherwise go to next step
                           details.onStepContinue!();

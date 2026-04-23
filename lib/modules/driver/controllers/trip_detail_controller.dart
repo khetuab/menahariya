@@ -102,61 +102,103 @@ class DriverTripDetailController extends GetxController {
     _socketService.on('trip_status_changed', _handleTripStatusChange);
   }
 
-  // Update the _loadTripDetails method in trip_detail_controller.dart
-
   Future<void> _loadTripDetails() async {
     try {
       _isLoading.value = true;
+      print('🔍 Loading trip details for: $tripId');
 
       final response = await _apiClient.get(
-        '${ApiEndpoints.trips}/$tripId',  // Change from tripsDetails to trips
+        '${ApiEndpoints.trips}/$tripId',
       );
+
+      print('📥 Response received');
 
       if (response != null && response['data'] != null) {
         final data = response['data'];
 
-        // The API returns { success: true, data: { trip: {...}, vehicle: {...}, ... } }
-        // Or maybe just { success: true, data: {...} }
-
-        // Check if data contains a 'trip' field or is the trip itself
+        // Handle nested trip object structure
         if (data['trip'] != null) {
           // Case 1: Response has nested trip object
           _trip.value = TripModel.fromJson(data['trip']);
           _vehicle.value = data['vehicle'] != null
               ? VehicleModel.fromJson(data['vehicle'])
               : null;
-          _passengers.value = (data['passengers'] as List?)
-              ?.map((p) => PassengerModel.fromJson(p))
-              .toList() ?? [];
-          _cargoList.value = (data['cargo'] as List?)
-              ?.map((c) => CargoModel.fromJson(c))
-              .toList() ?? [];
         } else {
           // Case 2: Response data is the trip object directly
           _trip.value = TripModel.fromJson(data);
-
-          // Try to get passengers from a separate endpoint or set empty
-          _passengers.value = [];
-          _cargoList.value = [];
         }
-
-        _totalPassengers.value = _passengers.length;
-        _checkedInCount.value = _passengers.where((p) => p.checkedIn).length;
-        _calculateBoardingProgress();
 
         if (_trip.value != null) {
           _departureTime.value = _trip.value!.departureTime;
           _estimatedArrival.value = _trip.value!.arrivalTime;
         }
+
+        // Load passengers and cargo separately
+        await _loadPassengers();
+        await _loadCargo();
+
+        _calculateBoardingProgress();
+
+        print('✅ Trip loaded: ${_trip.value?.origin} → ${_trip.value?.destination}');
+        print('📊 Passengers: ${_passengers.length}, Cargo: ${_cargoList.length}');
+      } else {
+        print('⚠️ No data in response');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Error loading trip details: $e');
-      AppSnackbar.show(
-        'Error',
-        'Failed to load trip details',
-      );
+      print('Stack trace: $stackTrace');
+      AppSnackbar.show('Error', 'Failed to load trip details: ${e.toString().split('\n')[0]}');
     } finally {
       _isLoading.value = false;
+    }
+  }
+
+  Future<void> _loadPassengers() async {
+    try {
+      final response = await _apiClient.get(
+        '/driver/boarding-list/$tripId',
+      );
+
+      if (response != null && response['data'] != null) {
+        final List<dynamic> passengersData = response['data'];
+        _passengers.value = passengersData
+            .map((p) => PassengerModel.fromJson(p as Map<String, dynamic>))
+            .toList();
+
+        _totalPassengers.value = _passengers.length;
+        _checkedInCount.value = _passengers.where((p) => p.checkedIn).length;
+
+        print('✅ Loaded ${_passengers.length} passengers');
+      } else {
+        _passengers.value = [];
+        print('⚠️ No passengers data');
+      }
+    } catch (e) {
+      print('Error loading passengers: $e');
+      _passengers.value = [];
+    }
+  }
+
+  Future<void> _loadCargo() async {
+    try {
+      final response = await _apiClient.get(
+        '/driver/cargo-list/$tripId',
+      );
+
+      if (response != null && response['data'] != null) {
+        final List<dynamic> cargoData = response['data'];
+        _cargoList.value = cargoData
+            .map((c) => CargoModel.fromJson(c as Map<String, dynamic>))
+            .toList();
+
+        print('✅ Loaded ${_cargoList.length} cargo items');
+      } else {
+        _cargoList.value = [];
+        print('⚠️ No cargo data');
+      }
+    } catch (e) {
+      print('Error loading cargo: $e');
+      _cargoList.value = [];
     }
   }
 
@@ -196,6 +238,7 @@ class DriverTripDetailController extends GetxController {
     } else {
       _boardingProgress.value = _checkedInCount.value / _totalPassengers.value;
     }
+    print('📊 Boarding progress: ${_boardingProgress.value} (${_checkedInCount.value}/${_totalPassengers.value})');
   }
 
   void refreshTripDetails() {

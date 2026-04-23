@@ -7,14 +7,11 @@ import 'package:menahariya/core/utils/app_snackbar.dart';
 import 'package:menahariya/data/models/cargo/cargo_model.dart';
 
 class CargoListController extends GetxController {
-  static CargoListController get instance => Get.find();
-
   final ApiClient _apiClient = ApiClient.instance;
 
-  // Current trip ID
-  late final String tripId;
+  final _tripId = ''.obs;
+  String get tripId => _tripId.value;
 
-  // Observables
   final _isLoading = false.obs;
   final _cargoList = <CargoModel>[].obs;
   final _filteredCargo = <CargoModel>[].obs;
@@ -24,7 +21,6 @@ class CargoListController extends GetxController {
   final _totalWeight = 0.0.obs;
   final _totalValue = 0.0.obs;
 
-  // Getters
   bool get isLoading => _isLoading.value;
   List<CargoModel> get cargoList => _filteredCargo;
   String get searchQuery => _searchQuery.value;
@@ -33,7 +29,6 @@ class CargoListController extends GetxController {
   double get totalWeight => _totalWeight.value;
   double get totalValue => _totalValue.value;
 
-  // Statistics
   int get totalCount => _cargoList.length;
   int get loadedCount => _cargoList.where((c) => c.status == 'loaded').length;
   int get pendingCount => _cargoList.where((c) => c.status == 'registered').length;
@@ -41,36 +36,41 @@ class CargoListController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _getTripId();
+    // Do not auto-load; wait for setTripId()
+  }
+
+  void setTripId(String id) {
+    if (_tripId.value == id) return;
+    _tripId.value = id;
     loadCargoList();
   }
 
-  void _getTripId() {
-    final args = Get.arguments;
-    if (args != null && args['tripId'] != null) {
-      tripId = args['tripId'];
-    }
-  }
-
   Future<void> loadCargoList() async {
+    if (_tripId.value.isEmpty) {
+      print('⚠️ Cannot load cargo list: tripId is empty');
+      return;
+    }
+
     try {
       _isLoading.value = true;
+      print('📦 Loading cargo list for trip: ${_tripId.value}');
 
-      final response = await _apiClient.get(
-        '/driver/cargo-list/$tripId',
-      );
+      final response = await _apiClient.get('/driver/cargo-list/${_tripId.value}');
 
       if (response != null && response['data'] != null) {
         final List<dynamic> cargo = response['data'];
         _cargoList.value = cargo
             .map((c) => CargoModel.fromJson(c))
             .toList();
-
+        print('✅ Loaded ${_cargoList.length} cargo items');
         _calculateTotals();
         _applyFilters();
+      } else {
+        _cargoList.value = [];
       }
     } catch (e) {
       print('Error loading cargo list: $e');
+      _cargoList.value = [];
     } finally {
       _isLoading.value = false;
     }
@@ -84,7 +84,6 @@ class CargoListController extends GetxController {
   void _applyFilters() {
     var filtered = List<CargoModel>.from(_cargoList);
 
-    // Apply status filter
     switch (_selectedFilter.value) {
       case CargoFilter.all:
         break;
@@ -99,7 +98,6 @@ class CargoListController extends GetxController {
         break;
     }
 
-    // Apply search query
     if (_searchQuery.value.isNotEmpty) {
       final query = _searchQuery.value.toLowerCase();
       filtered = filtered.where((c) {
@@ -125,11 +123,7 @@ class CargoListController extends GetxController {
   Future<void> selectCargo(String cargoId) async {
     try {
       _isLoading.value = true;
-
-      final response = await _apiClient.get(
-        '${ApiEndpoints.cargo}/$cargoId',
-      );
-
+      final response = await _apiClient.get('${ApiEndpoints.cargo}/$cargoId');
       if (response != null && response['data'] != null) {
         _selectedCargo.value = CargoModel.fromJson(response['data']);
       }
@@ -145,12 +139,11 @@ class CargoListController extends GetxController {
       await _apiClient.post(
         '/driver/mark-cargo-loaded',
         data: {
-          'tripId': tripId,
+          'tripId': _tripId.value,
           'cargoId': cargoId,
         },
       );
 
-      // Update local state
       final index = _cargoList.indexWhere((c) => c.id == cargoId);
       if (index != -1) {
         _cargoList[index] = _cargoList[index].copyWith(status: 'loaded');
@@ -159,16 +152,10 @@ class CargoListController extends GetxController {
         _calculateTotals();
       }
 
-      AppSnackbar.show(
-        'Success',
-        'Cargo marked as loaded',
-      );
+      AppSnackbar.show('Success', 'Cargo marked as loaded');
     } catch (e) {
       print('Error marking cargo loaded: $e');
-      AppSnackbar.show(
-        'Error',
-        'Failed to update cargo status',
-      );
+      AppSnackbar.show('Error', 'Failed to update cargo status');
     }
   }
 
@@ -177,21 +164,12 @@ class CargoListController extends GetxController {
   }
 
   Future<void> refreshList() async {
-    loadCargoList();
+    await loadCargoList();
   }
 
-  List<CargoModel> getCargoByDestination(String destination) {
-    return _cargoList.where((c) => c.destination == destination).toList();
-  }
-
-  Map<String, dynamic> getCargoSummary() {
-    return {
-      'totalCount': totalCount,
-      'loadedCount': loadedCount,
-      'pendingCount': pendingCount,
-      'totalWeight': totalWeight,
-      'totalValue': totalValue,
-    };
+  @override
+  void onClose() {
+    super.onClose();
   }
 }
 

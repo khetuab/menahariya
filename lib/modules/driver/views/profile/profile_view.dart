@@ -6,8 +6,10 @@ import 'package:menahariya/core/constants/app_colors.dart';
 import 'package:menahariya/core/constants/app_dimens.dart';
 import 'package:menahariya/core/constants/app_fonts.dart';
 import 'package:menahariya/core/widgets/buttons/primary_button.dart';
-import 'package:menahariya/core/utils/formatters/currency_formatter.dart';
 import 'package:menahariya/modules/driver/controllers/profile_controller.dart';
+
+import '../support/support_view.dart';
+import 'edit_profile_view.dart';
 
 class DriverProfileView extends GetView<DriverProfileController> {
   const DriverProfileView({Key? key}) : super(key: key);
@@ -80,9 +82,17 @@ class DriverProfileView extends GetView<DriverProfileController> {
     );
   }
 
+  // In profile_view.dart, update _buildProfileHeader to handle null user:
+
   Widget _buildProfileHeader(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // Add null check
+    final user = controller.user;
+    if (user == null) {
+      return const SizedBox.shrink(); // Or a loading indicator
+    }
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.padding20),
@@ -108,7 +118,7 @@ class DriverProfileView extends GetView<DriverProfileController> {
                     : null,
                 child: controller.profileImageUrl == null
                     ? Text(
-                  controller.user.fullName[0].toUpperCase(),
+                  user.fullName[0].toUpperCase(),
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -144,7 +154,7 @@ class DriverProfileView extends GetView<DriverProfileController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  controller.user.fullName,
+                  user.fullName,
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -364,6 +374,12 @@ class DriverProfileView extends GetView<DriverProfileController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final user = controller.user;
+
+    if (user == null) {
+      return const SizedBox.shrink(); // or loading widget
+    }
+
     return Container(
       padding: const EdgeInsets.all(AppDimens.padding16),
       decoration: BoxDecoration(
@@ -380,11 +396,15 @@ class DriverProfileView extends GetView<DriverProfileController> {
             ),
           ),
           const SizedBox(height: AppDimens.margin12),
-          _buildInfoRow(context, 'License Number', controller.user.licenseNumber ?? 'Not provided'),
+          _buildInfoRow(
+            context,
+            'License Number',
+            user.licenseNumber ?? 'Not provided',
+          ),
           _buildInfoRow(
             context,
             'Expiry Date',
-            controller.user.licenseExpiry?.toString().substring(0, 10) ?? 'Not provided',
+            user.licenseExpiry?.toString().substring(0, 10) ?? 'Not provided',
           ),
         ],
       ),
@@ -422,13 +442,13 @@ class DriverProfileView extends GetView<DriverProfileController> {
           context,
           icon: Icons.person_rounded,
           title: 'Edit Profile',
-          onTap: () => Get.toNamed('/driver/profile/edit'),
+          onTap: () => Get.to(()=>DriverEditProfileView()),
         ),
         _buildMenuItem(
           context,
           icon: Icons.access_time_rounded,
           title: 'Availability',
-          onTap: () => Get.toNamed('/driver/profile/availability'),
+          onTap: () => Get.toNamed('/driver/availability'),
         ),
         _buildMenuItem(
           context,
@@ -438,21 +458,9 @@ class DriverProfileView extends GetView<DriverProfileController> {
         ),
         _buildMenuItem(
           context,
-          icon: Icons.payment_rounded,
-          title: 'Earnings',
-          onTap: () => Get.toNamed('/driver/earnings'),
-        ),
-        _buildMenuItem(
-          context,
-          icon: Icons.settings_rounded,
-          title: 'Settings',
-          onTap: () => Get.toNamed('/driver/profile/settings'),
-        ),
-        _buildMenuItem(
-          context,
           icon: Icons.help_rounded,
           title: 'Help & Support',
-          onTap: () {},
+          onTap: () => Get.to(()=> SupportView()),
         ),
       ],
     );

@@ -1,5 +1,3 @@
-// lib/modules/driver/views/boarding/boarding_management_view.dart
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/app_colors.dart';
@@ -9,6 +7,8 @@ import 'package:menahariya/core/widgets/buttons/primary_button.dart';
 import 'package:menahariya/core/widgets/buttons/secondary_button.dart';
 import 'package:menahariya/core/widgets/loading/shimmer_loading.dart';
 import 'package:menahariya/modules/driver/controllers/boarding_controller.dart';
+
+import '../../../../core/widgets/qr_scanner_widget.dart';
 
 class BoardingManagementView extends GetView<BoardingController> {
   const BoardingManagementView({Key? key}) : super(key: key);
@@ -48,7 +48,7 @@ class BoardingManagementView extends GetView<BoardingController> {
         ),
       ),
       body: Obx(() {
-        if (controller.isLoading) {
+        if (controller.isLoading && controller.boardingList.isEmpty) {
           return _buildLoadingShimmer();
         }
 
@@ -132,87 +132,40 @@ class BoardingManagementView extends GetView<BoardingController> {
   }
 
   Widget _buildScanView(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      color: Colors.black,
-      child: Stack(
-        children: [
-          // Scanner placeholder (actual scanner will be implemented with camera)
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 250,
-                  height: 250,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: AppColors.primaryGreen,
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(AppDimens.radius12),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.qr_code_scanner_rounded,
-                      color: Colors.white,
-                      size: 80,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppDimens.margin24),
-                Text(
-                  'Align QR code within frame',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Manual Entry Button
-          Positioned(
-            bottom: 40,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: ElevatedButton.icon(
-                onPressed: () => controller.setBoardingMethod(BoardingMethod.manual),
-                icon: const Icon(Icons.keyboard_rounded),
-                label: const Text('Enter Code Manually'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: isDark ? AppColors.primaryGreen : Colors.black,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return QRScannerWidget(
+      onCodeScanned: (code) async {
+        print('📷 Scanned QR code: $code');
+        // Add a small delay to ensure UI is ready
+        await Future.delayed(const Duration(milliseconds: 100));
+        await controller.validateTicket(code);
+      },
     );
   }
 
   Widget _buildManualView(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final TextEditingController ticketCodeController = TextEditingController();
 
     return Padding(
       padding: const EdgeInsets.all(AppDimens.padding16),
       child: Column(
         children: [
           TextField(
+            controller: ticketCodeController,
             decoration: InputDecoration(
               labelText: 'Ticket Code',
-              hintText: 'Enter ticket code',
+              hintText: 'Enter ticket code (Ticket ID or QR Code)',
               prefixIcon: const Icon(Icons.confirmation_number_rounded),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppDimens.radius8),
               ),
+              helperText: 'You can enter the Ticket ID shown on the ticket',
             ),
-            onSubmitted: (value) => controller.validateTicket(value),
+            onSubmitted: (value) async {
+              await controller.validateTicket(value);
+              ticketCodeController.clear();
+            },
             autofocus: true,
           ),
           const SizedBox(height: AppDimens.margin16),
@@ -238,7 +191,7 @@ class BoardingManagementView extends GetView<BoardingController> {
           padding: const EdgeInsets.all(AppDimens.padding16),
           child: TextField(
             decoration: InputDecoration(
-              hintText: 'Search passenger...',
+              hintText: 'Search passenger by name, seat, or ticket...',
               prefixIcon: const Icon(Icons.search_rounded),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppDimens.radius8),
@@ -251,6 +204,10 @@ class BoardingManagementView extends GetView<BoardingController> {
         // Pending Passengers
         Expanded(
           child: Obx(() {
+            if (controller.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
             if (controller.pendingPassengers.isEmpty) {
               return Center(
                 child: Column(
@@ -280,14 +237,32 @@ class BoardingManagementView extends GetView<BoardingController> {
                 return Card(
                   child: ListTile(
                     leading: CircleAvatar(
-                      child: Text(passenger.name[0]),
+                      backgroundColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      child: Text(
+                        passenger.name.isNotEmpty ? passenger.name[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ),
-                    title: Text(passenger.name),
-                    subtitle: Text('Seat ${passenger.seatNumber}'),
+                    title: Text(
+                      passenger.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: AppFonts.semiBold,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Seat: ${passenger.seatNumber}'),
+                        Text('Ticket: ${passenger.ticketNumber.substring(0, 8)}...'),
+                      ],
+                    ),
                     trailing: ElevatedButton(
                       onPressed: () => controller.markPassengerCheckedIn(passenger.id),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppDimens.radius8),
+                        ),
                       ),
                       child: const Text('Check In'),
                     ),

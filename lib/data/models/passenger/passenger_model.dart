@@ -31,22 +31,24 @@ class PassengerModel {
     this.metadata,
   });
 
+  // lib/data/models/passenger/passenger_model.dart
+
   factory PassengerModel.fromJson(Map<String, dynamic> json) {
     return PassengerModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      name: json['name'] ?? json['passengerName'] ?? '',
-      phone: json['phone'] ?? json['passengerPhone'],
-      email: json['email'] ?? json['passengerEmail'],
-      seatNumber: json['seatNumber'] ?? '',
-      ticketNumber: json['ticketNumber'] ?? json['ticketId'] ?? '',
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? json['passengerName']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? json['passengerPhone']?.toString(),
+      email: json['email']?.toString() ?? json['passengerEmail']?.toString(),
+      seatNumber: json['seatNumber']?.toString() ?? '',
+      ticketNumber: json['ticketNumber']?.toString() ?? json['ticketId']?.toString() ?? '',
       checkedIn: json['checkedIn'] ?? false,
       checkedInTime: json['checkedInTime'] != null
-          ? DateTime.parse(json['checkedInTime'])
+          ? DateTime.parse(json['checkedInTime'].toString())
           : null,
       hasCargo: json['hasCargo'] ?? false,
-      cargoId: json['cargoId'],
+      cargoId: json['cargoId']?.toString(),
       specialAssistance: json['specialAssistance'] ?? false,
-      metadata: json['metadata'],
+      metadata: json['metadata'] is Map ? Map<String, dynamic>.from(json['metadata']) : null,
     );
   }
 

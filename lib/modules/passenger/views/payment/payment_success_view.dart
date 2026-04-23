@@ -6,7 +6,6 @@ import 'package:menahariya/core/constants/app_fonts.dart';
 import 'package:menahariya/core/widgets/buttons/primary_button.dart';
 import 'package:menahariya/core/widgets/buttons/secondary_button.dart';
 import 'package:menahariya/core/utils/formatters/currency_formatter.dart';
-import 'package:menahariya/data/models/booking/booking_model.dart';
 import 'package:menahariya/data/models/payment/payment_model.dart';
 
 import '../../../../core/services/payment/payment_service.dart';
@@ -23,7 +22,7 @@ class _PaymentSuccessViewState extends State<PaymentSuccessView> {
   void initState() {
     super.initState();
     // Auto‑redirect to home after 3 seconds (adjust as needed)
-    Future.delayed(const Duration(seconds: 30), () {
+    Future.delayed(const Duration(seconds: 4), () {
       if (mounted) Get.offAllNamed('/passenger/dashboard');
     });
   }
