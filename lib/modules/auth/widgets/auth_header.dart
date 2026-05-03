@@ -31,38 +31,18 @@ class AuthHeader extends StatelessWidget {
         // App Logo
         if (showLogo) ...[
           Container(
-            width: logoSize,
-            height: logoSize,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                  isDark ? AppColors.primaryYellow : AppColors.primaryYellow,
-                  isDark ? AppColors.primaryRed : AppColors.primaryRed,
-                ],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? AppColors.primaryGreen.withOpacity(0.3)
-                      : AppColors.primaryGreen.withOpacity(0.2),
-                  blurRadius: AppDimens.shadowBlurLarge,
-                  spreadRadius: AppDimens.shadowSpreadSmall,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(width: 2,color: Colors.white),
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Colors.green,blurRadius: 5)]
             ),
-            child: Center(
-              child: Text(
-                'M',
-                style: theme.textTheme.displaySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: logoSize * 0.5,
-                ),
+            child: SizedBox(
+              width: 120,
+              height: 120,
+              child: Image.asset(
+                'assets/logos/applogot.png',
+                fit: BoxFit.contain,
               ),
             ),
           ),
@@ -70,22 +50,22 @@ class AuthHeader extends StatelessWidget {
         ],
 
         // App Name
-        Text(
-          'MENAHARIYA',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
-          ),
-        ),
-        Text(
-          'SMART',
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: isDark ? AppColors.primaryYellow : AppColors.primaryYellowDark,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 4,
-          ),
-        ),
+        // Text(
+        //   'MENAHARIYA',
+        //   style: theme.textTheme.headlineSmall?.copyWith(
+        //     color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+        //     fontWeight: FontWeight.bold,
+        //     letterSpacing: 2,
+        //   ),
+        // ),
+        // Text(
+        //   'SMART',
+        //   style: theme.textTheme.titleLarge?.copyWith(
+        //     color: isDark ? AppColors.primaryYellow : AppColors.primaryYellowDark,
+        //     fontWeight: FontWeight.w600,
+        //     letterSpacing: 4,
+        //   ),
+        // ),
 
         const SizedBox(height: AppDimens.margin24),
 

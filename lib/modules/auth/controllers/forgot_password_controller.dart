@@ -27,6 +27,32 @@ class ForgotPasswordController extends GetxController {
   String? get phoneError => _phoneError.value;
   bool get isFormValid => _phoneError.value == null && phoneController.text.isNotEmpty;
 
+  // Format phone number helper
+  String _formatPhoneForBackend(String phone) {
+    // Remove all spaces and non-digits
+    String digits = phone.replaceAll(RegExp(r'\s+'), '').replaceAll(RegExp(r'\D'), '');
+
+    print('📞 Original phone input: "$phone", digits: "$digits"');
+
+    // Format for backend (expects 10 digits starting with 09)
+    if (digits.length == 9 && digits.startsWith('9')) {
+      // 912345678 -> 0912345678
+      return '0$digits';
+    } else if (digits.length == 10 && digits.startsWith('09')) {
+      // 0912345678 -> keep as is
+      return digits;
+    } else if (digits.length == 12 && digits.startsWith('251')) {
+      // 251912345678 -> convert to 09 format
+      return '0${digits.substring(3)}';
+    } else if (digits.length == 13 && digits.startsWith('251')) {
+      // +251912345678 (digits only) -> convert to 09 format
+      return '0${digits.substring(3)}';
+    }
+
+    // Default: return as is
+    return digits;
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -40,7 +66,9 @@ class ForgotPasswordController extends GetxController {
 
   // Validate phone
   void validatePhone(String value) {
-    _phoneError.value = AuthValidator.validatePhone(value);
+    // Remove spaces for validation
+    final cleanValue = value.replaceAll(RegExp(r'\s+'), '');
+    _phoneError.value = AuthValidator.validatePhone(cleanValue);
   }
 
   // Clear error
@@ -50,13 +78,18 @@ class ForgotPasswordController extends GetxController {
 
   // Handle submit
   Future<void> handleSubmit() async {
+    // Validate the phone (using clean version)
     validatePhone(phoneController.text);
 
     if (!isFormValid) return;
 
     _isLoading.value = true;
 
-    final success = await _authController.forgotPassword(phoneController.text);
+    // Format phone number properly
+    final formattedPhone = _formatPhoneForBackend(phoneController.text);
+    print('📞 Formatted phone for backend: "$formattedPhone"');
+
+    final success = await _authController.forgotPassword(formattedPhone);
 
     _isLoading.value = false;
 
@@ -64,7 +97,7 @@ class ForgotPasswordController extends GetxController {
       // Navigate to reset password screen
       Get.toNamed(
         AppRoutes.resetPassword,
-        arguments: {'phone': phoneController.text},
+        arguments: {'phone': formattedPhone},
       );
     }
   }

@@ -399,6 +399,11 @@ class AdminTripsView extends GetView<AdminTripController> {
                   onPressed: () => _showEditTripDialog(trip),
                   tooltip: 'Edit',
                 ),
+                IconButton(
+                  icon: const Icon(Icons.delete_forever, color: Colors.red),
+                  onPressed: () => _showDeleteTripDialog(trip),
+                  tooltip: 'Cancel Trip',
+                ),
                 if (trip.status == 'scheduled')
                   IconButton(
                     icon: const Icon(Icons.cancel_rounded, color: Colors.red),
@@ -488,7 +493,7 @@ class AdminTripsView extends GetView<AdminTripController> {
                   ),
                 ),
                 const SizedBox(height: AppDimens.margin12),
-                Wrap(
+            Obx(() => Wrap(
                   spacing: AppDimens.margin8,
                   runSpacing: AppDimens.margin8,
                   children: [
@@ -523,7 +528,7 @@ class AdminTripsView extends GetView<AdminTripController> {
                       onSelected: (value) => controller.setStatusFilter(value),
                     ),
                   ],
-                ),
+                )),
                 const SizedBox(height: AppDimens.margin24),
                 // Route Filter
                 Text(
@@ -566,7 +571,7 @@ class AdminTripsView extends GetView<AdminTripController> {
                       context: context,
                       initialDate: controller.dateFilter ?? DateTime.now(),
                       firstDate: DateTime(2024),
-                      lastDate: DateTime(2026),
+                      lastDate: DateTime.now().add(const Duration(days: 3650)),
                     );
                     if (date != null) {
                       controller.setDateFilter(date);
@@ -1321,6 +1326,62 @@ class AdminTripsView extends GetView<AdminTripController> {
     );
   }
 
+  void _showDeleteTripDialog(dynamic trip) async {
+    final reasonController = TextEditingController();
+
+    final confirmed = await AdminConfirmationDialog.show(
+      title: 'Delete Trip',
+      message: 'Are you sure you want to delete the trip from ${trip.origin} to ${trip.destination}?',
+      confirmText: 'Cancel',
+    );
+
+    if (confirmed) {
+      Get.bottomSheet(
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(Get.context!).brightness == Brightness.dark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimens.radius16)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(AppDimens.padding20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          text: 'Back',
+                          onPressed: () => Get.back(),
+                        ),
+                      ),
+                      const SizedBox(width: AppDimens.margin12),
+                      Expanded(
+                        child: PrimaryButton(
+                          text: 'Confirm Cancellation',
+                          onPressed: () async {
+                            Get.back();
+                            final success = await controller.deleteTrip(trip.id);
+                            if (success) {
+                              Get.snackbar('Success', 'Trip cancelled successfully');
+                            }
+                          },
+                          backgroundColor: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   void _showCancelTripDialog(dynamic trip) async {
     final reasonController = TextEditingController();
 
@@ -1371,7 +1432,7 @@ class AdminTripsView extends GetView<AdminTripController> {
                           text: 'Confirm Cancellation',
                           onPressed: () async {
                             Get.back();
-                            final success = await controller.cancelTrip(trip.id, reasonController.text);
+                            final success = await controller.cancelTrip(trip.id,reasonController.text);
                             if (success) {
                               Get.snackbar('Success', 'Trip cancelled successfully');
                             }

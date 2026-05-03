@@ -300,8 +300,18 @@ class AdminRouteController extends GetxController {
       final response = await _apiClient.delete('${ApiEndpoints.routes}/$routeId');
 
       if (response != null && response['success'] == true) {
-        await fetchRoutes(refresh: true);
+
+        // Remove immediately from local list
+        _routes.removeWhere((route) => route.id == routeId);
+
+        // Re-apply filters so UI updates instantly
+        _applyFilters();
+
         AppSnackbar.show('Success', 'Route deleted successfully');
+
+        // Optional background refresh
+        fetchRoutes(refresh: true);
+
         return true;
       }
       return false;

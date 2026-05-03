@@ -1,6 +1,7 @@
 // lib/modules/admin/controllers/admin_trip_controller.dart
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/constants/app_constants.dart';
@@ -104,7 +105,12 @@ class AdminTripController extends GetxController {
 
       if (_searchQuery.value.isNotEmpty) params['search'] = _searchQuery.value;
       if (_statusFilter.value.isNotEmpty) params['status'] = _statusFilter.value;
-      if (_dateFilter.value != null) params['date'] = _dateFilter.value!.toIso8601String();
+      if (_dateFilter.value != null) {
+        params['date'] =
+        '${_dateFilter.value!.year.toString().padLeft(4, '0')}-'
+            '${_dateFilter.value!.month.toString().padLeft(2, '0')}-'
+            '${_dateFilter.value!.day.toString().padLeft(2, '0')}';
+      }
       if (_routeFilter.value != null) params['routeId'] = _routeFilter.value;
 
       final response = await _apiClient.get(
@@ -151,11 +157,12 @@ class AdminTripController extends GetxController {
 
     // Apply date filter
     if (_dateFilter.value != null) {
-      final filterDate = _dateFilter.value;
-      filtered = filtered.where((t) =>
-      t.departureTime.year == filterDate!.year &&
-          t.departureTime.month == filterDate.month &&
-          t.departureTime.day == filterDate.day).toList();
+      filtered = filtered.where((t) {
+        return DateUtils.isSameDay(
+          t.departureTime.toLocal(),
+          _dateFilter.value!,
+        );
+      }).toList();
     }
 
     // Apply search query
@@ -265,8 +272,20 @@ class AdminTripController extends GetxController {
       );
 
       if (response != null && response['success'] == true) {
-        await fetchTrips(refresh: true);
+
+        final newTrip = TripModel.fromJson(response['data']);
+
+        // Add immediately
+        _trips.insert(0, newTrip);
+
+        // Refresh filtered UI
+        _applyFilters();
+
         AppSnackbar.show('Success', 'Trip created successfully');
+
+        // Optional background refresh
+        fetchTrips(refresh: true);
+
         return true;
       }
       return false;
@@ -312,6 +331,7 @@ class AdminTripController extends GetxController {
       if (response != null && response['success'] == true) {
         _trips.removeWhere((t) => t.id == tripId);
         _applyFilters();
+        fetchTrips(refresh: true);
         AppSnackbar.show('Success', 'Trip deleted successfully');
         return true;
       }
@@ -335,7 +355,11 @@ class AdminTripController extends GetxController {
       );
 
       if (response != null && response['success'] == true) {
-        await fetchTrips(refresh: true);
+        _trips.removeWhere((trip) => trip.id == tripId);
+
+        _applyFilters();
+
+        fetchTrips(refresh: true);
         AppSnackbar.show('Success', 'Trip cancelled successfully');
         return true;
       }

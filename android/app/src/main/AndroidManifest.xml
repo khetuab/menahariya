@@ -24,7 +24,7 @@
         android:required="false" />
 
     <application
-        android:label="menahariya"
+        android:label="መናሃሪያ"
         android:name="${applicationName}"
         android:icon="@mipmap/applogot"
         android:enableOnBackInvokedCallback="true"

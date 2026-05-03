@@ -22,11 +22,13 @@ class AuthBinding extends Bindings {
   }
 }
 
-// Specific bindings for each screen (optional - can be used for better performance)
 class LoginBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<LoginController>(() => LoginController());
+    Get.lazyPut<LoginController>(
+          () => LoginController(),
+      fenix: true, // 🔥 REQUIRED
+    );
   }
 }
 

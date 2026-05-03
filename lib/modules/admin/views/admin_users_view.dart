@@ -13,7 +13,6 @@ import '../../../core/constants/app_fonts.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/buttons/secondary_button.dart';
 import '../../../core/widgets/inputs/custom_textfield.dart';
-import '../../auth/controllers/auth_controller.dart';
 import '../controllers/admin_user_controller.dart';
 
 class AdminUsersView extends GetView<AdminUserController> {
@@ -405,6 +404,11 @@ class AdminUsersView extends GetView<AdminUserController> {
                   icon: const Icon(Icons.lock_reset_rounded, color: Colors.purple),
                   onPressed: () => _showResetPasswordDialog(user),
                   tooltip: 'Reset Password',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_forever, color: Colors.red),
+                  onPressed: () => _showRemoveUserDialog(user),
+                  tooltip: 'Remove user',
                 ),
               ],
             ),
@@ -998,6 +1002,60 @@ class AdminUsersView extends GetView<AdminUserController> {
     );
   }
 
+  void _showRemoveUserDialog(dynamic user) {
+
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: Theme.of(Get.context!).brightness == Brightness.dark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimens.radius16)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppDimens.padding20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Remove User',
+                  style: Get.context!.textTheme.headlineSmall?.copyWith(
+                    fontWeight: AppFonts.bold,
+                  ),
+                ),
+                const SizedBox(height: AppDimens.margin16),
+                Text('Remove User ${user.fullName}'),
+                const SizedBox(height: AppDimens.margin16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        text: 'Cancel',
+                        onPressed: () => Get.back(),
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.margin12),
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Remove',
+                        onPressed: () async {
+                          Get.back();
+                          final success = await controller.deleteUser(user.id);
+                          if (success) {
+                            Get.snackbar('Success', 'Password reset successfully');
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
   Widget _buildDetailSection({required String title, required List<Widget> children}) {
     final theme = Get.context!.theme;
 

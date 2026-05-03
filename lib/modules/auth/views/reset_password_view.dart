@@ -101,7 +101,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                   const SizedBox(height: AppDimens.margin16),
 
                   // New Password
-                  CustomTextField(
+                  Obx(() => CustomTextField(
                     label: 'New Password',
                     controller: controller.newPasswordController,
                     focusNode: controller.newPasswordFocusNode,
@@ -114,7 +114,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                         : Icons.visibility_rounded,
                     onSuffixTap: controller.togglePasswordVisibility,
                     errorText: controller.newPasswordError,
-                  ),
+                  )),
 
                   // Password Strength Indicator
                   Obx(() => PasswordStrengthIndicator(
@@ -126,7 +126,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                   const SizedBox(height: AppDimens.margin16),
 
                   // Confirm Password
-                  CustomTextField(
+                  Obx(() => CustomTextField(
                     label: 'Confirm Password',
                     controller: controller.confirmPasswordController,
                     focusNode: controller.confirmPasswordFocusNode,
@@ -139,7 +139,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                         : Icons.visibility_rounded,
                     onSuffixTap: controller.toggleConfirmPasswordVisibility,
                     errorText: controller.confirmPasswordError,
-                  ),
+                  )),
 
                   const SizedBox(height: AppDimens.margin32),
 

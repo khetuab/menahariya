@@ -486,8 +486,17 @@ class ApiClient extends getx.GetxService {
         data = error.response?.data;
 
         if (statusCode == 401) {
-          message = AppConstants.errorUnauthorized;
-          _handleUnauthorized();
+          message = _extractErrorMessage(error.response?.data) ?? AppConstants.errorUnauthorized;
+
+          // Check if this is from the login endpoint
+          final String? requestPath = error.requestOptions.path;
+          final bool isLoginRequest = requestPath?.contains('/auth/login') ?? false;
+
+          // Only handle unauthorized (clear token and redirect) if NOT from login endpoint
+          if (!isLoginRequest) {
+            _handleUnauthorized();
+          }
+          // If it IS from login, just return the error without clearing token
         } else if (statusCode == 403) {
           message = AppConstants.errorForbidden;
         } else if (statusCode == 404) {
@@ -520,13 +529,28 @@ class ApiClient extends getx.GetxService {
 
   // Handle unauthorized response
   Future<void> _handleUnauthorized() async {
+    final currentRoute = getx.Get.currentRoute;
+
+    // IMPORTANT: Don't redirect if we're already on login or register screens
+    final bool isOnAuthScreen = currentRoute == '/auth/login' ||
+        currentRoute == '/auth/register' ||
+        currentRoute == '/auth/forgot-password' ||
+        currentRoute == '/auth/reset-password' ||
+        currentRoute == '/auth/otp';
+
+    if (isOnAuthScreen) {
+      // We're already on an auth screen, don't navigate
+      print('⚠️ 401 on auth screen - skipping redirect to prevent loop');
+      return;
+    }
+
+    // Clear storage only if not on auth screen
     await _storage.delete(AppConstants.prefKeyToken);
     await _storage.delete(AppConstants.prefKeyUser);
     await _storage.delete('admin_token');
     await _storage.delete('admin_user');
 
     // Navigate to login based on current route
-    final currentRoute = getx.Get.currentRoute;
     if (currentRoute.contains('/admin')) {
       getx.Get.offAllNamed('/admin/login');
     } else {

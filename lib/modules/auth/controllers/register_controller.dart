@@ -19,6 +19,8 @@ class RegisterController extends GetxController {
   late final TextEditingController passwordController;
   late final TextEditingController confirmPasswordController;
 
+  final _isFormValid = false.obs;
+  bool get isFormValid => _isFormValid.value;
   // Focus nodes
   late final FocusNode fullNameFocusNode;
   late final FocusNode phoneFocusNode;
@@ -56,25 +58,40 @@ class RegisterController extends GetxController {
   String? get termsError => _termsError.value;
   double get passwordStrength => _passwordStrength.value;
 
-  bool get isFormValid {
-    return _fullNameError.value == null &&
-        _phoneError.value == null &&
-        _emailError.value == null &&
-        _passwordError.value == null &&
-        _confirmPasswordError.value == null &&
-        _termsError.value == null &&
-        fullNameController.text.isNotEmpty &&
-        phoneController.text.isNotEmpty &&
-        passwordController.text.isNotEmpty &&
-        confirmPasswordController.text.isNotEmpty &&
-        _agreeToTerms.value;
-  }
+  // bool get isFormValid {
+  //   return _fullNameError.value == null &&
+  //       _phoneError.value == null &&
+  //       _emailError.value == null &&
+  //       _passwordError.value == null &&
+  //       _confirmPasswordError.value == null &&
+  //       _termsError.value == null &&
+  //       fullNameController.text.isNotEmpty &&
+  //       phoneController.text.isNotEmpty &&
+  //       passwordController.text.isNotEmpty &&
+  //       confirmPasswordController.text.isNotEmpty &&
+  //       _agreeToTerms.value;
+  // }
 
   @override
   void onInit() {
     super.onInit();
     _initializeControllers();
     _setupPasswordListener();
+  }
+
+  void _updateFormValidity() {
+    _isFormValid.value =
+        _fullNameError.value == null &&
+            _phoneError.value == null &&
+            _emailError.value == null &&
+            _passwordError.value == null &&
+            _confirmPasswordError.value == null &&
+            _termsError.value == null &&
+            fullNameController.text.isNotEmpty &&
+            phoneController.text.isNotEmpty &&
+            passwordController.text.isNotEmpty &&
+            confirmPasswordController.text.isNotEmpty &&
+            _agreeToTerms.value;
   }
 
   void _initializeControllers() {
@@ -136,14 +153,13 @@ class RegisterController extends GetxController {
   // Toggle terms agreement
   void toggleTermsAgreement(bool? value) {
     _agreeToTerms.value = value ?? false;
-    if (_agreeToTerms.value) {
-      _termsError.value = null;
-    }
+    validateTerms(); // 🔥 important
   }
 
   // Validation methods
   void validateFullName(String value) {
     _fullNameError.value = AuthValidator.validateFullName(value);
+    _updateFormValidity();
   }
 
   // FIXED: Proper phone validation
@@ -177,11 +193,13 @@ class RegisterController extends GetxController {
       _phoneError.value = 'Please enter a valid Ethiopian phone number (e.g., 0912345678)';
     }
 
+    _updateFormValidity();
     print('Phone validation: "$digits" -> error: ${_phoneError.value}');
   }
 
   void validateEmail(String value) {
     _emailError.value = AuthValidator.validateEmail(value);
+    _updateFormValidity();
   }
 
   void validatePassword(String value) {
@@ -190,6 +208,7 @@ class RegisterController extends GetxController {
     if (confirmPasswordController.text.isNotEmpty) {
       validateConfirmPassword(confirmPasswordController.text);
     }
+    _updateFormValidity();
   }
 
   void validateConfirmPassword(String value) {
@@ -197,6 +216,7 @@ class RegisterController extends GetxController {
       passwordController.text,
       value,
     );
+    _updateFormValidity();
   }
 
   void validateTerms() {
@@ -205,6 +225,7 @@ class RegisterController extends GetxController {
     } else {
       _termsError.value = null;
     }
+    _updateFormValidity();
   }
 
   // Clear all errors

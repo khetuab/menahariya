@@ -53,7 +53,9 @@ class AdminDashboardView extends GetView<AdminDashboardController> {
             slivers: [
               // Welcome Header Sliver
               SliverToBoxAdapter(
-                child: _buildWelcomeHeader(context, authController),
+                child: Obx(
+                      () => _buildWelcomeHeader(context, authController),
+                ),
               ),
               // Stats Grid Sliver
               SliverPadding(

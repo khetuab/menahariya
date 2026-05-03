@@ -1,6 +1,7 @@
 // lib/modules/auth/controllers/auth_controller.dart
 
 import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/app_constants.dart';
 import 'package:menahariya/core/services/api/api_client.dart';
@@ -58,6 +59,10 @@ class AuthController extends GetxController {
   bool get isAdmin => _userRole.value == AppConstants.roleAdmin;
   bool get isStaff => _userRole.value == AppConstants.roleTicketingStaff ||
       _userRole.value == AppConstants.roleCargoStaff;
+  set currentUser(UserModel? user) {
+    _currentUser.value = user;
+    _currentUser.refresh();
+  }
 
   @override
   void onInit() {
@@ -89,7 +94,12 @@ class AuthController extends GetxController {
       await logout();
     }
   }
+  final _isGuest = false.obs;
+  bool get isGuest => _isGuest.value;
 
+  void enterGuestMode() {
+    _isGuest.value = true;
+  }
   // Initialize services after login
   Future<void> _initializeServices() async {
     try {
@@ -136,16 +146,39 @@ class AuthController extends GetxController {
         final tokens = response['data']['tokens'];
 
         // Save user data
-        _currentUser.value = UserModel.fromJson(userData);
+        // Save user data
+        final user = UserModel.fromJson(userData);
+
+// Update last login immediately
+        _currentUser.value = user.copyWith(
+          lastLogin: DateTime.now(),
+        );
+
         _authToken.value = tokens['accessToken'];
         _refreshToken.value = tokens['refreshToken'];
         _userRole.value = _currentUser.value?.role;
         _userId.value = _currentUser.value?.id ?? '';
 
+// Save to secure storage
+        await _secureStorage.write(
+          AppConstants.prefKeyToken,
+          _authToken.value!,
+        );
+
+        await _secureStorage.writeObject(
+          AppConstants.prefKeyUser,
+          _currentUser.value!.toJson(),
+        );
+
+        await _secureStorage.write(
+          'refresh_token',
+          tokens['refreshToken'],
+        );
+
         // Save to secure storage
-        await _secureStorage.write(AppConstants.prefKeyToken, _authToken.value!);
-        await _secureStorage.writeObject(AppConstants.prefKeyUser, userData);
-        await _secureStorage.write('refresh_token', tokens['refreshToken']);
+        // await _secureStorage.write(AppConstants.prefKeyToken, _authToken.value!);
+        // await _secureStorage.writeObject(AppConstants.prefKeyUser, userData);
+        // await _secureStorage.write('refresh_token', tokens['refreshToken']);
 
         // Save remember me preference
         if (_sharedPrefs.getRememberMe()) {
@@ -162,12 +195,14 @@ class AuthController extends GetxController {
         await _initializeServices();
 
         // Navigate to dashboard
+        FocusManager.instance.primaryFocus?.unfocus();
         _navigateToDashboard();
 
         return true;
       }
       return false;
     } on ApiException catch (e) {
+      FocusManager.instance.primaryFocus?.unfocus();
       _handleLoginError(e);
       return false;
     } catch (e) {
@@ -178,6 +213,7 @@ class AuthController extends GetxController {
       );
       return false;
     } finally {
+      FocusManager.instance.primaryFocus?.unfocus();
       _isLoading.value = false;
     }
   }
@@ -323,21 +359,38 @@ class AuthController extends GetxController {
     try {
       _isLoading.value = true;
 
+      // Clean the phone number before sending
+      final cleanPhone = phone.replaceAll(RegExp(r'\s+'), '').replaceAll(RegExp(r'\D'), '');
+
+      // Format to 10-digit with leading 09 if needed
+      String formattedPhone = cleanPhone;
+      if (cleanPhone.length == 9 && cleanPhone.startsWith('9')) {
+        formattedPhone = '0$cleanPhone';
+      }
+
+      print('📞 Forgot password for phone: "$formattedPhone"');
+
       final response = await _apiClient.post(
         ApiEndpoints.authForgotPassword,
-        data: {'phone': phone},
+        data: {'phone': formattedPhone},
       );
 
       if (response != null && response['success'] == true) {
         Get.toNamed(
           AppRoutes.resetPassword,
-          arguments: {'phone': phone},
+          arguments: {'phone': formattedPhone},
         );
         return true;
       }
       return false;
     } catch (e) {
       print('Forgot password error: $e');
+      AppSnackbar.show(
+        'Error',
+        e.toString().contains('No user found')
+            ? 'No account found with this phone number'
+            : 'Failed to send reset code',
+      );
       return false;
     } finally {
       _isLoading.value = false;

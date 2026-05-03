@@ -107,6 +107,7 @@ class OtpVerificationView extends GetView<OtpController> {
                         maxLength: 1,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
+
                         ),
                         decoration: InputDecoration(
                           counterText: '',
@@ -116,6 +117,8 @@ class OtpVerificationView extends GetView<OtpController> {
                             borderRadius: BorderRadius.circular(AppDimens.radius12),
                             borderSide: BorderSide.none,
                           ),
+                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                          isDense: true,
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(AppDimens.radius12),
                             borderSide: BorderSide(

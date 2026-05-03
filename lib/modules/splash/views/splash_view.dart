@@ -89,12 +89,12 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
             end: Alignment.bottomCenter,
             colors: isDark
                 ? [
-              AppColors.backgroundDark,
-              AppColors.primaryGreenDark.withOpacity(0.8),
+              AppColors.black,
+              AppColors.black,
             ]
                 : [
-              AppColors.backgroundLight,
-              AppColors.primaryGreen.withOpacity(0.1),
+              AppColors.white,
+              AppColors.white,
             ],
           ),
         ),
@@ -105,7 +105,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
               Positioned.fill(
                 child: CustomPaint(
                   painter: SplashBackgroundPainter(
-                    color: isDark ? AppColors.primaryGreen : AppColors.primaryGreenLight,
+                    color: isDark ? AppColors.black : AppColors.white,
                     isDark: isDark,
                   ),
                 ),
@@ -157,40 +157,12 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
               opacity: _fadeAnimation.value,
               child: Transform.scale(
                 scale: _scaleAnimation.value,
-                child: Container(
+                child: SizedBox(
                   width: 120,
                   height: 120,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.primaryGreen,
-                        AppColors.primaryYellow,
-                        AppColors.primaryRed,
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDark
-                            ? AppColors.primaryGreen.withOpacity(0.3)
-                            : AppColors.primaryGreen.withOpacity(0.2),
-                        blurRadius: AppDimens.shadowBlurLarge,
-                        spreadRadius: AppDimens.shadowSpreadSmall,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      'M',
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 60,
-                      ),
-                    ),
+                  child: Image.asset(
+                    'assets/logos/applogot.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),
@@ -198,37 +170,6 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
           },
         ),
 
-        const SizedBox(height: AppDimens.margin24),
-
-        // App Name
-        AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeAnimation.value,
-              child: Column(
-                children: [
-                  Text(
-                    'MENAHARIYA',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
-                    ),
-                  ),
-                  Text(
-                    'SMART',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: isDark ? AppColors.primaryYellow : AppColors.primaryYellowDark,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 6,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
 
         const SizedBox(height: AppDimens.margin48),
 

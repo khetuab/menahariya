@@ -1,5 +1,6 @@
 // lib/modules/auth/views/register_view.dart
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/app_colors.dart';
@@ -32,7 +33,7 @@ class RegisterView extends GetView<RegisterController> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppDimens.padding24),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Header
                   const AuthHeader(
@@ -92,19 +93,21 @@ class RegisterView extends GetView<RegisterController> {
                         const SizedBox(height: AppDimens.margin16),
 
                         // Password
-                        CustomTextField(
-                          label: AppStrings.password,
-                          controller: controller.passwordController,
-                          focusNode: controller.passwordFocusNode,
-                          obscureText: !controller.isPasswordVisible,
-                          onChanged: controller.validatePassword,
-                          textInputAction: TextInputAction.next,
-                          prefixIcon: Icons.lock_rounded,
-                          suffixIcon: controller.isPasswordVisible
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
-                          onSuffixTap: controller.togglePasswordVisibility,
-                          errorText: controller.passwordError,
+                        Obx(
+                          ()=> CustomTextField(
+                            label: AppStrings.password,
+                            controller: controller.passwordController,
+                            focusNode: controller.passwordFocusNode,
+                            obscureText: !controller.isPasswordVisible,
+                            onChanged: controller.validatePassword,
+                            textInputAction: TextInputAction.next,
+                            prefixIcon: Icons.lock_rounded,
+                            suffixIcon: controller.isPasswordVisible
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                            onSuffixTap: controller.togglePasswordVisibility,
+                            errorText: controller.passwordError,
+                          ),
                         ),
 
                         // Password Strength Indicator
@@ -117,19 +120,21 @@ class RegisterView extends GetView<RegisterController> {
                         const SizedBox(height: AppDimens.margin16),
 
                         // Confirm Password
-                        CustomTextField(
-                          label: 'Confirm Password',
-                          controller: controller.confirmPasswordController,
-                          focusNode: controller.confirmPasswordFocusNode,
-                          obscureText: !controller.isConfirmPasswordVisible,
-                          onChanged: controller.validateConfirmPassword,
-                          textInputAction: TextInputAction.done,
-                          prefixIcon: Icons.lock_rounded,
-                          suffixIcon: controller.isConfirmPasswordVisible
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
-                          onSuffixTap: controller.toggleConfirmPasswordVisibility,
-                          errorText: controller.confirmPasswordError,
+                        Obx(
+                          () => CustomTextField(
+                            label: 'Confirm Password',
+                            controller: controller.confirmPasswordController,
+                            focusNode: controller.confirmPasswordFocusNode,
+                            obscureText: !controller.isConfirmPasswordVisible,
+                            onChanged: controller.validateConfirmPassword,
+                            textInputAction: TextInputAction.done,
+                            prefixIcon: Icons.lock_rounded,
+                            suffixIcon: controller.isConfirmPasswordVisible
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                            onSuffixTap: controller.toggleConfirmPasswordVisibility,
+                            errorText: controller.confirmPasswordError,
+                          ),
                         ),
 
                         const SizedBox(height: AppDimens.margin24),
@@ -149,27 +154,28 @@ class RegisterView extends GetView<RegisterController> {
                                   text: TextSpan(
                                     style: theme.textTheme.bodyMedium,
                                     children: [
-                                      const TextSpan(
-                                        text: 'I agree to the ',
-                                      ),
+                                      const TextSpan(text: 'I agree to the '),
+
                                       TextSpan(
                                         text: 'Terms of Service',
                                         style: TextStyle(
                                           color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
                                           fontWeight: FontWeight.bold,
                                         ),
-                                        recognizer: null, // Add tap recognizer
+                                        recognizer: TapGestureRecognizer()
+                                          ..onTap = () => Get.toNamed('/terms'),
                                       ),
-                                      const TextSpan(
-                                        text: ' and ',
-                                      ),
+
+                                      const TextSpan(text: ' and '),
+
                                       TextSpan(
                                         text: 'Privacy Policy',
                                         style: TextStyle(
                                           color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
                                           fontWeight: FontWeight.bold,
                                         ),
-                                        recognizer: null, // Add tap recognizer
+                                        recognizer: TapGestureRecognizer()
+                                          ..onTap = () => Get.toNamed('/privacy'),
                                       ),
                                     ],
                                   ),

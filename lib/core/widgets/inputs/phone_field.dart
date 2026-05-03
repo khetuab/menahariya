@@ -24,7 +24,7 @@ class PhoneField extends StatefulWidget {
     this.initialValue,
     this.controller,
     this.label,
-    this.hint = '0912 345 678',
+    this.hint = '912 345 678',
     this.onChanged,
     this.validator,
     this.enabled = true,

@@ -71,6 +71,8 @@ import '../../modules/driver/trips/assigned_trips_view.dart';
 import '../../modules/driver/views/profile/edit_profile_view.dart';
 import '../../modules/driver/views/support/support_view.dart';
 import '../../modules/driver/views/trip/update_trip_status_view.dart';
+import '../../modules/legal/view/privacy_view.dart';
+import '../../modules/legal/view/terms_view.dart';
 import '../../modules/onboarding/bindings/onboarding_binding.dart';
 import '../../modules/onboarding/views/onboarding_view.dart';
 import '../../modules/passenger/views/cargo/cargo_trip_select_view.dart';
@@ -102,13 +104,22 @@ class AppPages {
       transition: Transition.fadeIn,
     ),
 
+    GetPage(
+      name: '/terms',
+      page: () => const TermsView(),
+    ),
+
+    GetPage(
+      name: '/privacy',
+      page: () => const PrivacyView(),
+    ),
     GetPage(name: AppRoutes.adminProfile, page: () => const AdminProfileView()),
     GetPage(name: AppRoutes.adminSettings, page: () => const AdminSettingsView()),
     // Auth Routes
     GetPage(
       name: AppRoutes.login,
       page: () => const LoginView(),
-      binding: AuthBinding(),
+      binding: LoginBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

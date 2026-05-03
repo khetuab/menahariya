@@ -156,7 +156,7 @@ class AdminVehicleController extends GetxController {
   Future<void> fetchDrivers() async {
     try {
       // Use the correct endpoint for fetching drivers
-      final response = await _apiClient.get('/users/drivers');
+      final response = await _apiClient.get(ApiEndpoints.adminDrivers);
       if (response != null && response['data'] != null) {
         final List<dynamic> driversData = response['data'];
         _drivers.value = driversData.map((d) => UserModel.fromJson(d)).toList();
@@ -327,45 +327,43 @@ class AdminVehicleController extends GetxController {
 
   Future<bool> deleteVehicle(String vehicleId) async {
     try {
-      final confirm = await Get.dialog<bool>(
-        AlertDialog(
-          title: const Text('Delete Vehicle'),
-          content: const Text('Are you sure you want to delete this vehicle ?'),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(result: false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Get.back(result: true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
+      final response = await _apiClient.delete(
+        '${ApiEndpoints.vehicles}/$vehicleId',
       );
 
-      if (confirm != true) return false;
-
-      _isLoading.value = true;
-
-      final response = await _apiClient.delete('${ApiEndpoints.vehicles}/$vehicleId');
-
       if (response != null && response['success'] == true) {
-        await fetchVehicles(refresh: true);
-        AppSnackbar.show('Success', 'Vehicle deleted successfully');
+
+        // Remove vehicle locally
+        _vehicles.removeWhere(
+              (vehicle) => vehicle.id == vehicleId,
+        );
+
+        // Refresh filtered list/UI
+        _applyFilters();
+
+        AppSnackbar.show(
+          'Success',
+          'Vehicle deleted successfully',
+        );
+
+        // Optional background refresh
+        fetchVehicles(refresh: true);
+
         return true;
       }
+
       return false;
     } catch (e) {
       print('Error deleting vehicle: $e');
-      AppSnackbar.show('Error', 'Failed to delete vehicle');
+
+      AppSnackbar.show(
+        'Error',
+        'Failed to delete vehicle',
+      );
+
       return false;
-    } finally {
-      _isLoading.value = false;
     }
   }
-
   void startEdit(VehicleModel vehicle) {
     _selectedVehicle.value = vehicle;
     plateNumberController.text = vehicle.plateNumber;
@@ -414,12 +412,14 @@ class AdminVehicleController extends GetxController {
 
   void setStatusFilter(String status) {
     _statusFilter.value = status;
+    _applyFilters(); // instant UI sync
     fetchVehicles(refresh: true);
   }
 
   void setTypeFilter(String type) {
     _typeFilter.value = type;
-    fetchVehicles(refresh: true);
+    _applyFilters(); // instant UI sync
+    fetchVehicles(refresh: true); // backend sync
   }
 
   void setSearchQuery(String query) {

@@ -1,5 +1,9 @@
 // lib/modules/admin/views/admin_cargo_view.dart
 
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -13,7 +17,6 @@ import '../../../core/constants/app_fonts.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/buttons/secondary_button.dart';
 import '../../../core/widgets/inputs/custom_textfield.dart';
-import '../../auth/controllers/auth_controller.dart';
 import '../controllers/admin_cargo_controller.dart';
 
 class AdminCargoView extends GetView<AdminCargoController> {
@@ -516,36 +519,44 @@ class AdminCargoView extends GetView<AdminCargoController> {
                   ),
                 ),
                 const SizedBox(height: AppDimens.margin12),
-                Wrap(
+                Obx(() => Wrap(
                   spacing: AppDimens.margin8,
                   runSpacing: AppDimens.margin8,
                   children: controller.availableStatuses.map((status) {
                     return AdminFilterChip(
-                      label: status == 'all' ? 'All' : (status.capitalize ?? status),
+                      label: status == 'all'
+                          ? 'All'
+                          : (status.capitalize ?? status),
                       value: status,
                       selectedValue: controller.statusFilter,
-                      onSelected: (value) => controller.setStatusFilter(value),
+                      onSelected: (value) {
+                        controller.setStatusFilter(value);
+                      },
                     );
                   }).toList(),
-                ),
+                )),
                 const SizedBox(height: AppDimens.margin24),
                 // Date Filter
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Date'),
-                  subtitle: Text(
+                  subtitle: Obx(() => Text(
                     controller.dateFilter != null
-                        ? DateFormat('yyyy-MM-dd').format(controller.dateFilter!)
+                        ? DateFormat('yyyy-MM-dd')
+                        .format(controller.dateFilter!)
                         : 'Select date',
-                  ),
+                  )),
                   trailing: const Icon(Icons.calendar_today_rounded),
                   onTap: () async {
+                    final now = DateTime.now();
+
                     final date = await showDatePicker(
                       context: context,
-                      initialDate: controller.dateFilter ?? DateTime.now(),
+                      initialDate: controller.dateFilter ?? now,
                       firstDate: DateTime(2024),
-                      lastDate: DateTime(2026),
+                      lastDate: now.add(const Duration(days: 365)),
                     );
+
                     if (date != null) {
                       controller.setDateFilter(date);
                       Get.back();
@@ -782,7 +793,6 @@ class AdminCargoView extends GetView<AdminCargoController> {
 
   void _showReceiptDialog(dynamic cargo) {
     final theme = Get.context!.theme;
-    final isDark = theme.brightness == Brightness.dark;
 
     Get.dialog(
       Dialog(
@@ -796,48 +806,344 @@ class AdminCargoView extends GetView<AdminCargoController> {
             children: [
               const Icon(Icons.receipt_rounded, size: 48, color: Colors.green),
               const SizedBox(height: AppDimens.margin16),
+
               Text(
                 'Cargo Receipt',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: AppFonts.bold,
                 ),
               ),
+
               const SizedBox(height: AppDimens.margin24),
+
               _buildReceiptRow('Tracking Code', cargo.trackingCode),
               _buildReceiptRow('Sender', cargo.senderName),
               _buildReceiptRow('Receiver', cargo.receiverName),
               _buildReceiptRow('Cargo Type', cargo.cargoType),
               _buildReceiptRow('Weight', '${cargo.weight} kg'),
               _buildReceiptRow('Route', '${cargo.origin} → ${cargo.destination}'),
+
               const Divider(height: AppDimens.margin24),
-              _buildReceiptRow('Total Fee', 'ETB ${cargo.fee.toStringAsFixed(2)}', isBold: true),
+
+              _buildReceiptRow(
+                'Total Fee',
+                'ETB ${cargo.fee.toStringAsFixed(2)}',
+                isBold: true,
+              ),
+
               const SizedBox(height: AppDimens.margin24),
+
+              // BUTTONS ROW (UPDATED)
               Row(
                 children: [
                   Expanded(
                     child: SecondaryButton(
-                      text: 'Cancel',
-                      onPressed: () => Get.back(),
+                      text: 'Save',
+                      icon: Icons.download_rounded,
+                      onPressed: () async {
+                        Get.back();
+                        await _downloadReceipt(cargo);
+                      },
                     ),
                   ),
+
                   const SizedBox(width: AppDimens.margin12),
+
                   Expanded(
                     child: PrimaryButton(
                       text: 'Print',
+                      icon: Icons.print_rounded,
                       onPressed: () {
                         Get.back();
                         Get.snackbar('Print', 'Receipt sent to printer');
                       },
-                      icon: Icons.print_rounded,
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: AppDimens.margin12),
+
+              SizedBox(
+                width: double.infinity,
+                child: SecondaryButton(
+                  text: 'Close',
+                  onPressed: () => Get.back(),
+                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _downloadReceipt(dynamic cargo) async {
+    try {
+      Get.snackbar(
+        'Preparing',
+        'Generating receipt...',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+
+      final htmlContent = _buildReceiptHtml(cargo);
+
+      final fileName =
+          'receipt_${cargo.trackingCode}_${DateTime.now().millisecondsSinceEpoch}.html';
+
+      final Uint8List bytes = Uint8List.fromList(
+        utf8.encode(htmlContent),
+      );
+
+      // ✅ PUBLIC DOWNLOAD FOLDER (VISIBLE IN FILE MANAGER)
+      final Directory downloadDir =
+      Directory('/storage/emulated/0/Download/Menahariya_Receipts');
+
+      if (!await downloadDir.exists()) {
+        await downloadDir.create(recursive: true);
+      }
+
+      final File file = File('${downloadDir.path}/$fileName');
+
+      await file.writeAsBytes(bytes);
+
+      Get.snackbar(
+        'Success',
+        'Saved to Downloads → Menahariya_Receipts',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to save receipt: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+  String _buildReceiptHtml(dynamic cargo) {
+    final now = DateTime.now();
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargo Receipt - ${cargo.trackingCode}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            background: #eef2f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .receipt-card {
+            max-width: 700px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -10px rgba(0,0,0,0.15);
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .receipt-header {
+            background: linear-gradient(135deg, #1e3c2c 0%, #2a6b3c 100%);
+            color: white;
+            padding: 28px 32px;
+            text-align: center;
+        }
+        .receipt-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .receipt-header p {
+            opacity: 0.85;
+            font-size: 14px;
+        }
+        .receipt-body {
+            padding: 32px;
+        }
+        .tracking-badge {
+            background: #f0f6f0;
+            padding: 12px 20px;
+            border-radius: 40px;
+            text-align: center;
+            margin-bottom: 28px;
+            border-left: 4px solid #2a6b3c;
+        }
+        .tracking-code {
+            font-family: monospace;
+            font-size: 20px;
+            font-weight: bold;
+            color: #1e3c2c;
+            letter-spacing: 1.5px;
+        }
+        .section {
+            margin-bottom: 28px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e3c2c;
+            border-left: 5px solid #2a6b3c;
+            padding-left: 12px;
+            margin-bottom: 16px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #edf2f0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #4a5b4e;
+            width: 35%;
+        }
+        .info-value {
+            color: #1a2e22;
+            font-weight: 500;
+            width: 65%;
+            text-align: right;
+        }
+        .status-badge {
+            display: inline-block;
+            background: #e9f5eb;
+            color: #2a6b3c;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .fee-total {
+            background: #f9faf7;
+            padding: 16px;
+            border-radius: 20px;
+            margin-top: 12px;
+            border: 1px dashed #bdd4c0;
+        }
+        .footer {
+            background: #fafcf8;
+            padding: 20px 32px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7c6e;
+            border-top: 1px solid #e2e8e2;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .receipt-card {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-card">
+        <div class="receipt-header">
+            <h1>🛻 CARGO RECEIPT</h1>
+            <p>Official Shipping Document</p>
+        </div>
+
+        <div class="receipt-body">
+            <div class="tracking-badge">
+                <div style="font-size:12px; margin-bottom:6px;">TRACKING CODE</div>
+                <div class="tracking-code">${cargo.trackingCode}</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">📦 Shipment Overview</div>
+                <div class="info-row">
+                    <span class="info-label">Status</span>
+                    <span class="info-value"><span class="status-badge">${cargo.status.toUpperCase()}</span></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Registered Date</span>
+                    <span class="info-value">${_formatDateTime(cargo.registeredDate)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Cargo Type</span>
+                    <span class="info-value">${cargo.cargoType}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Weight</span>
+                    <span class="info-value">${cargo.weight} kg</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">📍 Route</div>
+                <div class="info-row">
+                    <span class="info-label">Origin</span>
+                    <span class="info-value">${cargo.origin}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Destination</span>
+                    <span class="info-value">${cargo.destination}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Departure</span>
+                    <span class="info-value">${_formatDateTime(cargo.departureTime)}</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">👤 Sender</div>
+                <div class="info-row">
+                    <span class="info-label">Name</span>
+                    <span class="info-value">${cargo.senderName}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone</span>
+                    <span class="info-value">${cargo.senderPhone}</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">📬 Receiver</div>
+                <div class="info-row">
+                    <span class="info-label">Name</span>
+                    <span class="info-value">${cargo.receiverName}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone</span>
+                    <span class="info-value">${cargo.receiverPhone}</span>
+                </div>
+            </div>
+
+            <div class="fee-total">
+                <div class="info-row" style="border-bottom: none;">
+                    <span class="info-label" style="font-weight:800;">TOTAL FEE</span>
+                    <span class="info-value" style="font-size:22px; font-weight:800; color:#2a6b3c;">ETB ${cargo.fee.toStringAsFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Generated on ${DateFormat('yyyy-MM-dd HH:mm:ss').format(now)}<br>
+            Menahariya Cargo Services – Authorised Document
+        </div>
+    </div>
+</body>
+</html>
+  ''';
   }
 
   Widget _buildDetailSection({required String title, required List<Widget> children}) {
@@ -901,19 +1207,27 @@ class AdminCargoView extends GetView<AdminCargoController> {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.padding8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isBold ? null : theme.textTheme.bodySmall?.color,
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: isBold ? null : theme.textTheme.bodySmall?.color,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: isBold ? AppFonts.bold : AppFonts.medium,
-              color: isBold ? Colors.green : null,
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: isBold ? AppFonts.bold : AppFonts.medium,
+                color: isBold ? Colors.green : null,
+              ),
             ),
           ),
         ],

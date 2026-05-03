@@ -27,9 +27,9 @@ class OnboardingView extends GetView<OnboardingController> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppColors.primaryGreen,
-                  AppColors.primaryYellow,
-                  AppColors.primaryRed,
+                  AppColors.black,
+                  AppColors.black,
+                  AppColors.black,
                 ],
                 stops: const [0.1, 0.5, 0.9],
               ),

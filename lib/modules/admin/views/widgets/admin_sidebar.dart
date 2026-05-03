@@ -31,7 +31,7 @@ class AdminDrawer extends StatelessWidget {
       child: Column(
         children: [
           // Drawer Header
-          UserAccountsDrawerHeader(
+          Obx(() => UserAccountsDrawerHeader(
             decoration: BoxDecoration(
               color: isDark ? AppColors.primaryGreen : AppColors.primaryGreenLight,
             ),
@@ -46,7 +46,7 @@ class AdminDrawer extends StatelessWidget {
               child: _buildProfileImage(authController, staticBaseUrl),
             ),
             onDetailsPressed: () => Get.to(() => const AdminProfileView()),
-          ),
+          )),
 
           // Drawer Items
           Expanded(

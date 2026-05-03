@@ -68,7 +68,7 @@ class AdminVehiclesView extends GetView<AdminVehicleController> {
             // Stats Row
             _buildStatsRow(context),
             // Active Filters
-            _buildActiveFilters(context),
+            Obx(() => _buildActiveFilters(context)),
             // Vehicles List
             Expanded(
               child: RefreshIndicator(
@@ -519,25 +519,26 @@ class AdminVehiclesView extends GetView<AdminVehicleController> {
                   ),
                 ),
                 const SizedBox(height: AppDimens.margin12),
-                Wrap(
-                  spacing: AppDimens.margin8,
-                  runSpacing: AppDimens.margin8,
-                  children: [
-                    AdminFilterChip(
-                      label: 'All',
-                      value: '',
-                      selectedValue: controller.typeFilter,
-                      onSelected: (value) => controller.setTypeFilter(value),
-                    ),
-                    ...controller.vehicleTypes.map((type) {
-                      return AdminFilterChip(
-                        label: type,
-                        value: type,
+                Obx(() => Wrap(
+                    spacing: AppDimens.margin8,
+                    runSpacing: AppDimens.margin8,
+                    children: [
+                      AdminFilterChip(
+                        label: 'All',
+                        value: '',
                         selectedValue: controller.typeFilter,
                         onSelected: (value) => controller.setTypeFilter(value),
-                      );
-                    }).toList(), // ✅ Add .toList() here
-                  ],
+                      ),
+                      ...controller.vehicleTypes.map((type) {
+                        return AdminFilterChip(
+                          label: type,
+                          value: type,
+                          selectedValue: controller.typeFilter,
+                          onSelected: (value) => controller.setTypeFilter(value),
+                        );
+                      }).toList(), // ✅ Add .toList() here
+                    ],
+                  ),
                 ),
                 const SizedBox(height: AppDimens.margin24),
                 // Status Filter
@@ -548,25 +549,26 @@ class AdminVehiclesView extends GetView<AdminVehicleController> {
                   ),
                 ),
                 const SizedBox(height: AppDimens.margin12),
-                Wrap(
-                  spacing: AppDimens.margin8,
-                  runSpacing: AppDimens.margin8,
-                  children: [
-                    AdminFilterChip(
-                      label: 'All',
-                      value: '',
-                      selectedValue: controller.statusFilter,
-                      onSelected: (value) => controller.setStatusFilter(value),
-                    ),
-                    ...controller.vehicleStatuses.map((status) {
-                      return AdminFilterChip(
-                        label: _capitalize(status),
-                        value: status,
+                Obx( ()=> Wrap(
+                    spacing: AppDimens.margin8,
+                    runSpacing: AppDimens.margin8,
+                    children: [
+                      AdminFilterChip(
+                        label: 'All',
+                        value: '',
                         selectedValue: controller.statusFilter,
                         onSelected: (value) => controller.setStatusFilter(value),
-                      );
-                    }).toList(), // ✅ Add .toList() here
-                  ],
+                      ),
+                      ...controller.vehicleStatuses.map((status) {
+                        return AdminFilterChip(
+                          label: _capitalize(status),
+                          value: status,
+                          selectedValue: controller.statusFilter,
+                          onSelected: (value) => controller.setStatusFilter(value),
+                        );
+                      }).toList(), // ✅ Add .toList() here
+                    ],
+                  ),
                 ),
                 const SizedBox(height: AppDimens.margin24),
                 Row(

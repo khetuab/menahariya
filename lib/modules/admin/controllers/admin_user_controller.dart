@@ -182,7 +182,7 @@ class AdminUserController extends GetxController {
 
   Future<bool> createUser(Map<String, dynamic> userData) async {
     try {
-      _isLoading.value = true;
+      _isSaving.value = true;
 
       final response = await _apiClient.post(
         ApiEndpoints.users,
@@ -200,13 +200,13 @@ class AdminUserController extends GetxController {
       AppSnackbar.show('Error', 'Failed to create user');
       return false;
     } finally {
-      _isLoading.value = false;
+      _isSaving.value = false;
     }
   }
 
   Future<bool> updateUser(String userId, Map<String, dynamic> updates) async {
     try {
-      _isLoading.value = true;
+      _isSaving.value = true;
 
       final response = await _apiClient.patch(
         '${ApiEndpoints.users}/$userId',
@@ -224,16 +224,16 @@ class AdminUserController extends GetxController {
       AppSnackbar.show('Error', 'Failed to update user');
       return false;
     } finally {
-      _isLoading.value = false;
+      _isSaving.value = false;
     }
   }
 
   Future<bool> toggleUserStatus(String userId, bool isActive) async {
     try {
-      _isLoading.value = true;
+      _isSaving.value = true;
 
       final response = await _apiClient.patch(
-        '${ApiEndpoints.users}/$userId/status',
+        '${ApiEndpoints.users}/$userId',
         data: {'isActive': isActive},
       );
 
@@ -248,16 +248,16 @@ class AdminUserController extends GetxController {
       AppSnackbar.show('Error', 'Failed to update user status');
       return false;
     } finally {
-      _isLoading.value = false;
+      _isSaving.value = false;
     }
   }
 
   Future<bool> resetUserPassword(String userId, String newPassword) async {
     try {
-      _isLoading.value = true;
+      _isSaving.value = true;
 
       final response = await _apiClient.post(
-        '${ApiEndpoints.users}/$userId/reset-password',
+        '${ApiEndpoints.admin}/$userId/reset-password',
         data: {'password': newPassword},
       );
 
@@ -271,13 +271,13 @@ class AdminUserController extends GetxController {
       AppSnackbar.show('Error', 'Failed to reset password');
       return false;
     } finally {
-      _isLoading.value = false;
+      _isSaving.value = false;
     }
   }
 
   Future<bool> deleteUser(String userId) async {
     try {
-      _isLoading.value = true;
+      _isSaving.value = true;
       final response = await _apiClient.delete('${ApiEndpoints.users}/$userId');
       if (response != null && response['success'] == true) {
         await fetchUsers(refresh: true); // Refresh instead of local removal
@@ -290,7 +290,7 @@ class AdminUserController extends GetxController {
       AppSnackbar.show('Error', 'Failed to delete user');
       return false;
     } finally {
-      _isLoading.value = false;
+      _isSaving.value = false;
     }
   }
 

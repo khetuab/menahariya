@@ -6,6 +6,7 @@ import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import '../../../config/environment/env_config.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/api/api_client.dart';
 import '../../../core/utils/app_snackbar.dart';
 import '../../../core/services/storage/secure_storage.dart';
@@ -178,7 +179,11 @@ class AdminProfileController extends GetxController {
             email: _profile.value!.email,
             profileImage: _profile.value!.profileImage,
           );
-          await _secureStorage.writeObject('user', updatedUser.toJson());
+          await _secureStorage.writeObject(
+            AppConstants.prefKeyUser,
+            updatedUser.toJson(),
+          );
+          await AuthController.instance.updateUser(updatedUser);
         }
 
         AppSnackbar.show('Success', 'Profile updated successfully');

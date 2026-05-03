@@ -96,6 +96,11 @@ class LoginController extends GetxController {
 
   Future<void> handleLogin() async {
     // Validate all fields
+    // ✅ Clear previous errors FIRST
+    clearErrors();
+
+
+    if (!isFormValid) return;
     validatePhone(phoneController.text);
     validatePassword(passwordController.text);
 
@@ -162,6 +167,17 @@ class LoginController extends GetxController {
     Get.toNamed(AppRoutes.forgotPassword);
   }
 
+  void _dismissKeyboard() {
+    // Unfocus all focus nodes
+    phoneFocusNode.unfocus();
+    passwordFocusNode.unfocus();
+
+    // Force dismiss keyboard system-wide
+    if (Get.context != null) {
+      FocusManager.instance.primaryFocus?.unfocus();
+    }
+  }
+
   // Clear focus
   void unfocusFields() {
     phoneFocusNode.unfocus();
@@ -170,6 +186,14 @@ class LoginController extends GetxController {
 
   @override
   void onClose() {
+    // Dismiss keyboard if possible
+    if (Get.context != null) {
+      FocusScope.of(Get.context!).unfocus();
+    }
+    // Unfocus individual nodes to stop any pending interactions
+    phoneFocusNode.unfocus();
+    passwordFocusNode.unfocus();
+    // Dispose controllers and nodes
     phoneController.dispose();
     passwordController.dispose();
     phoneFocusNode.dispose();
