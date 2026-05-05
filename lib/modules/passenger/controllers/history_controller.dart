@@ -99,8 +99,14 @@ class PassengerHistoryController extends GetxController {
     _calculateStatistics();
   }
 
-  // ============== Tickets History ==============
+  // Add this method to PassengerHistoryController class
 
+  void resetStatusFilter() {
+    _statusFilter.value = '';
+    print('🔄 Status filter reset to: ${_statusFilter.value}');
+  }
+
+// Also update the loadTickets method to ensure it doesn't use a stale status filter:
   Future<void> loadTickets({bool refresh = false}) async {
     if (refresh) {
       _ticketsCurrentPage.value = 1;
@@ -113,41 +119,74 @@ class PassengerHistoryController extends GetxController {
     try {
       _isLoading.value = true;
 
+      // Don't send status filter unless it's specifically set
+      final Map<String, dynamic> queryParams = {
+        'page': _ticketsCurrentPage.value,
+        'limit': 100,
+      };
+
+      // Only add status filter if it's not empty
+      if (_statusFilter.value.isNotEmpty && _statusFilter.value != 'all') {
+        queryParams['status'] = _statusFilter.value;
+      }
+
       final response = await _apiClient.get(
         ApiEndpoints.ticketsMyTickets,
-        queryParameters: {
-          'page': _ticketsCurrentPage.value,
-          'limit': AppConstants.defaultPageSize,
-          'status': _statusFilter.value != 'all' ? _statusFilter.value : null,
-          'sort': _sortOrder.value == SortOrder.ascending ? 'asc' : 'desc',
-          ..._getDateRangeParams(),
-        },
+        queryParameters: queryParams,
       );
 
-      if (response != null && response['data'] != null) {
-        final List<dynamic> data = response['data'];
-        final newTickets = data.map((t) => TicketModel.fromJson(t)).toList();
+      print('📊 Tickets API Response: $response');
 
-        if (_ticketsCurrentPage.value == 1) {
+      if (response != null && response['data'] != null) {
+        List<TicketModel> newTickets = [];
+
+        if (response['data'] is List) {
+          newTickets = (response['data'] as List)
+              .map((t) => TicketModel.fromJson(t))
+              .toList();
+        }
+
+        print('✅ Loaded ${newTickets.length} tickets');
+
+        if (refresh) {
           _tickets.value = newTickets;
         } else {
           _tickets.addAll(newTickets);
         }
 
         _applyTicketFilters();
-        _ticketsHasMore.value = newTickets.length >= AppConstants.defaultPageSize;
+        _ticketsHasMore.value = newTickets.length >= 100;
         _ticketsCurrentPage.value++;
+
+        _calculateStatistics();
       }
     } catch (e) {
-      print('Error loading tickets: $e');
+      print('❌ Error loading tickets: $e');
     } finally {
       _isLoading.value = false;
       _isRefreshing.value = false;
     }
   }
 
+  // In history_controller.dart, add a method to reset filters for tickets view:
+
+  void resetToTicketsView() {
+    // Reset status filter to empty (show all)
+    _statusFilter.value = '';
+    // Reset other filters
+    _dateRange.value = null;
+    _searchQuery.value = '';
+    _sortOrder.value = SortOrder.descending;
+    // Reload tickets
+    loadTickets(refresh: true);
+  }
+// Update _applyTicketFilters to work with empty filters
   void _applyTicketFilters() {
     var filtered = List<TicketModel>.from(_tickets);
+
+    print('🔍 Applying filters to ${_tickets.length} tickets');
+    print('🔍 Status filter: ${_statusFilter.value}');
+    print('🔍 Search query: ${_searchQuery.value}');
 
     // Apply search query
     if (_searchQuery.value.isNotEmpty) {
@@ -155,6 +194,13 @@ class PassengerHistoryController extends GetxController {
         return t.origin.toLowerCase().contains(_searchQuery.value.toLowerCase()) ||
             t.destination.toLowerCase().contains(_searchQuery.value.toLowerCase()) ||
             t.id.toLowerCase().contains(_searchQuery.value.toLowerCase());
+      }).toList();
+    }
+
+    // Apply status filter
+    if (_statusFilter.value.isNotEmpty && _statusFilter.value != 'all') {
+      filtered = filtered.where((t) {
+        return t.status.toLowerCase() == _statusFilter.value.toLowerCase();
       }).toList();
     }
 
@@ -174,57 +220,37 @@ class PassengerHistoryController extends GetxController {
     }
 
     filteredTickets.value = filtered;
+    print('✅ After filter: ${filteredTickets.length} tickets');
   }
 
-  // ============== Cargo History ==============
+  // Add this to PassengerHistoryController class
+  final _cargoStatusFilter = ''.obs;
+  String get cargoStatusFilter => _cargoStatusFilter.value;
 
-  Future<void> loadCargoHistory({bool refresh = false}) async {
-    if (refresh) {
-      _cargoCurrentPage.value = 1;
-      _cargoHasMore.value = true;
-      _cargoList.clear();
-    }
-
-    if (!_cargoHasMore.value || _isLoading.value) return;
-
-    try {
-      _isLoading.value = true;
-
-      final response = await _apiClient.get(
-        ApiEndpoints.cargoHistory,
-        queryParameters: {
-          'page': _cargoCurrentPage.value,
-          'limit': AppConstants.defaultPageSize,
-          'status': _statusFilter.value != 'all' ? _statusFilter.value : null,
-          'sort': _sortOrder.value == SortOrder.ascending ? 'asc' : 'desc',
-          ..._getDateRangeParams(),
-        },
-      );
-
-      if (response != null && response['data'] != null) {
-        final List<dynamic> data = response['data'];
-        final newCargo = data.map((c) => CargoModel.fromJson(c)).toList();
-
-        if (_cargoCurrentPage.value == 1) {
-          _cargoList.value = newCargo;
-        } else {
-          _cargoList.addAll(newCargo);
-        }
-
-        _applyCargoFilters();
-        _cargoHasMore.value = newCargo.length >= AppConstants.defaultPageSize;
-        _cargoCurrentPage.value++;
-      }
-    } catch (e) {
-      print('Error loading cargo history: $e');
-    } finally {
-      _isLoading.value = false;
-      _isRefreshing.value = false;
-    }
+  void setCargoStatusFilter(String status) {
+    _cargoStatusFilter.value = status;
+    _applyCargoFilters();
   }
 
+  void resetStatusFilterForCargo() {
+    _cargoStatusFilter.value = '';
+    print('🔄 Cargo status filter reset');
+    loadCargoHistory(refresh: true);
+  }
+
+// Update _applyCargoFilters method:
   void _applyCargoFilters() {
     var filtered = List<CargoModel>.from(_cargoList);
+
+    print('🔍 Applying cargo filters to ${_cargoList.length} items');
+    print('🔍 Cargo status filter: ${_cargoStatusFilter.value}');
+
+    // Apply status filter
+    if (_cargoStatusFilter.value.isNotEmpty && _cargoStatusFilter.value != 'all') {
+      filtered = filtered.where((c) {
+        return c.status.toLowerCase() == _cargoStatusFilter.value.toLowerCase();
+      }).toList();
+    }
 
     // Apply search query
     if (_searchQuery.value.isNotEmpty) {
@@ -250,7 +276,116 @@ class PassengerHistoryController extends GetxController {
     }
 
     filteredCargo.value = filtered;
+    print('✅ After filter: ${filteredCargo.length} cargo items');
   }
+  // ============== Cargo History ==============
+
+  // Replace the loadCargoHistory method with this:
+
+  Future<void> loadCargoHistory({bool refresh = false}) async {
+    if (refresh) {
+      _cargoCurrentPage.value = 1;
+      _cargoHasMore.value = true;
+      _cargoList.clear();
+    }
+
+    if (!_cargoHasMore.value || _isLoading.value) return;
+
+    try {
+      _isLoading.value = true;
+
+      print('📦 Loading cargo history...');
+
+      // Use the correct endpoint from ApiEndpoints
+      final response = await _apiClient.get(
+        ApiEndpoints.cargoHistory,
+        queryParameters: {
+          'page': _cargoCurrentPage.value,
+          'limit': 100,  // Get more items
+        },
+      );
+
+      print('📦 Cargo API Response: $response');
+
+      if (response != null && response['data'] != null) {
+        List<CargoModel> newCargo = [];
+
+        // Handle different response structures
+        if (response['data'] is List) {
+          newCargo = (response['data'] as List)
+              .map((c) => CargoModel.fromJson(c))
+              .toList();
+        } else if (response['data']['data'] is List) {
+          newCargo = (response['data']['data'] as List)
+              .map((c) => CargoModel.fromJson(c))
+              .toList();
+        } else if (response['data']['cargos'] is List) {
+          newCargo = (response['data']['cargos'] as List)
+              .map((c) => CargoModel.fromJson(c))
+              .toList();
+        }
+
+        print('✅ Loaded ${newCargo.length} cargo items');
+
+        if (refresh) {
+          _cargoList.value = newCargo;
+        } else {
+          _cargoList.addAll(newCargo);
+        }
+
+        _applyCargoFilters();
+        _cargoHasMore.value = newCargo.length >= 100;
+        _cargoCurrentPage.value++;
+
+        // Update total cargo count
+        _totalCargo.value = _cargoList.length;
+      } else {
+        print('⚠️ No cargo data found');
+        if (refresh) {
+          _cargoList.clear();
+          filteredCargo.clear();
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading cargo history: $e');
+      if (refresh) {
+        _cargoList.clear();
+        filteredCargo.clear();
+      }
+    } finally {
+      _isLoading.value = false;
+      _isRefreshing.value = false;
+    }
+  }
+
+  // void _applyCargoFilters() {
+  //   var filtered = List<CargoModel>.from(_cargoList);
+  //
+  //   // Apply search query
+  //   if (_searchQuery.value.isNotEmpty) {
+  //     filtered = filtered.where((c) {
+  //       return c.trackingCode.toLowerCase().contains(_searchQuery.value.toLowerCase()) ||
+  //           c.destination.toLowerCase().contains(_searchQuery.value.toLowerCase());
+  //     }).toList();
+  //   }
+  //
+  //   // Apply date range
+  //   if (_dateRange.value != null) {
+  //     filtered = filtered.where((c) {
+  //       return c.registeredDate.isAfter(_dateRange.value!.start) &&
+  //           c.registeredDate.isBefore(_dateRange.value!.end);
+  //     }).toList();
+  //   }
+  //
+  //   // Apply sorting
+  //   if (_sortOrder.value == SortOrder.ascending) {
+  //     filtered.sort((a, b) => a.registeredDate.compareTo(b.registeredDate));
+  //   } else {
+  //     filtered.sort((a, b) => b.registeredDate.compareTo(a.registeredDate));
+  //   }
+  //
+  //   filteredCargo.value = filtered;
+  // }
 
   // ============== Payments History ==============
 

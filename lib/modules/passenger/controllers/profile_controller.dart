@@ -1,5 +1,6 @@
 // lib/modules/passenger/controllers/profile_controller.dart
 
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,9 @@ import 'package:menahariya/core/utils/permissions/permission_handler.dart';
 import 'package:menahariya/modules/passenger/views/support/about_view.dart';
 import 'package:menahariya/modules/passenger/views/support/help_support_view.dart';
 import 'package:menahariya/modules/passenger/views/support/privacy_security_view.dart';
+
+import '../../../core/constants/app_dimens.dart';
+import '../../../core/services/storage/shared_prefs.dart';
 
 class PassengerProfileController extends GetxController {
   static PassengerProfileController get instance => Get.find();
@@ -81,6 +85,7 @@ class PassengerProfileController extends GetxController {
   final _autoDownloadTickets = false.obs;
   final _receivePromotions = true.obs;
 
+  final SharedPrefs _sharedPrefs = SharedPrefs();
   // Statistics
   final _totalTrips = 0.obs;
   final _totalCargo = 0.obs;
@@ -160,13 +165,671 @@ class PassengerProfileController extends GetxController {
     _initializeControllers();
     _loadPreferences();
     _loadStatistics();
+    _loadStatisticsFromUserData();
+    _loadBiometricState();
+    _load2FAState();
     PermissionHandler.debugPermissions();
   }
 
+
+  Future<void> _loadBiometricState() async {
+    try {
+      final biometricEnabled = await _sharedPrefs.getBool('biometric_enabled');
+      print('🔐 Loading biometric state from SharedPrefs: $biometricEnabled');
+      _isBiometricEnabled.value = biometricEnabled ?? false;
+    } catch (e) {
+      print('❌ Error loading biometric state: $e');
+      _isBiometricEnabled.value = false;
+    }
+  }
+
+  void _loadStatisticsFromUserData() async {
+    // Statistics already loaded from user data
+    // Optionally refresh from server if needed
+    try {
+      final response = await _apiClient.get('/users/me');
+      if (response != null && response['data'] != null) {
+        final userData = response['data'];
+        _totalTrips.value = userData['totalTrips'] ?? _totalTrips.value;
+        // Cargo might not be in the response yet
+        _loyaltyPoints.value = userData['loyaltyPoints'] ?? _loyaltyPoints.value;
+        _loyaltyTier.value = userData['loyaltyTier'] ?? _loyaltyTier.value;
+        print('✅ Statistics refreshed from /users/me');
+      }
+    } catch (e) {
+      print('⚠️ Could not refresh statistics: $e');
+    }
+  }
+
+  // In PassengerProfileController, replace the _loadStatistics method:
+
+  final _isBiometricEnabled = false.obs;
+  bool get isBiometricEnabled => _isBiometricEnabled.value;
+
+  // Update the biometric methods in profile_controller.dart:
+
+  // In profile_controller.dart, update toggleBiometricLogin:
+
+  Future<void> toggleBiometricLogin(bool value) async {
+    print('🔐 Toggle biometric login called with value: $value');
+
+    if (value) {
+      // Check if user is logged in
+      if (_user.value == null) {
+        print('❌ No user logged in, cannot enable biometrics');
+        Get.snackbar('Please Login First', 'Login with password to enable biometrics');
+        return;
+      }
+
+      // Check if device supports biometrics
+      final isAvailable = await PermissionHandler.checkBiometricSupport();
+      print('🔐 Device biometric support: $isAvailable');
+
+      if (!isAvailable) {
+        Get.snackbar(
+          'Not Available',
+          'Biometric authentication is not available on this device',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      // FIRST: Ask for password to confirm and save it
+      final password = await _showPasswordDialog();
+      if (password == null || password.isEmpty) {
+        print('❌ No password provided, cancelling biometric enable');
+        Get.snackbar('Password Required', 'Please enter your password to enable biometrics');
+        _isBiometricEnabled.value = false;
+        return;
+      }
+
+      // Get available biometric types
+      final availableTypes = await PermissionHandler.getAvailableBiometrics();
+      final typeNames = availableTypes.map((t) =>
+          PermissionHandler.getBiometricTypeName(t)).join(' or ');
+
+      // Authenticate to enable
+      final isAuthenticated = await PermissionHandler.authenticateWithBiometrics(
+        reason: 'Enable ${typeNames.isEmpty ? 'biometric' : typeNames} login for faster access to your account',
+      );
+
+      print('🔐 Authentication result: $isAuthenticated');
+
+      if (isAuthenticated) {
+        // Save to SharedPrefs with the actual password
+        await _sharedPrefs.setString('biometric_phone', _user.value!.phone);
+        await _sharedPrefs.setString('biometric_password', password);  // Save actual password!
+        await _sharedPrefs.setBool('biometric_enabled', true);
+
+        // Also update AuthController
+        await _authController.saveCredentialsForBiometric(_user.value!.phone, password);
+
+        _isBiometricEnabled.value = true;
+        print('✅ Biometric login ENABLED - phone: ${_user.value!.phone}, password saved');
+
+        Get.snackbar(
+          'Success',
+          'Biometric login enabled. Next time you login, you can use biometrics.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        _isBiometricEnabled.value = false;
+        print('❌ Biometric login NOT enabled - authentication failed');
+      }
+    } else {
+      // Disable biometric login
+      print('🔐 Disabling biometric login...');
+
+      final confirm = await Get.dialog<bool>(
+        AlertDialog(
+          title: const Text('Disable Biometric Login'),
+          content: const Text('Are you sure you want to disable biometric login?'),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(result: false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Get.back(result: true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Disable'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        // Clear from SharedPrefs
+        await _sharedPrefs.remove('biometric_phone');
+        await _sharedPrefs.remove('biometric_password');
+        await _sharedPrefs.setBool('biometric_enabled', false);
+
+        // Clear from SecureStorage
+        await _secureStorage.delete('saved_credentials');
+        await _secureStorage.delete('saved_phone');
+
+        _isBiometricEnabled.value = false;
+        print('✅ Biometric login DISABLED');
+
+        Get.snackbar(
+          'Disabled',
+          'Biometric login disabled',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        // Revert the switch
+        _isBiometricEnabled.value = true;
+        print('⚠️ User cancelled biometric disable');
+      }
+    }
+  }
+
+// Add this helper method to show password dialog
+  Future<String?> _showPasswordDialog() async {
+    final passwordController = TextEditingController();
+    final isPasswordVisible = false.obs;
+
+    return await Get.dialog<String>(
+      AlertDialog(
+        title: const Text('Confirm Password'),
+        content: Obx(() => TextField(
+          controller: passwordController,
+          obscureText: !isPasswordVisible.value,
+          decoration: InputDecoration(
+            labelText: 'Enter your password',
+            border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              icon: Icon(
+                isPasswordVisible.value ? Icons.visibility_off : Icons.visibility,
+              ),
+              onPressed: () => isPasswordVisible.toggle(),
+            ),
+          ),
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: null),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: passwordController.text),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Add a method to authenticate when the app starts (if biometric login is enabled)
+  Future<bool> authenticateWithBiometricsOnStartup() async {
+    if (_isBiometricEnabled.value) {
+      final isAuthenticated = await PermissionHandler.authenticateWithBiometrics(
+        reason: 'Authenticate to access your account',
+      );
+      return isAuthenticated;
+    }
+    return true;
+  }
+
+
+
+  final _profileVisibility = 'public'.obs; // 'public', 'private', 'contacts_only'
+  String get profileVisibility => _profileVisibility.value;
+
+  Future<void> updateProfileVisibility(String visibility) async {
+    try {
+      await _apiClient.patch('/users/profile/visibility', data: {
+        'visibility': visibility,
+      });
+      _profileVisibility.value = visibility;
+      await _secureStorage.write('profile_visibility', visibility);
+      Get.snackbar('Success', 'Profile visibility updated');
+    } catch (e) {
+      print('Error updating profile visibility: $e');
+    }
+  }
+
+  final _locationSharingEnabled = true.obs;
+  final _locationAccuracy = 'precise'.obs; // 'precise', 'approximate'
+  bool get locationSharingEnabled => _locationSharingEnabled.value;
+  String get locationAccuracy => _locationAccuracy.value;
+
+  Future<void> toggleLocationSharing(bool value) async {
+    _locationSharingEnabled.value = value;
+    await _secureStorage.writeBool('location_sharing', value);
+
+    if (value) {
+      await PermissionHandler.requestLocationPermission();
+    }
+  }
+
+  Future<void> updateLocationAccuracy(String accuracy) async {
+    _locationAccuracy.value = accuracy;
+    await _secureStorage.write('location_accuracy', accuracy);
+  }
+
+// ============== Clear History Methods ==============
+
+  Future<void> clearSearchHistory() async {
+    try {
+      await _apiClient.delete('/users/history/search');
+      Get.snackbar('Success', 'Search history cleared');
+    } catch (e) {
+      print('Error clearing search history: $e');
+    }
+  }
+
+  Future<void> clearBrowseHistory() async {
+    try {
+      await _apiClient.delete('/users/history/browse');
+      Get.snackbar('Success', 'Browse history cleared');
+    } catch (e) {
+      print('Error clearing browse history: $e');
+    }
+  }
+
+// ============== Download Data Methods ==============
+
+  Future<void> requestDataDownload() async {
+    try {
+      _isLoading.value = true;
+
+      final response = await _apiClient.post('/users/data/export');
+
+      if (response != null && response['success'] == true) {
+        Get.snackbar(
+          'Request Sent',
+          'We\'ll email you when your data is ready',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 4),
+        );
+      }
+    } catch (e) {
+      print('Error requesting data download: $e');
+      Get.snackbar('Error', 'Failed to request data download');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+// ============== Delete Account Methods ==============
+
+  Future<void> deleteAccount(String password) async {
+    try {
+      _isLoading.value = true;
+
+      final response = await _apiClient.delete('/users/account', data: {
+        'password': password,
+      });
+
+      if (response != null && response['success'] == true) {
+        await _authController.logout();
+        Get.offAllNamed('/auth/login');
+        Get.snackbar('Account Deleted', 'Your account has been permanently deleted');
+      }
+    } catch (e) {
+      print('Error deleting account: $e');
+      Get.snackbar('Error', 'Failed to delete account. Please check your password.');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+  final _is2FAEnabled = false.obs;
+  final _2FAMethod = 'authenticator'.obs; // 'authenticator', 'sms', 'email'
+  final _2FASecret = ''.obs;
+  final _backupCodes = <String>[].obs;
+
+  bool get is2FAEnabled => _is2FAEnabled.value;
+  String get twoFAMethod => _2FAMethod.value;
+  List<String> get backupCodes => _backupCodes;
+
+  // Update the setupTwoFactorAuth method
+
+  Future<void> _load2FAState() async {
+    try {
+      final twoFactorEnabled = await _sharedPrefs.getBool('2fa_enabled');
+      print('🔐 Loading 2FA state from SharedPrefs: $twoFactorEnabled');
+      _is2FAEnabled.value = twoFactorEnabled ?? false;
+
+      // Also load from user data if available
+      if (_user.value != null && _user.value!.twoFactorEnabled != null) {
+        final user2FAEnabled = _user.value!.twoFactorEnabled;
+        if (user2FAEnabled != _is2FAEnabled.value) {
+          _is2FAEnabled.value = user2FAEnabled!;
+          await _sharedPrefs.setBool('2fa_enabled', user2FAEnabled);
+        }
+      }
+    } catch (e) {
+      print('❌ Error loading 2FA state: $e');
+      _is2FAEnabled.value = false;
+    }
+  }
+  Future<void> setupTwoFactorAuth() async {
+    try {
+      _isLoading.value = true;
+      print('🔐 Setting up 2FA...');
+
+      // Get setup data from server
+      final response = await _apiClient.post('/auth/2fa/setup');
+
+      print('📦 2FA Setup Response received');
+
+      if (response != null && response['data'] != null) {
+        final data = response['data'];
+        _2FASecret.value = data['secret'] ?? '';
+        _backupCodes.value = List<String>.from(data['backupCodes'] ?? []);
+
+        final otpauthUrl = data['otpauthUrl'] ?? '';
+        String? qrCodeBase64 = data['qrCode'];
+
+        final codeController = TextEditingController();
+
+        // Show QR code dialog
+        Get.dialog(
+          AlertDialog(
+            title: const Text('Setup Two-Factor Authentication'),
+            content: SizedBox(
+              width: 320,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Scan this QR code with your authenticator app:',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    // Display QR code if available
+                    if (qrCodeBase64 != null && qrCodeBase64.isNotEmpty)
+                      Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Image.memory(
+                          base64Decode(qrCodeBase64.replaceFirst('data:image/png;base64,', '')),
+                          width: 200,
+                          height: 200,
+                          fit: BoxFit.contain,
+                        ),
+                      )
+                    else if (_2FASecret.value.isNotEmpty)
+                      Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.qr_code, size: 80),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Secret Key:',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                              Text(
+                                _2FASecret.value,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontFamily: 'monospace',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: codeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Enter 6-digit code',
+                        border: OutlineInputBorder(),
+                        hintText: '000000',
+                        helperText: 'Enter the code from your authenticator app',
+                      ),
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '⚠️ Save these backup codes!',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Use these codes if you lose access to your authenticator app:',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: _backupCodes.map((code) => Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                code,
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            )).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  codeController.dispose();
+                  Get.back();
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final code = codeController.text.trim();
+                  if (code.length != 6) {
+                    Get.snackbar('Error', 'Please enter a valid 6-digit code');
+                    return;
+                  }
+                  Get.back();
+                  await _verifyAndEnable2FA(code);
+                  codeController.dispose();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                ),
+                child: const Text('Verify & Enable'),
+              ),
+            ],
+          ),
+          barrierDismissible: false,
+        );
+      }
+    } catch (e) {
+      print('❌ Error setting up 2FA: $e');
+      Get.snackbar('Error', 'Failed to setup two-factor authentication');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  // In profile_controller.dart, update _verifyAndEnable2FA:
+
+  Future<void> _verifyAndEnable2FA(String code) async {
+    try {
+      _isLoading.value = true;
+      print('🔐 Verifying 2FA with code: $code');
+
+      final response = await _apiClient.post('/auth/2fa/verify', data: {
+        'code': code,
+        'method': _2FAMethod.value,
+      });
+
+      print('📦 2FA Verify Response: $response');
+
+      if (response != null && response['success'] == true) {
+        _is2FAEnabled.value = true;
+
+        // Save to SharedPrefs (persists across logout)
+        await _sharedPrefs.setBool('2fa_enabled', true);
+
+        // Also save to SecureStorage for backup
+        await _secureStorage.writeBool('2fa_enabled', true);
+
+        Get.snackbar(
+          'Success',
+          'Two-factor authentication enabled',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } catch (e) {
+      print('❌ Error verifying 2FA: $e');
+      Get.snackbar('Error', 'Invalid verification code. Please try again.');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+// Update disableTwoFactorAuth:
+  Future<void> disableTwoFactorAuth() async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Disable 2FA'),
+        content: const Text('Are you sure you want to disable two-factor authentication?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Disable'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _apiClient.post('/auth/2fa/disable');
+        _is2FAEnabled.value = false;
+
+        // Clear from SharedPrefs
+        await _sharedPrefs.setBool('2fa_enabled', false);
+        await _secureStorage.writeBool('2fa_enabled', false);
+
+        Get.snackbar('Success', 'Two-factor authentication disabled');
+      } catch (e) {
+        print('Error disabling 2FA: $e');
+        Get.snackbar('Error', 'Failed to disable 2FA');
+      }
+    }
+  }
+  Future<void> _loadStatistics() async {
+    try {
+      print('📊 Loading statistics...');
+
+      // Get trips count from booking history
+      final tripsResponse = await _apiClient.get('/tickets/my-tickets?limit=100');
+      if (tripsResponse != null && tripsResponse['data'] != null) {
+        final trips = tripsResponse['data'] as List;
+        _totalTrips.value = trips.length;
+        print('✅ Total trips: ${_totalTrips.value}');
+      }
+
+      // Get cargo count from cargo history (using correct endpoint)
+      try {
+        final cargoResponse = await _apiClient.get('/cargo/history?limit=100');
+        if (cargoResponse != null && cargoResponse['data'] != null) {
+          final cargoData = cargoResponse['data'];
+          List cargoList = [];
+
+          if (cargoData is List) {
+            cargoList = cargoData;
+          } else if (cargoData['data'] is List) {
+            cargoList = cargoData['data'];
+          }
+
+          _totalCargo.value = cargoList.length;
+          print('✅ Total cargo: ${_totalCargo.value}');
+        }
+      } catch (cargoError) {
+        print('⚠️ Could not load cargo count: $cargoError');
+        _totalCargo.value = 0;
+      }
+
+      // Get loyalty points from user data
+      if (_user.value != null) {
+        _loyaltyPoints.value = _user.value!.loyaltyPoints ?? 0;
+        _loyaltyTier.value = _user.value!.loyaltyTier ?? 'Bronze';
+        print('✅ Loyalty: Points=${_loyaltyPoints.value}, Tier=${_loyaltyTier.value}');
+      }
+
+    } catch (e) {
+      print('❌ Error loading statistics: $e');
+      _totalTrips.value = 0;
+      _totalCargo.value = 0;
+      _loyaltyPoints.value = 254;
+      _loyaltyTier.value = 'Bronze';
+    }
+  }
+
+  Future<void> refreshStatistics() async {
+    await _loadStatistics();
+  }
   void _loadUserData() {
     _user.value = _authController.currentUser!;
     _profileImageUrl.value = user.profileImage;
     _memberSince.value = user.createdAt;
+
+    // Load statistics from user object if available
+    if (_user.value != null) {
+      _loyaltyPoints.value = _user.value!.loyaltyPoints ?? 0;
+      _loyaltyTier.value = _user.value!.loyaltyTier ?? 'Bronze';
+      print('📊 User data loaded: Points=${_loyaltyPoints.value}, Tier=${_loyaltyTier.value}');
+    }
   }
 
   void _initializeControllers() {
@@ -199,22 +862,6 @@ class PassengerProfileController extends GetxController {
       print('Error loading preferences: $e');
     }
   }
-
-  Future<void> _loadStatistics() async {
-    try {
-      final response = await _apiClient.get('/user/statistics');
-      if (response != null && response['data'] != null) {
-        _totalTrips.value = response['data']['totalTrips'] ?? 0;
-        _totalCargo.value = response['data']['totalCargo'] ?? 0;
-        _loyaltyPoints.value = response['data']['loyaltyPoints'] ?? 0;
-        _loyaltyTier.value = response['data']['loyaltyTier'] ?? 'Bronze';
-      }
-    } catch (e) {
-      print('Error loading statistics: $e');
-    }
-  }
-
-  // ============== Profile Image Methods ==============
 
   Future<void> pickImageFromCamera() async {
     final granted = await PermissionHandler.requestCameraPermission();

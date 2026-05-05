@@ -14,11 +14,13 @@ import 'package:menahariya/modules/auth/controllers/login_controller.dart';
 import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
 import 'package:menahariya/modules/auth/widgets/auth_header.dart';
 import 'package:menahariya/core/utils/app_snackbar.dart';
+import 'package:menahariya/modules/passenger/controllers/profile_controller.dart';
 
 import '../../../core/widgets/loading/progress_indicator.dart';
 
 class LoginView extends GetView<LoginController> {
   const LoginView({Key? key}) : super(key: key);
+
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +128,38 @@ class LoginView extends GetView<LoginController> {
                           icon: Icons.login_rounded,
                         )),
 
+                        Obx(() {
+                          if (controller.isBiometricEnabled) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: AppDimens.margin16),
+                              child: OutlinedButton.icon(
+                                onPressed: controller.isBiometricLoginInProgress
+                                    ? null
+                                    : () => controller.loginWithBiometrics(),
+                                icon: controller.isBiometricLoginInProgress
+                                    ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                                    : const Icon(Icons.fingerprint),
+                                label: Text(
+                                  controller.isBiometricLoginInProgress
+                                      ? 'Authenticating...'
+                                      : 'Login with Biometrics',
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: AppDimens.padding12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppDimens.radius8),
+                                  ),
+                                ),
+                              ),
+                            );
+                          } else {
+                            return const SizedBox();
+                          }
+                        }),
                         const SizedBox(height: AppDimens.margin16),
 
                         // Register Link
@@ -133,7 +167,7 @@ class LoginView extends GetView<LoginController> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Don't have an account? ",
+                              "Don't have an account ? ",
                               style: theme.textTheme.bodyMedium,
                             ),
                             GestureDetector(

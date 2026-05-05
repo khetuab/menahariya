@@ -7,7 +7,6 @@ import 'package:menahariya/core/constants/app_dimens.dart';
 import 'package:menahariya/core/constants/app_fonts.dart';
 import 'package:menahariya/core/widgets/buttons/primary_button.dart';
 import 'package:menahariya/core/utils/formatters/date_formatter.dart';
-import 'package:menahariya/core/utils/formatters/currency_formatter.dart';
 import 'package:menahariya/modules/passenger/controllers/cargo_controller.dart';
 import 'package:menahariya/data/models/trip/trip_model.dart';
 
@@ -23,6 +22,10 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
       appBar: AppBar(
         title: const Text('Select Trip for Cargo'),
         backgroundColor: isDark ? AppColors.surfaceDark : AppColors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.of(context).pop(null),
+        ),
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -33,7 +36,7 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
 
           return Column(
             children: [
-              // Search Bar - Fixed at top with scroll
+              // Search Bar - Fixed at top
               Container(
                 padding: const EdgeInsets.all(AppDimens.padding16),
                 child: _buildSearchBar(context),
@@ -63,257 +66,262 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Origin Field with Suggestions
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.grey800 : AppColors.grey50,
-                  borderRadius: BorderRadius.circular(AppDimens.radius8),
-                ),
-                child: TextField(
-                  controller: TextEditingController(text: controller.origin.value),
-                  focusNode: controller.originFocusNode,
-                  onChanged: (value) {
-                    controller.origin.value = value;
-                    controller.getCargoPlaceSuggestions(value, 'origin');
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'From',
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.all(AppDimens.padding12),
-                    prefixIcon: Icon(
-                      Icons.fmd_good_rounded,
-                      size: 18,
-                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                    ),
-                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
-                    ),
-                  ),
-                  style: theme.textTheme.bodyMedium,
-                  textInputAction: TextInputAction.next,
-                  onSubmitted: (_) => controller.destinationFocusNode.requestFocus(),
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Origin Field with Suggestions
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.grey800 : AppColors.grey50,
+                borderRadius: BorderRadius.circular(AppDimens.radius8),
               ),
-
-              // Origin Suggestions - Limited height with scroll
-              Obx(() {
-                if (controller.cargoSuggestions.isEmpty || !controller.originFocusNode.hasFocus) {
-                  return const SizedBox();
-                }
-                return Container(
-                  margin: const EdgeInsets.only(top: AppDimens.margin4),
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.grey800 : AppColors.white,
-                    borderRadius: BorderRadius.circular(AppDimens.radius8),
-                    border: Border.all(
-                      color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                    ),
+              child: TextField(
+                controller: controller.originController, // Use controller directly
+                focusNode: controller.originFocusNode,
+                onChanged: (value) {
+                  controller.origin.value = value;
+                  controller.getCargoPlaceSuggestions(value, 'origin');
+                },
+                decoration: InputDecoration(
+                  hintText: 'From',
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(AppDimens.padding12),
+                  prefixIcon: Icon(
+                    Icons.fmd_good_rounded,
+                    size: 18,
+                    color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
                   ),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: controller.cargoSuggestions.length,
-                    itemBuilder: (context, index) {
-                      final place = controller.cargoSuggestions[index];
-                      return ListTile(
-                        leading: Icon(
-                          Icons.location_on_rounded,
-                          size: 18,
-                          color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                        ),
-                        title: Text(
-                          place.name,
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        subtitle: place.city != null
-                            ? Text(
-                          place.city!,
-                          style: theme.textTheme.bodySmall,
-                        )
-                            : null,
-                        onTap: () {
-                          controller.origin.value = place.name;
-                          controller.originFocusNode.unfocus();
-                          controller.cargoSuggestions.clear();
-                          Future.delayed(const Duration(milliseconds: 100), () {
-                            controller.destinationFocusNode.requestFocus();
-                          });
-                        },
-                      );
-                    },
+                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                    color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
                   ),
-                );
-              }),
-            ],
-          ),
-
-          const SizedBox(height: AppDimens.margin8),
-
-          // Swap Button
-          Align(
-            alignment: Alignment.centerRight,
-            child: IconButton(
-              icon: Icon(
-                Icons.swap_vert_rounded,
-                color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                ),
+                style: theme.textTheme.bodyMedium,
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => controller.destinationFocusNode.requestFocus(),
               ),
-              onPressed: () {
-                final temp = controller.origin.value;
-                controller.origin.value = controller.destination.value;
-                controller.destination.value = temp;
-              },
-              tooltip: 'Swap locations',
             ),
-          ),
 
-          const SizedBox(height: AppDimens.margin8),
-
-          // Destination Field with Suggestions
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
+            // Origin Suggestions
+            Obx(() {
+              if (controller.cargoSuggestions.isEmpty || !controller.originFocusNode.hasFocus) {
+                return const SizedBox();
+              }
+              return Container(
+                margin: const EdgeInsets.only(top: AppDimens.margin4),
+                constraints: const BoxConstraints(maxHeight: 200),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.grey800 : AppColors.grey50,
+                  color: isDark ? AppColors.grey800 : AppColors.white,
                   borderRadius: BorderRadius.circular(AppDimens.radius8),
-                ),
-                child: TextField(
-                  controller: TextEditingController(text: controller.destination.value),
-                  focusNode: controller.destinationFocusNode,
-                  onChanged: (value) {
-                    controller.destination.value = value;
-                    controller.getCargoPlaceSuggestions(value, 'destination');
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'To',
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.all(AppDimens.padding12),
-                    prefixIcon: Icon(
-                      Icons.fmd_bad_rounded,
-                      size: 18,
-                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                    ),
-                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
-                    ),
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
                   ),
-                  style: theme.textTheme.bodyMedium,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => FocusScope.of(context).unfocus(),
                 ),
-              ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: controller.cargoSuggestions.length,
+                  itemBuilder: (context, index) {
+                    final place = controller.cargoSuggestions[index];
+                    return ListTile(
+                      leading: Icon(
+                        Icons.location_on_rounded,
+                        size: 18,
+                        color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      ),
+                      title: Text(
+                        place.name,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      subtitle: place.city != null
+                          ? Text(
+                        place.city!,
+                        style: theme.textTheme.bodySmall,
+                      )
+                          : null,
+                      onTap: () {
+                        controller.originController.text = place.name;
+                        controller.origin.value = place.name;
+                        controller.originFocusNode.unfocus();
+                        controller.cargoSuggestions.clear();
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          controller.destinationFocusNode.requestFocus();
+                        });
+                      },
+                    );
+                  },
+                ),
+              );
+            }),
+          ],
+        ),
 
-              // Destination Suggestions - Limited height with scroll
-              Obx(() {
-                if (controller.cargoSuggestions.isEmpty || !controller.destinationFocusNode.hasFocus) {
-                  return const SizedBox();
-                }
-                return Container(
-                  margin: const EdgeInsets.only(top: AppDimens.margin4),
-                  constraints: const BoxConstraints(maxHeight: 200),
+        const SizedBox(height: AppDimens.margin8),
+
+        // Swap Button
+        Align(
+          alignment: Alignment.centerRight,
+          child: IconButton(
+            icon: Icon(
+              Icons.swap_vert_rounded,
+              color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+            ),
+            onPressed: () {
+              final tempOrigin = controller.originController.text;
+              final tempDestination = controller.destinationController.text;
+
+              controller.originController.text = tempDestination;
+              controller.destinationController.text = tempOrigin;
+
+              controller.origin.value = tempDestination;
+              controller.destination.value = tempOrigin;
+            },
+            tooltip: 'Swap locations',
+          ),
+        ),
+
+        const SizedBox(height: AppDimens.margin8),
+
+        // Destination Field with Suggestions
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.grey800 : AppColors.grey50,
+                borderRadius: BorderRadius.circular(AppDimens.radius8),
+              ),
+              child: TextField(
+                controller: controller.destinationController, // Use controller directly
+                focusNode: controller.destinationFocusNode,
+                onChanged: (value) {
+                  controller.destination.value = value;
+                  controller.getCargoPlaceSuggestions(value, 'destination');
+                },
+                decoration: InputDecoration(
+                  hintText: 'To',
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(AppDimens.padding12),
+                  prefixIcon: Icon(
+                    Icons.fmd_bad_rounded,
+                    size: 18,
+                    color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                  ),
+                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                    color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
+                  ),
+                ),
+                style: theme.textTheme.bodyMedium,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => FocusScope.of(context).unfocus(),
+              ),
+            ),
+
+            // Destination Suggestions
+            Obx(() {
+              if (controller.cargoSuggestions.isEmpty || !controller.destinationFocusNode.hasFocus) {
+                return const SizedBox();
+              }
+              return Container(
+                margin: const EdgeInsets.only(top: AppDimens.margin4),
+                constraints: const BoxConstraints(maxHeight: 200),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.grey800 : AppColors.white,
+                  borderRadius: BorderRadius.circular(AppDimens.radius8),
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                  ),
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: controller.cargoSuggestions.length,
+                  itemBuilder: (context, index) {
+                    final place = controller.cargoSuggestions[index];
+                    return ListTile(
+                      leading: Icon(
+                        Icons.location_on_rounded,
+                        size: 18,
+                        color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      ),
+                      title: Text(
+                        place.name,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      subtitle: place.city != null
+                          ? Text(
+                        place.city!,
+                        style: theme.textTheme.bodySmall,
+                      )
+                          : null,
+                      onTap: () {
+                        controller.destinationController.text = place.name;
+                        controller.destination.value = place.name;
+                        controller.destinationFocusNode.unfocus();
+                        controller.cargoSuggestions.clear();
+                      },
+                    );
+                  },
+                ),
+              );
+            }),
+          ],
+        ),
+
+        const SizedBox(height: AppDimens.margin12),
+
+        // Date and Search Button
+        Row(
+          children: [
+            // Date Picker
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _selectDate(context),
+                child: Container(
+                  padding: const EdgeInsets.all(AppDimens.padding12),
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.grey800 : AppColors.white,
+                    color: isDark ? AppColors.grey800 : AppColors.grey50,
                     borderRadius: BorderRadius.circular(AppDimens.radius8),
-                    border: Border.all(
-                      color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                    ),
                   ),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: controller.cargoSuggestions.length,
-                    itemBuilder: (context, index) {
-                      final place = controller.cargoSuggestions[index];
-                      return ListTile(
-                        leading: Icon(
-                          Icons.location_on_rounded,
-                          size: 18,
-                          color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                        ),
-                        title: Text(
-                          place.name,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 18,
+                        color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      ),
+                      const SizedBox(width: AppDimens.margin8),
+                      Expanded(
+                        child: Obx(() => Text(
+                          controller.selectedDate.value == null
+                              ? 'Select Date'
+                              : DateFormatter.toDisplayDate(controller.selectedDate.value!),
                           style: theme.textTheme.bodyMedium,
-                        ),
-                        subtitle: place.city != null
-                            ? Text(
-                          place.city!,
-                          style: theme.textTheme.bodySmall,
-                        )
-                            : null,
-                        onTap: () {
-                          controller.destination.value = place.name;
-                          controller.destinationFocusNode.unfocus();
-                          controller.cargoSuggestions.clear();
-                        },
-                      );
-                    },
-                  ),
-                );
-              }),
-            ],
-          ),
-
-          const SizedBox(height: AppDimens.margin12),
-
-          // Date and Search Button
-          Row(
-            children: [
-              // Date Picker
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _selectDate(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(AppDimens.padding12),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.grey800 : AppColors.grey50,
-                      borderRadius: BorderRadius.circular(AppDimens.radius8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 18,
-                          color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                        ),
-                        const SizedBox(width: AppDimens.margin8),
-                        Expanded(
-                          child: Obx(() => Text(
-                            controller.selectedDate.value == null
-                                ? 'Select Date'
-                                : DateFormatter.toDisplayDate(controller.selectedDate.value!),
-                            style: theme.textTheme.bodyMedium,
-                            overflow: TextOverflow.ellipsis,
-                          )),
-                        ),
-                      ],
-                    ),
+                          overflow: TextOverflow.ellipsis,
+                        )),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: AppDimens.margin12),
+            ),
+            const SizedBox(width: AppDimens.margin12),
 
-              // Search Button
-              SizedBox(
-                width: 100,
-                height: 48,
-                child: PrimaryButton(
-                  text: 'Search',
-                  onPressed: () {
-                    FocusScope.of(context).unfocus();
-                    controller.searchTrips();
-                  },
-                ),
+            // Search Button
+            SizedBox(
+              width: 100,
+              height: 48,
+              child: PrimaryButton(
+                text: 'Search',
+                onPressed: () {
+                  FocusScope.of(context).unfocus();
+                  controller.searchTrips();
+                },
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -338,7 +346,6 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
           // Route
           Row(
             children: [
-              // Origin
               Expanded(
                 flex: 2,
                 child: Column(
@@ -359,8 +366,6 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
                   ],
                 ),
               ),
-
-              // Arrow Icon
               const SizedBox(width: AppDimens.margin8),
               Icon(
                 Icons.arrow_forward_rounded,
@@ -368,8 +373,6 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
                 size: 20,
               ),
               const SizedBox(width: AppDimens.margin8),
-
-              // Destination
               Expanded(
                 flex: 2,
                 child: Column(
@@ -393,10 +396,7 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
               ),
             ],
           ),
-
           const SizedBox(height: AppDimens.margin12),
-
-          // Cargo Space
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -423,17 +423,15 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
               ),
             ],
           ),
-
           const SizedBox(height: AppDimens.margin16),
-
-          // Select Button
           SizedBox(
             width: double.infinity,
             child: PrimaryButton(
               text: 'Select This Trip',
               onPressed: () {
                 print('🔘 Select trip button pressed for: ${trip.origin} → ${trip.destination}');
-                controller.selectTripForCargo(trip);
+                // Pass the trip as argument and go back
+                Get.back(result: trip);
               },
             ),
           ),
@@ -472,7 +470,9 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
             ),
             const SizedBox(height: AppDimens.margin24),
             OutlinedButton.icon(
-              onPressed: () => FocusScope.of(context).unfocus(),
+              onPressed: () {
+                controller.clearSearch();
+              },
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Clear Search'),
               style: OutlinedButton.styleFrom(
@@ -489,7 +489,7 @@ class CargoTripSelectView extends GetView<PassengerCargoController> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    FocusScope.of(context).unfocus(); // Dismiss keyboard
+    FocusScope.of(context).unfocus();
 
     final DateTime? picked = await showDatePicker(
       context: context,

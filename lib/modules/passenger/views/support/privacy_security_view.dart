@@ -43,19 +43,27 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
                 title: 'Biometric Login',
                 subtitle: 'Use fingerprint or face ID',
                 onTap: () {},
-                trailing: Switch(
-                  value: false,
-                  onChanged: (value) {},
+                trailing: Obx(() => Switch(
+                  value: controller.isBiometricEnabled,
+                  onChanged: controller.toggleBiometricLogin,
                   activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                ),
+                )),
               ),
               _buildMenuItem(
                 context,
                 icon: Icons.smartphone_rounded,
                 title: 'Two-Factor Authentication',
-                subtitle: 'Add an extra layer of security',
-                onTap: () {},
-                showArrow: true,
+                subtitle: controller.is2FAEnabled ? 'Enabled' : 'Add an extra layer of security',
+                onTap: controller.is2FAEnabled
+                    ? () => _show2FADialog(context)
+                    : () => controller.setupTwoFactorAuth(),
+                trailing: Obx(() => Switch(
+                  value: controller.is2FAEnabled,
+                  onChanged: (_) => controller.is2FAEnabled
+                      ? controller.disableTwoFactorAuth()
+                      : controller.setupTwoFactorAuth(),
+                  activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                )),
               ),
             ],
           ),
@@ -72,16 +80,18 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
                 context,
                 icon: Icons.visibility_off_rounded,
                 title: 'Profile Visibility',
-                subtitle: 'Control who can see your profile',
-                onTap: () {},
+                subtitle: _getVisibilityText(controller.profileVisibility),
+                onTap: () => _showVisibilityDialog(context),
                 showArrow: true,
               ),
               _buildMenuItem(
                 context,
                 icon: Icons.location_on_rounded,
                 title: 'Location Privacy',
-                subtitle: 'Manage location sharing preferences',
-                onTap: () {},
+                subtitle: controller.locationSharingEnabled
+                    ? '${controller.locationAccuracy == 'precise' ? 'Precise' : 'Approximate'} location sharing'
+                    : 'Location sharing disabled',
+                onTap: () => _showLocationPrivacyDialog(context),
                 showArrow: true,
               ),
               _buildMenuItem(
@@ -322,6 +332,191 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
     );
   }
 
+  String _getVisibilityText(String visibility) {
+    switch (visibility) {
+      case 'public':
+        return 'Anyone can see your profile';
+      case 'private':
+        return 'Only you can see your profile';
+      case 'contacts_only':
+        return 'Only your contacts can see your profile';
+      default:
+        return 'Public';
+    }
+  }
+
+  void _showVisibilityDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Profile Visibility'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile(
+              title: const Text('Public'),
+              subtitle: const Text('Anyone can see your profile'),
+              value: 'public',
+              groupValue: controller.profileVisibility,
+              onChanged: (value) {
+                controller.updateProfileVisibility(value!);
+                Get.back();
+              },
+              activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+            ),
+            RadioListTile(
+              title: const Text('Private'),
+              subtitle: const Text('Only you can see your profile'),
+              value: 'private',
+              groupValue: controller.profileVisibility,
+              onChanged: (value) {
+                controller.updateProfileVisibility(value!);
+                Get.back();
+              },
+              activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+            ),
+            RadioListTile(
+              title: const Text('Contacts Only'),
+              subtitle: const Text('Only your contacts can see your profile'),
+              value: 'contacts_only',
+              groupValue: controller.profileVisibility,
+              onChanged: (value) {
+                controller.updateProfileVisibility(value!);
+                Get.back();
+              },
+              activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLocationPrivacyDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimens.radius16)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppDimens.padding20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Location Privacy',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: AppDimens.margin16),
+                Obx(() => SwitchListTile(
+                  title: const Text('Share Location'),
+                  subtitle: const Text('Allow app to access your location'),
+                  value: controller.locationSharingEnabled,
+                  onChanged: controller.toggleLocationSharing,
+                  activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                )),
+                if (controller.locationSharingEnabled)
+                  Column(
+                    children: [
+                      const Divider(),
+                      RadioListTile(
+                        title: const Text('Precise Location'),
+                        subtitle: const Text('Share exact location'),
+                        value: 'precise',
+                        groupValue: controller.locationAccuracy,
+                        onChanged: (value) => controller.updateLocationAccuracy(value!),
+                        activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      ),
+                      RadioListTile(
+                        title: const Text('Approximate Location'),
+                        subtitle: const Text('Share general area only'),
+                        value: 'approximate',
+                        groupValue: controller.locationAccuracy,
+                        onChanged: (value) => controller.updateLocationAccuracy(value!),
+                        activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _show2FADialog(BuildContext context) {
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.surfaceDark : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimens.radius16)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppDimens.padding20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Two-Factor Authentication',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: AppDimens.margin16),
+                const Text('Choose your preferred 2FA method:'),
+                const SizedBox(height: AppDimens.margin12),
+                RadioListTile(
+                  title: const Text('Authenticator App'),
+                  subtitle: const Text('Google Authenticator, Authy, etc.'),
+                  value: 'authenticator',
+                  groupValue: controller.twoFAMethod,
+                  onChanged: (value) {
+                    controller.setupTwoFactorAuth();
+                    Get.back();
+                  },
+                ),
+                RadioListTile(
+                  title: const Text('SMS'),
+                  subtitle: const Text('Receive codes via text message'),
+                  value: 'sms',
+                  groupValue: controller.twoFAMethod,
+                  onChanged: (value) {
+                    // Setup SMS 2FA
+                    Get.back();
+                  },
+                ),
+                RadioListTile(
+                  title: const Text('Email'),
+                  subtitle: const Text('Receive codes via email'),
+                  value: 'email',
+                  groupValue: controller.twoFAMethod,
+                  onChanged: (value) {
+                    // Setup Email 2FA
+                    Get.back();
+                  },
+                ),
+                const SizedBox(height: AppDimens.margin16),
+                TextButton.icon(
+                  onPressed: () => controller.disableTwoFactorAuth(),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  label: const Text('Disable 2FA', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showDownloadDataDialog(BuildContext context) {
     Get.dialog(
       AlertDialog(
@@ -337,12 +532,13 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
           ElevatedButton(
             onPressed: () {
               Get.back();
-              Get.snackbar(
-                'Request Sent',
-                'We\'ll email you when your data is ready',
-                snackPosition: SnackPosition.BOTTOM,
-              );
+              controller.requestDataDownload();
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.primaryGreenLight
+                  : AppColors.primaryGreen,
+            ),
             child: const Text('Request Download'),
           ),
         ],
@@ -365,11 +561,8 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
           ElevatedButton(
             onPressed: () {
               Get.back();
-              Get.snackbar(
-                'History Cleared',
-                'Your search history has been cleared',
-                snackPosition: SnackPosition.BOTTOM,
-              );
+              controller.clearSearchHistory();
+              controller.clearBrowseHistory();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -382,6 +575,8 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    final passwordController = TextEditingController();
+
     Get.dialog(
       AlertDialog(
         title: const Text('Delete Account'),
@@ -393,7 +588,7 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
             ),
             const SizedBox(height: AppDimens.margin16),
             TextField(
-              controller: TextEditingController(),
+              controller: passwordController,
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: 'Enter your password to confirm',
@@ -409,13 +604,12 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
           ),
           ElevatedButton(
             onPressed: () {
+              if (passwordController.text.isEmpty) {
+                Get.snackbar('Error', 'Please enter your password');
+                return;
+              }
               Get.back();
-              // Implement delete account logic
-              Get.snackbar(
-                'Account Deleted',
-                'Your account has been deactivated',
-                snackPosition: SnackPosition.BOTTOM,
-              );
+              controller.deleteAccount(passwordController.text);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -426,4 +620,6 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
       ),
     );
   }
+
+
 }

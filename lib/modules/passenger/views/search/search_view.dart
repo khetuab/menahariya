@@ -191,14 +191,14 @@ class PassengerSearchView extends GetView<search.PassengerSearchController> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppDimens.margin12),
-                  // Round Trip Toggle
-                  Obx(() => ChoiceChip(
-                    label: const Text('Round Trip'),
-                    selected: controller.isRoundTrip,
-                    onSelected: controller.toggleRoundTrip,
-                    selectedColor: isDark ? AppColors.primaryGreen.withOpacity(0.3) : AppColors.primaryGreen.withOpacity(0.1),
-                  )),
+                  // const SizedBox(width: AppDimens.margin12),
+                  // // Round Trip Toggle
+                  // Obx(() => ChoiceChip(
+                  //   label: const Text('Round Trip'),
+                  //   selected: controller.isRoundTrip,
+                  //   onSelected: controller.toggleRoundTrip,
+                  //   selectedColor: isDark ? AppColors.primaryGreen.withOpacity(0.3) : AppColors.primaryGreen.withOpacity(0.1),
+                  // )),
                 ],
               ),
 
@@ -229,51 +229,51 @@ class PassengerSearchView extends GetView<search.PassengerSearchController> {
                 );
               }),
 
-              // Passengers
-              Obx(() => Container(
-                padding: const EdgeInsets.all(AppDimens.padding12),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.grey800 : AppColors.grey50,
-                  borderRadius: BorderRadius.circular(AppDimens.radius12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.people_rounded),
-                    const SizedBox(width: AppDimens.margin12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Passengers',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                            ),
-                          ),
-                          Text(
-                            '${controller.passengerCount} passenger${controller.passengerCount > 1 ? 's' : ''}',
-                            style: theme.textTheme.bodyLarge,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle_outline),
-                          onPressed: controller.decrementPassengers,
-                          color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline),
-                          onPressed: controller.incrementPassengers,
-                          color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              )),
+              // // Passengers
+              // Obx(() => Container(
+              //   padding: const EdgeInsets.all(AppDimens.padding12),
+              //   decoration: BoxDecoration(
+              //     color: isDark ? AppColors.grey800 : AppColors.grey50,
+              //     borderRadius: BorderRadius.circular(AppDimens.radius12),
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       const Icon(Icons.people_rounded),
+              //       const SizedBox(width: AppDimens.margin12),
+              //       Expanded(
+              //         child: Column(
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           children: [
+              //             Text(
+              //               'Passengers',
+              //               style: theme.textTheme.bodySmall?.copyWith(
+              //                 color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              //               ),
+              //             ),
+              //             Text(
+              //               '${controller.passengerCount} passenger${controller.passengerCount > 1 ? 's' : ''}',
+              //               style: theme.textTheme.bodyLarge,
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //       Row(
+              //         children: [
+              //           IconButton(
+              //             icon: const Icon(Icons.remove_circle_outline),
+              //             onPressed: controller.decrementPassengers,
+              //             color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+              //           ),
+              //           IconButton(
+              //             icon: const Icon(Icons.add_circle_outline),
+              //             onPressed: controller.incrementPassengers,
+              //             color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+              //           ),
+              //         ],
+              //       ),
+              //     ],
+              //   ),
+              // )),
 
               const SizedBox(height: AppDimens.margin24),
 

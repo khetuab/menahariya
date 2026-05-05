@@ -29,6 +29,8 @@ class PassengerCargoController extends GetxController {
   late final TextEditingController descriptionController;
   late final TextEditingController declaredValueController;
   late final TextEditingController trackingCodeController;
+  late final TextEditingController originController;
+  late final TextEditingController destinationController;
 
   // Focus nodes
   late final FocusNode senderNameFocusNode;
@@ -69,6 +71,7 @@ class PassengerCargoController extends GetxController {
   final _trackingCode = ''.obs;
   final _currentStep = 0.obs;
 
+
   void _setupCargoFocusListeners() {
     originFocusNode.addListener(() {
       showOriginSuggestions.value = originFocusNode.hasFocus;
@@ -82,19 +85,6 @@ class PassengerCargoController extends GetxController {
   void selectTripForCargo(TripModel trip) {
     print('✅ Selecting trip: ${trip.origin} → ${trip.destination}');
     _selectedTrip.value = trip;
-
-    // Show success message
-    Get.snackbar(
-      'Success',
-      'Trip selected successfully',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 2),
-    );
-
-    // Navigate back to cargo registration
-    Get.back(result: trip);
   }
   // Getters
   bool get isLoading => _isLoading.value;
@@ -145,6 +135,7 @@ class PassengerCargoController extends GetxController {
     _loadCargoTypes();
     loadCargoList();
     _setupCargoFocusListeners();
+
   }
 
   void _initializeControllers() {
@@ -158,6 +149,8 @@ class PassengerCargoController extends GetxController {
     descriptionController = TextEditingController();
     declaredValueController = TextEditingController();
     trackingCodeController = TextEditingController();
+    originController = TextEditingController();
+    destinationController = TextEditingController();
 
     senderNameFocusNode = FocusNode();
     senderPhoneFocusNode = FocusNode();
@@ -169,6 +162,17 @@ class PassengerCargoController extends GetxController {
     weightController.addListener(_calculateEstimatedFee);
     dimensionsController.addListener(_calculateEstimatedFee);
   }
+
+  void clearSearch() {
+    originController.clear();
+    destinationController.clear();
+    origin.value = '';
+    destination.value = '';
+    selectedDate.value = null;
+    availableTrips.clear();
+    cargoSuggestions.clear();
+  }
+
 
   Future<void> _loadCargoTypes() async {
     try {
@@ -185,7 +189,10 @@ class PassengerCargoController extends GetxController {
   // In CargoTripSelectView, update the search method:
 
   Future<void> searchTrips() async {
-    if (origin.value.isEmpty || destination.value.isEmpty || selectedDate.value == null) {
+    final originText = originController.text.trim();
+    final destinationText = destinationController.text.trim();
+
+    if (originText.isEmpty || destinationText.isEmpty || selectedDate.value == null) {
       Get.snackbar(
         'Missing Information',
         'Please fill all search fields',
@@ -197,20 +204,27 @@ class PassengerCargoController extends GetxController {
     try {
       _isLoadingTrips.value = true;
 
-      // Use the correct API endpoint
       final response = await _apiClient.get(
-        '/trips/search',  // Make sure this matches your API endpoint
+        '/trips/search',
         queryParameters: {
-          'origin': origin.value,
-          'destination': destination.value,
+          'origin': originText,
+          'destination': destinationText,
           'date': DateFormatter.toApiDate(selectedDate.value!),
-          'hasCargoSpace': 'true',  // Add as string
+          'hasCargoSpace': 'true',
         },
       );
 
       if (response != null && response['data'] != null) {
         final List<dynamic> tripsData = response['data'];
         availableTrips.value = tripsData.map((t) => TripModel.fromJson(t)).toList();
+
+        if (availableTrips.isEmpty) {
+          Get.snackbar(
+            'No Trips Found',
+            'No trips available for the selected route',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
       }
     } catch (e) {
       print('Error searching trips: $e');
@@ -224,6 +238,7 @@ class PassengerCargoController extends GetxController {
     }
   }
 
+
   // In PassengerCargoController, add this method:
 
   Future<void> getCargoPlaceSuggestions(String query, String type) async {
@@ -234,7 +249,7 @@ class PassengerCargoController extends GetxController {
 
     try {
       final response = await _apiClient.get(
-        '/places/suggest',  // Make sure this endpoint exists
+        '/places/suggest',
         queryParameters: {'q': query},
       );
 
@@ -249,6 +264,7 @@ class PassengerCargoController extends GetxController {
       cargoSuggestions.clear();
     }
   }
+
   Future<void> loadCargoList() async {
     try {
       _isLoading.value = true;
@@ -356,11 +372,11 @@ class PassengerCargoController extends GetxController {
       if (response != null && response['data'] != null) {
         _calculatedFee.value = response['data']['fee']?.toDouble() ?? 0;
 
-        Get.snackbar(
-          'Fee Calculated',
-          'Estimated fee: ${CurrencyFormatter.format(_calculatedFee.value)}',
-          snackPosition: SnackPosition.BOTTOM,
-        );
+        // Get.snackbar(
+        //   'Fee Calculated',
+        //   'Estimated fee: ${CurrencyFormatter.format(_calculatedFee.value)}',
+        //   snackPosition: SnackPosition.BOTTOM,
+        // );
       }
     } catch (e) {
       print('Error calculating fee: $e');
@@ -555,6 +571,8 @@ class PassengerCargoController extends GetxController {
     receiverPhoneFocusNode.dispose();
     trackingCodeController.dispose();
     weightFocusNode.dispose();
+    originController.dispose();
+    destinationController.dispose();
     super.onClose();
   }
 }

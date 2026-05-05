@@ -11,6 +11,7 @@ import 'package:menahariya/modules/passenger/controllers/home_controller.dart';
 import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
 import 'package:menahariya/data/models/trip/trip_model.dart';
 
+import '../../../../core/routes/app_routes.dart';
 import '../../controllers/notification_controller.dart';
 
 class HomeView extends GetView<HomeController> {
@@ -318,7 +319,7 @@ class HomeView extends GetView<HomeController> {
                 availableSeats: trip.availableSeats,
                 busType: trip.busType,
                 onTap: () => Get.toNamed(
-                  '/passenger/trip/${trip.id}',
+                  AppRoutes.passengerTripDetail,  // ✅ Use the constant
                   arguments: {'tripId': trip.id},
                 ),
               );

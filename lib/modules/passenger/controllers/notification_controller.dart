@@ -78,22 +78,61 @@ class PassengerNotificationController extends GetxController {
     try {
       _isLoading.value = true;
 
+      // FIX: Convert filter to proper type string that matches backend
+      String? typeParam;
+      switch (_selectedFilter.value) {
+        case NotificationFilter.all:
+          typeParam = null;  // Don't send type for 'all'
+          break;
+        case NotificationFilter.unread:
+          typeParam = null;  // Unread is handled separately via different endpoints
+          break;
+        case NotificationFilter.bookings:
+          typeParam = 'booking';  // Backend expects 'booking' not 'bookings'
+          break;
+        case NotificationFilter.payments:
+          typeParam = 'payment';  // Backend expects 'payment' not 'payments'
+          break;
+        case NotificationFilter.trips:
+          typeParam = 'trip';  // Backend expects 'trip' not 'trips'
+          break;
+        case NotificationFilter.cargo:
+          typeParam = 'cargo';
+          break;
+        case NotificationFilter.promotions:
+          typeParam = 'promo';  // Backend expects 'promo' not 'promotions'
+          break;
+      }
+
+      final queryParams = <String, dynamic>{
+        'page': _currentPage.value,
+        'limit': AppConstants.defaultPageSize,
+      };
+
+      if (typeParam != null) {
+        queryParams['type'] = typeParam;
+      }
+
+      print('🔍 Fetching notifications with type: $typeParam'); // Debug log
+
       final response = await _apiClient.get(
         ApiEndpoints.notificationsAll,
-        queryParameters: {
-          'page': _currentPage.value,
-          'limit': AppConstants.defaultPageSize,
-          'type': _selectedFilter.value != NotificationFilter.all
-              ? _selectedFilter.value.toString().split('.').last
-              : null,
-        },
+        queryParameters: queryParams,
       );
 
       if (response != null && response['data'] != null) {
-        final List<dynamic> notificationsData = response['data'];
-        final newNotifications = notificationsData
-            .map((n) => NotificationModel.fromJson(n))
-            .toList();
+        List<NotificationModel> newNotifications = [];
+
+        // Handle different response structures
+        if (response['data'] is List) {
+          newNotifications = (response['data'] as List)
+              .map((n) => NotificationModel.fromJson(n))
+              .toList();
+        } else {
+          newNotifications = [];
+        }
+
+        print('✅ Loaded ${newNotifications.length} notifications for type: $typeParam');
 
         if (_currentPage.value == 1) {
           _notifications.value = newNotifications;
@@ -101,12 +140,18 @@ class PassengerNotificationController extends GetxController {
           _notifications.addAll(newNotifications);
         }
 
-        _updateUnreadCount();
+        // Update unread count only for 'all' filter
+        if (response['meta'] != null && response['meta']['unreadCount'] != null) {
+          _unreadCount.value = response['meta']['unreadCount'];
+        } else {
+          _updateUnreadCount();
+        }
+
         _hasMorePages.value = newNotifications.length >= AppConstants.defaultPageSize;
         _currentPage.value++;
       }
     } catch (e) {
-      print('Error fetching notifications: $e');
+      print('❌ Error fetching notifications: $e');
     } finally {
       _isLoading.value = false;
       _isRefreshing.value = false;
@@ -155,7 +200,52 @@ class PassengerNotificationController extends GetxController {
   void setFilter(NotificationFilter filter) {
     if (_selectedFilter.value == filter) return;
     _selectedFilter.value = filter;
-    fetchNotifications(refresh: true);
+
+    // For 'unread' filter, use a different endpoint
+    if (filter == NotificationFilter.unread) {
+      _fetchUnreadNotifications();
+    } else {
+      fetchNotifications(refresh: true);
+    }
+  }
+
+// Add this new method for unread notifications
+  Future<void> _fetchUnreadNotifications({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage.value = 1;
+      _notifications.clear();
+    }
+
+    try {
+      _isLoading.value = true;
+
+      final response = await _apiClient.get(
+        ApiEndpoints.notificationsUnread,  // Use the unread endpoint
+        queryParameters: {
+          'limit': AppConstants.defaultPageSize,
+        },
+      );
+
+      if (response != null && response['data'] != null) {
+        List<NotificationModel> newNotifications = [];
+
+        if (response['data'] is List) {
+          newNotifications = (response['data'] as List)
+              .map((n) => NotificationModel.fromJson(n))
+              .toList();
+        }
+
+        print('✅ Loaded ${newNotifications.length} unread notifications');
+
+        _notifications.value = newNotifications;
+        _updateUnreadCount();
+      }
+    } catch (e) {
+      print('❌ Error fetching unread notifications: $e');
+    } finally {
+      _isLoading.value = false;
+      _isRefreshing.value = false;
+    }
   }
 
   Future<void> refreshNotifications() async {

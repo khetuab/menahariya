@@ -159,7 +159,8 @@ class ApiEndpoints {
   static const String notificationsMarkRead = '/notifications/mark-read';
   static const String notificationsMarkAllRead = '/notifications/mark-all-read';
   static const String notificationsDelete = '/notifications';
-  // Settings
+  static const String notificationsUnread = '/notifications/unread';  // Add this
+   // Settings
   static const String adminSettings = '$admin/settings';
   static const String adminSettingsUpdate = '$admin/settings/update';
 
@@ -175,7 +176,6 @@ class ApiEndpoints {
   // Notification Endpoints
   static const String notifications = '/notifications';
   //static const String notificationsAll = '$notifications/all';
-  static const String notificationsUnread = '$notifications/unread';
   //static const String notificationsMarkRead = '$notifications/mark-read'; // + id
   //static const String notificationsMarkAllRead = '$notifications/mark-all-read';
   //static const String notificationsDelete = '$notifications/'; // + id

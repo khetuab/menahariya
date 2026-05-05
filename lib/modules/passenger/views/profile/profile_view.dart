@@ -35,38 +35,41 @@ class ProfileView extends GetView<PassengerProfileController> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(AppDimens.padding16),
-          child: Column(
-            children: [
-              // Profile Header
-              _buildProfileHeader(context),
+        return RefreshIndicator(
+          onRefresh: () => controller.refreshStatistics(),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppDimens.padding16),
+            child: Column(
+              children: [
+                // Profile Header
+                _buildProfileHeader(context),
 
-              const SizedBox(height: AppDimens.margin24),
+                const SizedBox(height: AppDimens.margin24),
 
-              // Stats Grid
-              _buildStatsGrid(context),
+                // Stats Grid
+                _buildStatsGrid(context),
 
-              const SizedBox(height: AppDimens.margin24),
+                const SizedBox(height: AppDimens.margin24),
 
-              // Menu Items
-              _buildMenuSection(context),
+                // Menu Items
+                _buildMenuSection(context),
 
-              const SizedBox(height: AppDimens.margin24),
+                const SizedBox(height: AppDimens.margin24),
 
-              // Logout Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppDimens.padding16),
-                child: PrimaryButton(
-                  text: 'Logout',
-                  onPressed: controller.logout,
-                  backgroundColor: Colors.transparent,
-                  textColor: isDark ? AppColors.errorLight : AppColors.error,
-                  borderColor: isDark ? AppColors.errorLight : AppColors.error,
+                // Logout Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.padding16),
+                  child: PrimaryButton(
+                    text: 'Logout',
+                    onPressed: controller.logout,
+                    backgroundColor: Colors.transparent,
+                    textColor: isDark ? AppColors.errorLight : AppColors.error,
+                    borderColor: isDark ? AppColors.errorLight : AppColors.error,
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppDimens.margin60),
-            ],
+                const SizedBox(height: AppDimens.margin60),
+              ],
+            ),
           ),
         );
       }),

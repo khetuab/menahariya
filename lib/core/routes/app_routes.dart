@@ -41,6 +41,7 @@ class AppRoutes {
   static const String passengerBookingHistory = '/passenger/booking-history';
   static const String passengerCargoHistory = '/passenger/cargo-history';
   static const String passengerProfile = '/passenger/profile';
+  static const String twoFactorVerify = '/auth/2fa-verify';
   static const String passengerEditProfile = '/passenger/edit-profile';
   static const String passengerSettings = '/passenger/settings';
   static const String passengerNotifications = '/passenger/notifications';

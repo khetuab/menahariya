@@ -9,6 +9,8 @@ import 'package:menahariya/core/widgets/cards/ticket_card.dart';
 import 'package:menahariya/core/widgets/loading/shimmer_loading.dart';
 import 'package:menahariya/modules/passenger/controllers/history_controller.dart';
 
+import '../../../../data/models/ticket/ticket_model.dart';
+
 class BookingHistoryView extends GetView<PassengerHistoryController> {
   const BookingHistoryView({Key? key}) : super(key: key);
 
@@ -16,6 +18,14 @@ class BookingHistoryView extends GetView<PassengerHistoryController> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // Reset filters and load tickets when view is created
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Reset status filter to empty (show all tickets)
+      controller.resetStatusFilter();
+      // Load tickets
+      controller.loadTickets(refresh: true);
+    });
 
     return DefaultTabController(
       length: 3,
@@ -31,208 +41,150 @@ class BookingHistoryView extends GetView<PassengerHistoryController> {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            // Upcoming Tab
-            _buildTicketList(context, 'upcoming'),
-            // Completed Tab
-            _buildTicketList(context, 'completed'),
-            // Cancelled Tab
-            _buildTicketList(context, 'cancelled'),
-          ],
-        ),
+        body: Obx(() {
+          if (controller.isLoading && controller.tickets.isEmpty) {
+            return _buildLoadingShimmer();
+          }
+
+          return TabBarView(
+            children: [
+              // Upcoming Tab
+              _buildTicketList(context, 'upcoming'),
+              // Completed Tab
+              _buildTicketList(context, 'completed'),
+              // Cancelled Tab
+              _buildTicketList(context, 'cancelled'),
+            ],
+          );
+        }),
       ),
     );
   }
 
   Widget _buildTicketList(BuildContext context, String type) {
-    return Obx(() {
-      if (controller.isLoading && controller.tickets.isEmpty) {
-        return _buildLoadingShimmer();
-      }
+    final tickets = _getFilteredTicketsForType(type);
 
-      return RefreshIndicator(
-        onRefresh: controller.refreshAll,
-        child: ListView(
-          padding: const EdgeInsets.all(AppDimens.padding16),
-          children: [
-            // Date Range Filter
-            _buildDateFilter(context),
-
-            const SizedBox(height: AppDimens.margin16),
-
-            // Stats Summary
-            _buildStatsSummary(context),
-
-            const SizedBox(height: AppDimens.margin16),
-
-            // Tickets List
-            if (_getFilteredTicketsForType(type).isEmpty)
-              _buildEmptyState(context)
-            else
-              ..._getFilteredTicketsForType(type).map((ticket) => TicketCard(
-                ticketId: ticket.id,
-                origin: ticket.origin,
-                destination: ticket.destination,
-                departureTime: ticket.departureTime,
-                seatNumber: ticket.seatNumber,
-                price: ticket.price,
-                status: ticket.status,
-                onTap: () => Get.toNamed('/passenger/ticket/${ticket.id}'),
-                showActions: false,
-              )),
-
-            // Load More
-            if (controller.ticketsHasMore)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppDimens.padding16),
-                child: Center(
-                  child: ElevatedButton(
-                    onPressed: controller.loadMoreTickets,
-                    child: const Text('Load More'),
-                  ),
-                ),
+    return RefreshIndicator(
+      onRefresh: () async {
+        await controller.loadTickets(refresh: true);
+      },
+      child: tickets.isEmpty
+          ? _buildEmptyState(context, type)
+          : ListView.builder(
+        padding: const EdgeInsets.all(AppDimens.padding16),
+        itemCount: tickets.length,
+        itemBuilder: (context, index) {
+          final ticket = tickets[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppDimens.margin12),
+            child: TicketCard(
+              ticketId: ticket.id ?? ticket.bookingId,
+              origin: ticket.origin,
+              destination: ticket.destination,
+              departureTime: ticket.departureTime,
+              seatNumber: ticket.seatNumber,
+              price: ticket.price,
+              status: ticket.status,
+              onTap: () => Get.toNamed(
+                '/passenger/ticket-detail/${ticket.id}',
+                arguments: {'ticketId': ticket.id},
               ),
-          ],
-        ),
-      );
-    });
-  }
-
-  List<dynamic> _getFilteredTicketsForType(String type) {
-    // Filter based on tab type
-    switch (type) {
-      case 'upcoming':
-        return controller.filteredTickets.where((t) =>
-        t.status == 'confirmed' || t.status == 'paid' || t.status == 'pending'
-        ).toList();
-      case 'completed':
-        return controller.filteredTickets.where((t) =>
-        t.status == 'used' || t.status == 'completed'
-        ).toList();
-      case 'cancelled':
-        return controller.filteredTickets.where((t) =>
-        t.status == 'cancelled'
-        ).toList();
-      default:
-        return controller.filteredTickets;
-    }
-  }
-
-  Widget _buildDateFilter(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.padding12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.grey800 : AppColors.grey50,
-        borderRadius: BorderRadius.circular(AppDimens.radius12),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.calendar_today_rounded,
-            size: 16,
-            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-          ),
-          const SizedBox(width: AppDimens.margin8),
-          Expanded(
-            child: Obx(() {
-              if (controller.dateRange == null) {
-                return Text(
-                  'Select Date Range',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
-                  ),
-                );
-              }
-              return Text(
-                '${controller.dateRange!.start.toString().substring(0, 10)} - ${controller.dateRange!.end.toString().substring(0, 10)}',
-                style: theme.textTheme.bodyMedium,
-              );
-            }),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list_rounded),
-            onSelected: (value) {
-              if (value == 'clear') {
-                controller.clearDateRange();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'clear',
-                child: Text('Clear Filter'),
-              ),
-            ],
-          ),
-        ],
+              showActions: false,
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStatsSummary(BuildContext context) {
+  List<TicketModel> _getFilteredTicketsForType(String type) {
+    final allTickets = controller.tickets;
+
+    print('📊 Filtering for type: $type');
+    print('📊 Total tickets available: ${allTickets.length}');
+
+    if (allTickets.isEmpty) {
+      return [];
+    }
+
+    switch (type) {
+      case 'upcoming':
+      // Upcoming: status is 'issued' and departure time is in the future
+        return allTickets.where((t) {
+          final isIssued = t.status == 'issued';
+          final isFutureDate = t.departureTime.isAfter(DateTime.now());
+          return isIssued && isFutureDate;
+        }).toList();
+
+      case 'completed':
+      // Completed: status is 'issued' but departure time is in the past
+      // Or status is 'used', 'completed', 'delivered'
+        return allTickets.where((t) {
+          final isPastDate = t.departureTime.isBefore(DateTime.now());
+          final isCompletedStatus = t.status == 'used' ||
+              t.status == 'completed' ||
+              t.status == 'delivered';
+          return (isPastDate && t.status == 'issued') || isCompletedStatus;
+        }).toList();
+
+      case 'cancelled':
+      // Cancelled: status is 'cancelled' or 'refunded'
+        return allTickets.where((t) {
+          return t.status == 'cancelled' || t.status == 'refunded';
+        }).toList();
+
+      default:
+        return allTickets;
+    }
+  }
+
+  Widget _buildEmptyState(BuildContext context, String type) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.padding16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            isDark ? AppColors.primaryGreenDark : AppColors.primaryGreen,
-            isDark ? AppColors.primaryGreen : AppColors.primaryGreenLight,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(AppDimens.radius12),
-      ),
-      child: Row(
+    String title = '';
+    String message = '';
+    IconData icon = Icons.history_rounded;
+
+    switch (type) {
+      case 'upcoming':
+        title = 'No Upcoming Trips';
+        message = 'You don\'t have any upcoming trips';
+        icon = Icons.calendar_today_rounded;
+        break;
+      case 'completed':
+        title = 'No Completed Trips';
+        message = 'Your completed trips will appear here';
+        icon = Icons.check_circle_rounded;
+        break;
+      case 'cancelled':
+        title = 'No Cancelled Trips';
+        message = 'Cancelled trips will appear here';
+        icon = Icons.cancel_rounded;
+        break;
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  '${controller.totalTrips}',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: AppFonts.bold,
-                  ),
-                ),
-                Text(
-                  'Total Trips',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-              ],
+          Icon(
+            icon,
+            size: 80,
+            color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
+          ),
+          const SizedBox(height: AppDimens.margin16),
+          Text(
+            title,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: AppFonts.semiBold,
             ),
           ),
-          Container(
-            width: 1,
-            height: 30,
-            color: Colors.white.withOpacity(0.3),
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  controller.mostFrequentRoute ?? 'N/A',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: AppFonts.semiBold,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  'Most Visited',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-              ],
+          const SizedBox(height: AppDimens.margin8),
+          Text(
+            message,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
             ),
           ),
         ],
@@ -241,50 +193,20 @@ class BookingHistoryView extends GetView<PassengerHistoryController> {
   }
 
   Widget _buildLoadingShimmer() {
-    return ListView.separated(
+    return ListView.builder(
       padding: const EdgeInsets.all(AppDimens.padding16),
       itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(height: AppDimens.margin12),
-      itemBuilder: (_, __) => ShimmerLoading(
-        child: Container(
-          height: 180,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppDimens.radius12),
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: AppDimens.margin12),
+        child: ShimmerLoading(
+          child: Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppDimens.radius12),
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.history_rounded,
-            size: 80,
-            color: isDark ? AppColors.textHintDark : AppColors.textHintLight,
-          ),
-          const SizedBox(height: AppDimens.margin16),
-          Text(
-            'No Booking History',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: AppFonts.semiBold,
-            ),
-          ),
-          const SizedBox(height: AppDimens.margin8),
-          Text(
-            'Your booking history will appear here',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -31,6 +31,7 @@ class UserModel {
   final double? walletBalance;
   final int? loyaltyPoints;
   final String? loyaltyTier;
+  final bool? twoFactorEnabled;
 
   UserModel({
     required this.id,
@@ -58,6 +59,7 @@ class UserModel {
     // Passenger fields
     this.walletBalance,
     this.loyaltyPoints,
+    this.twoFactorEnabled,
     this.loyaltyTier,
   });
 
@@ -97,6 +99,7 @@ class UserModel {
           ? DateTime.parse(json['createdAt'].toString())
           : DateTime.now(),
       lastLogin: parseDate(json['lastLogin']),
+      twoFactorEnabled: json['twoFactorEnabled'] ?? false,
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'].toString())
           : null,
@@ -137,6 +140,7 @@ class UserModel {
     if (rating != null) data['rating'] = rating;
     if (totalTrips != null) data['totalTrips'] = totalTrips;
     if (isAvailable != null) data['isAvailable'] = isAvailable;
+    if (twoFactorEnabled != null) data['twoFactorEnabled'] = twoFactorEnabled;
 
     // Passenger fields
     if (walletBalance != null) data['walletBalance'] = walletBalance;
@@ -157,6 +161,7 @@ class UserModel {
     String? gender,
     bool? isActive,
     bool? isVerified,
+    bool? twoFactorEnabled,
     Map<String, dynamic>? metadata,
     // Driver fields
     String? licenseNumber,
@@ -196,6 +201,7 @@ class UserModel {
       isAvailable: isAvailable ?? this.isAvailable,
       // Passenger fields
       walletBalance: walletBalance ?? this.walletBalance,
+      twoFactorEnabled: twoFactorEnabled ?? this.twoFactorEnabled,
       loyaltyPoints: loyaltyPoints ?? this.loyaltyPoints,
       loyaltyTier: loyaltyTier ?? this.loyaltyTier,
     );

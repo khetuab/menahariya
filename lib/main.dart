@@ -15,6 +15,8 @@ import 'package:menahariya/core/theme/light_theme.dart';
 import 'package:menahariya/modules/common/views/not_found_view.dart';
 
 import 'core/routes/app_routes.dart';
+import 'core/services/storage/secure_storage.dart';
+// In your splash controller or initial binding
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized( );

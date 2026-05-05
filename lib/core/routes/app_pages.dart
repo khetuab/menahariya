@@ -67,6 +67,7 @@ import 'package:menahariya/modules/admin/views/admin_settings_view.dart';
 import '../../modules/admin/views/admin_profile_view.dart';
 import '../../modules/auth/controllers/auth_controller.dart';
 import '../../modules/auth/views/forgot_password_view.dart';
+import '../../modules/auth/views/two_factor_verify_view.dart';
 import '../../modules/driver/trips/assigned_trips_view.dart';
 import '../../modules/driver/views/profile/edit_profile_view.dart';
 import '../../modules/driver/views/support/support_view.dart';
@@ -452,6 +453,11 @@ class AppPages {
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
       middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.twoFactorVerify,
+      page: () => const TwoFactorVerifyView(),
+      transition: Transition.rightToLeft,
     ),
     GetPage(
       name: AppRoutes.passengerCargoHistory,

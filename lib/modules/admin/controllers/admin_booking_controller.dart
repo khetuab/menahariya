@@ -88,7 +88,7 @@ class AdminBookingController extends GetxController {
       if (_dateFilter.value != null) params['date'] = _dateFilter.value!.toIso8601String();
 
       final response = await _apiClient.get(
-        ApiEndpoints.bookingsHistory,
+      "/admin/bookings",
         queryParameters: params,
       );
 

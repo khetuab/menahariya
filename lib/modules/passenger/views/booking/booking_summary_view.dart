@@ -13,10 +13,12 @@ import 'package:menahariya/modules/passenger/controllers/booking_controller.dart
 
 import '../../../../core/utils/formatters/date_formatter.dart';
 import '../../../../data/models/ticket/booking_request.dart';
+import '../terms_conditions_view.dart';
 
 class BookingSummaryView extends GetView<PassengerBookingController> {
   const BookingSummaryView({Key? key}) : super(key: key);
 
+  
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -54,20 +56,17 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
                     const SizedBox(width: AppDimens.margin12),
                   Expanded(
                     flex: 2,
-                    child: PrimaryButton(
+                    child: Obx(() => PrimaryButton(  // ← Wrap with Obx
                       text: details.currentStep == 2 ? 'Confirm Booking' : 'Continue',
                       onPressed: () async {
                         if (details.currentStep == 2) {
-                          // On the last step, create the booking
-                          print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
                           await controller.createBooking();
                         } else {
-                          // Otherwise go to next step
                           details.onStepContinue!();
                         }
                       },
                       isDisabled: !controller.canProceedToPayment,
-                    ),
+                    )),
                   ),
                 ],
               ),
@@ -227,7 +226,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
 
           const SizedBox(height: AppDimens.margin16),
 
-          // Terms Checkbox
+          // Terms Checkbox Section
           Row(
             children: [
               Obx(() => Checkbox(
@@ -237,7 +236,15 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
               )),
               Expanded(
                 child: GestureDetector(
-                  onTap: () => controller.toggleTermsAgreement(!controller.agreeToTerms),
+                  onTap: () async {
+                    // Navigate to Terms & Conditions screen
+                    final agreed = await Get.to(() => const TermsConditionsView());
+
+                    // If user agreed, automatically check the box
+                    if (agreed == true && !controller.agreeToTerms) {
+                      controller.toggleTermsAgreement(true);
+                    }
+                  },
                   child: RichText(
                     text: TextSpan(
                       style: theme.textTheme.bodyMedium,
@@ -248,6 +255,7 @@ class BookingSummaryView extends GetView<PassengerBookingController> {
                           style: TextStyle(
                             color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
                             fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
                           ),
                         ),
                       ],

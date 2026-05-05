@@ -1,6 +1,7 @@
 // lib/modules/passenger/views/cargo/cargo_receipt_view.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/app_colors.dart';
 import 'package:menahariya/core/constants/app_dimens.dart';
@@ -99,6 +100,7 @@ class CargoReceiptView extends StatelessWidget {
                 children: [
                   // Header
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Column(
@@ -111,17 +113,55 @@ class CargoReceiptView extends StatelessWidget {
                                 letterSpacing: 1,
                               ),
                             ),
-                            Text(
-                              '#${cargo.trackingCode}',
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: AppFonts.bold,
-                              ),
+                            const SizedBox(height: AppDimens.margin4),
+                            // Fixed: Use Expanded instead of Flexible for better constraint
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '#${cargo.trackingCode}',
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: AppFonts.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: AppDimens.margin4),
+                                GestureDetector(
+                                  onTap: () {
+                                    Clipboard.setData(ClipboardData(text: cargo.trackingCode));
+                                    Get.snackbar(
+                                      'Copied!',
+                                      'Tracking code copied to clipboard',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      duration: const Duration(seconds: 2),
+                                      colorText: Colors.white,
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(AppDimens.padding4),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? AppColors.grey700 : AppColors.grey100,
+                                      borderRadius: BorderRadius.circular(AppDimens.radius4),
+                                    ),
+                                    child: Icon(
+                                      Icons.copy_rounded,
+                                      size: 16,
+                                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: AppDimens.margin8),
                       Container(
-                        padding: const EdgeInsets.all(AppDimens.padding8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.padding8,
+                          vertical: AppDimens.padding4,
+                        ),
                         decoration: BoxDecoration(
                           color: isDark ? AppColors.primaryGreen.withOpacity(0.2) : AppColors.primaryGreen.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(AppDimens.radius8),
@@ -136,7 +176,6 @@ class CargoReceiptView extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const Divider(height: AppDimens.margin32),
 
                   // Sender Details
@@ -207,7 +246,7 @@ class CargoReceiptView extends StatelessWidget {
                       ),
                       Text(
                         CurrencyFormatter.format(cargo.fee),
-                        style: theme.textTheme.headlineSmall?.copyWith(
+                        style: theme.textTheme.titleLarge?.copyWith(
                           color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
                           fontWeight: AppFonts.bold,
                         ),
@@ -295,14 +334,23 @@ class CargoReceiptView extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                entry.key,
-                style: theme.textTheme.bodySmall,
+              Expanded(
+                flex: 2,
+                child: Text(
+                  entry.key,
+                  style: theme.textTheme.bodySmall,
+                ),
               ),
-              Text(
-                entry.value,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: AppFonts.medium,
+              const SizedBox(width: AppDimens.margin8),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  entry.value,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: AppFonts.medium,
+                  ),
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

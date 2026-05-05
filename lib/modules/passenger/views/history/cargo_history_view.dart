@@ -17,16 +17,19 @@ class CargoHistoryView extends GetView<PassengerHistoryController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Load cargo when view is created
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.resetStatusFilterForCargo();
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cargo History'),
         backgroundColor: isDark ? AppColors.surfaceDark : AppColors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () {
-              // Show search
-            },
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => controller.loadCargoHistory(refresh: true),
           ),
         ],
       ),
@@ -36,7 +39,7 @@ class CargoHistoryView extends GetView<PassengerHistoryController> {
         }
 
         return RefreshIndicator(
-          onRefresh: controller.refreshAll,
+          onRefresh: () => controller.loadCargoHistory(refresh: true),
           child: ListView(
             padding: const EdgeInsets.all(AppDimens.padding16),
             children: [
@@ -54,34 +57,40 @@ class CargoHistoryView extends GetView<PassengerHistoryController> {
               if (controller.filteredCargo.isEmpty)
                 _buildEmptyState(context)
               else
-                ...controller.filteredCargo.map((cargo) => CargoCard(
-                  trackingId: cargo.trackingCode,
-                  destination: cargo.destination,
-                  weight: cargo.weight,
-                  fee: cargo.fee,
-                  status: cargo.status,
-                  registeredDate: cargo.registeredDate,
-                  onTap: () => Get.toNamed(
-                    '/passenger/cargo/${cargo.id}',
-                    arguments: {'cargoId': cargo.id},
-                  ),
-                  onTrack: () => Get.toNamed(
-                    '/passenger/cargo/track',
-                    arguments: {'trackingCode': cargo.trackingCode},
-                  ),
-                  onReceipt: () => Get.toNamed(
-                    '/passenger/cargo/receipt',
-                    arguments: {'cargo': cargo},
+                ...controller.filteredCargo.map((cargo) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppDimens.margin12),
+                  child: CargoCard(
+                    trackingId: cargo.trackingCode,
+                    destination: cargo.destination,
+                    weight: cargo.weight,
+                    fee: cargo.fee,
+                    status: cargo.status,
+                    registeredDate: cargo.registeredDate,
+                    onTap: () => Get.toNamed(
+                      '/passenger/cargo/${cargo.id}',
+                      arguments: {'cargoId': cargo.id},
+                    ),
+                    onTrack: () => Get.toNamed(
+                      '/passenger/cargo/track',
+                      arguments: {'trackingCode': cargo.trackingCode},
+                    ),
+                    onReceipt: () => Get.toNamed(
+                      '/passenger/cargo/receipt',
+                      arguments: {'cargo': cargo},
+                    ),
                   ),
                 )),
 
               // Load More
-              if (controller.cargoHasMore)
+              if (controller.cargoHasMore && controller.filteredCargo.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppDimens.padding16),
                   child: Center(
                     child: ElevatedButton(
                       onPressed: controller.loadMoreCargo,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      ),
                       child: const Text('Load More'),
                     ),
                   ),
@@ -121,7 +130,7 @@ class CargoHistoryView extends GetView<PassengerHistoryController> {
                   ),
                 ),
                 Text(
-                  '${controller.totalCargo}',
+                  '${controller.filteredCargo.length}',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: AppFonts.bold,
@@ -168,7 +177,11 @@ class CargoHistoryView extends GetView<PassengerHistoryController> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _buildFilterChip(context, 'All', 'all'),
+          _buildFilterChip(context, 'All', ''),
+          const SizedBox(width: AppDimens.margin8),
+          _buildFilterChip(context, 'Registered', 'registered'),
+          const SizedBox(width: AppDimens.margin8),
+          _buildFilterChip(context, 'Loaded', 'loaded'),
           const SizedBox(width: AppDimens.margin8),
           _buildFilterChip(context, 'In Transit', 'in_transit'),
           const SizedBox(width: AppDimens.margin8),
@@ -181,36 +194,44 @@ class CargoHistoryView extends GetView<PassengerHistoryController> {
   }
 
   Widget _buildFilterChip(BuildContext context, String label, String value) {
-    final isSelected = controller.statusFilter == value;
+    final isSelected = controller.cargoStatusFilter == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return FilterChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
-        controller.setStatusFilter(selected ? value : 'all');
+        controller.setCargoStatusFilter(selected ? value : '');
       },
       selectedColor: isSelected
-          ? (Theme.of(context).brightness == Brightness.dark
+          ? (isDark
           ? AppColors.primaryGreen.withOpacity(0.3)
           : AppColors.primaryGreen.withOpacity(0.1))
           : null,
-      checkmarkColor: Theme.of(context).brightness == Brightness.dark
+      checkmarkColor: isDark
           ? AppColors.primaryGreenLight
           : AppColors.primaryGreen,
+      side: BorderSide(
+        color: isSelected
+            ? (isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen)
+            : (isDark ? AppColors.borderDark : AppColors.borderLight),
+      ),
     );
   }
 
   Widget _buildLoadingShimmer() {
-    return ListView.separated(
+    return ListView.builder(
       padding: const EdgeInsets.all(AppDimens.padding16),
       itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(height: AppDimens.margin12),
-      itemBuilder: (_, __) => ShimmerLoading(
-        child: Container(
-          height: 150,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppDimens.radius12),
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: AppDimens.margin12),
+        child: ShimmerLoading(
+          child: Container(
+            height: 150,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppDimens.radius12),
+            ),
           ),
         ),
       ),
@@ -242,6 +263,15 @@ class CargoHistoryView extends GetView<PassengerHistoryController> {
             'Your cargo shipment history will appear here',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: AppDimens.margin24),
+          ElevatedButton.icon(
+            onPressed: () => Get.toNamed('/passenger/cargo/register'),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Send Cargo'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
             ),
           ),
         ],

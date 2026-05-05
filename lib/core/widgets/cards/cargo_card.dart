@@ -92,6 +92,7 @@ class CargoCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(AppDimens.padding16),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(AppDimens.padding8),
@@ -121,10 +122,13 @@ class CargoCard extends StatelessWidget {
                             fontWeight: AppFonts.medium,
                             letterSpacing: 1,
                           ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: AppDimens.margin8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDimens.padding8,
@@ -146,13 +150,17 @@ class CargoCard extends StatelessWidget {
               ),
             ),
 
-            // Cargo Details
+            // Cargo Details - Using Wrap for responsive layout
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppDimens.padding16),
-              child: Row(
+              child: Wrap(
+                alignment: WrapAlignment.spaceEvenly,
+                spacing: AppDimens.margin8,
+                runSpacing: AppDimens.margin12,
                 children: [
                   // Destination
-                  Expanded(
+                  SizedBox(
+                    width: 100,
                     child: _buildDetailItem(
                       context,
                       icon: Icons.location_on_rounded,
@@ -161,12 +169,8 @@ class CargoCard extends StatelessWidget {
                     ),
                   ),
                   // Weight
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                  ),
-                  Expanded(
+                  SizedBox(
+                    width: 80,
                     child: _buildDetailItem(
                       context,
                       icon: Icons.monitor_weight_rounded,
@@ -175,12 +179,8 @@ class CargoCard extends StatelessWidget {
                     ),
                   ),
                   // Fee
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                  ),
-                  Expanded(
+                  SizedBox(
+                    width: 80,
                     child: _buildDetailItem(
                       context,
                       icon: Icons.payments_rounded,
@@ -212,31 +212,36 @@ class CargoCard extends StatelessWidget {
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                   ),
                   const SizedBox(width: AppDimens.margin4),
-                  Text(
-                    'Registered ${DateFormatter.toRelative(registeredDate)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  Expanded(
+                    child: Text(
+                      'Registered ${DateFormatter.toRelative(registeredDate)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
-                  const Spacer(),
                   if (showActions) ...[
                     if (onTrack != null)
-                      TextButton.icon(
+                      TextButton(
                         onPressed: onTrack,
-                        icon: const Icon(Icons.track_changes_rounded, size: 16),
-                        label: const Text('Track'),
                         style: TextButton.styleFrom(
                           foregroundColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                          padding: const EdgeInsets.symmetric(horizontal: AppDimens.padding8),
+                          minimumSize: const Size(0, 36),
                         ),
+                        child: const Text('Track'),
                       ),
                     if (onReceipt != null)
-                      TextButton.icon(
+                      TextButton(
                         onPressed: onReceipt,
-                        icon: const Icon(Icons.receipt_rounded, size: 16),
-                        label: const Text('Receipt'),
                         style: TextButton.styleFrom(
                           foregroundColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                          padding: const EdgeInsets.symmetric(horizontal: AppDimens.padding8),
+                          minimumSize: const Size(0, 36),
                         ),
+                        child: const Text('Receipt'),
                       ),
                   ],
                 ],
@@ -258,6 +263,7 @@ class CargoCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           icon,
@@ -276,6 +282,9 @@ class CargoCard extends StatelessWidget {
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: AppFonts.medium,
           ),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
       ],
     );

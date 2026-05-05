@@ -28,7 +28,21 @@ class SplashController extends GetxController {
   final LocalNotificationService _notificationService = LocalNotificationService.instance;
   final ThemeController _themeController = ThemeController.to;
   final AuthController _authController = AuthController.instance;
+  Future<void> syncBiometricState() async {
+    final sharedPrefs = SharedPrefs();
+    final secureStorage = SecureStorage();
 
+    final biometricEnabled = await sharedPrefs.getBool('biometric_enabled');
+    final biometricPhone = await sharedPrefs.getString('biometric_phone');
+    final biometricPassword = await sharedPrefs.getString('biometric_password');
+
+    if (biometricEnabled == true && biometricPhone != null && biometricPassword != null) {
+      final credentials = '$biometricPhone:$biometricPassword';
+      await secureStorage.write('saved_credentials', credentials);
+      await secureStorage.write('saved_phone', biometricPhone);
+      print('✅ Synced biometric credentials on app start');
+    }
+  }
   // Observables
   final _loadingProgress = 0.0.obs;
   final _loadingMessage = 'Initializing...'.obs;
@@ -49,15 +63,16 @@ class SplashController extends GetxController {
   String get errorMessage => _errorMessage.value;
 
   @override
-  void onInit() {
+  Future<void> onInit() async {
     super.onInit();
-
+    await syncBiometricState();
   }
 
   @override
   void onReady() {
     super.onReady();
     _startInitialization();
+
   }
 
   // Method to set animations from view

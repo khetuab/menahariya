@@ -86,10 +86,56 @@ class PassengerBookingController extends GetxController {
 
   bool get canProceedToPayment {
     if (_currentStep.value == 0) {
-      return passengerNameController.text.isNotEmpty &&
+      // Validate primary passenger
+      final isPrimaryValid = passengerNameController.text.isNotEmpty &&
           passengerPhoneController.text.isNotEmpty &&
           _validateEmail() &&
           _agreeToTerms.value;
+
+      if (!isPrimaryValid) return false;
+
+      // Validate all additional passengers
+      return _areAllAdditionalPassengersValid();
+    }
+    return true;
+  }
+
+  final _canProceed = false.obs;
+  bool get canProceed => _canProceed.value;
+
+  void _onFormChanged() {
+    updateValidationState();
+  }
+
+  void updateValidationState() {
+    bool newValue;
+    if (_currentStep.value == 0) {
+      final isPrimaryValid = passengerNameController.text.isNotEmpty &&
+          passengerPhoneController.text.isNotEmpty &&
+          _validateEmail() &&
+          _agreeToTerms.value;
+
+      final areAdditionalValid = _areAllAdditionalPassengersValid();
+      newValue = isPrimaryValid && areAdditionalValid;
+    } else {
+      newValue = true;
+    }
+
+    if (_canProceed.value != newValue) {
+      _canProceed.value = newValue;
+    }
+  }
+
+// Add this helper method
+  bool _areAllAdditionalPassengersValid() {
+    // If no additional passengers, return true
+    if (_additionalPassengers.isEmpty) return true;
+
+    // Check each additional passenger has a name
+    for (final passenger in _additionalPassengers) {
+      if (passenger.name == null || passenger.name!.trim().isEmpty) {
+        return false;
+      }
     }
     return true;
   }
@@ -101,7 +147,20 @@ class PassengerBookingController extends GetxController {
     _initializeControllers();
     _loadWalletBalance();
     _initializePassengerDetails();
+
+    // Add all listeners
+    passengerNameController.addListener(_onFormChanged);
+    passengerPhoneController.addListener(_onFormChanged);
+    passengerEmailController.addListener(_onFormChanged);
+
+    ever(_agreeToTerms, (_) => updateValidationState());
+    ever(_currentStep, (_) => updateValidationState());
+    ever(_additionalPassengers, (_) => updateValidationState());
+
+    // Initial validation
+    updateValidationState();
   }
+
 
   void _getArguments() {
     final args = Get.arguments;

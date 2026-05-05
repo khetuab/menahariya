@@ -61,6 +61,7 @@ class CargoRegistrationView extends GetView<PassengerCargoController> {
                       isLoading: details.currentStep == 2 && controller.isLoading,
                     ),
                   ),
+                  SizedBox(height: 100,)
                 ],
               ),
             );
@@ -460,7 +461,7 @@ class CargoRegistrationView extends GetView<PassengerCargoController> {
                 ),
               ),
               Text(
-                controller.formattedCalculatedFee,
+                controller.formattedEstimatedFee,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
                   fontWeight: AppFonts.bold,
@@ -563,12 +564,34 @@ class CargoRegistrationView extends GetView<PassengerCargoController> {
 
 
 
-  void _selectTrip(BuildContext context) {
-    Get.toNamed('/passenger/cargo/select-trip')?.then((result) {
-      if (result != null && result is TripModel) {
-        controller.setSelectedTrip(result);
-        print('✅ Trip received back: ${result.origin} → ${result.destination}');
-      }
-    });
+  void _selectTrip(BuildContext context) async {
+    // Hide keyboard before navigation
+    FocusScope.of(context).unfocus();
+
+    // Use Navigator.push instead of Get.toNamed for better result handling
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CargoTripSelectView(),
+      ),
+    );
+
+    print('🔙 Returned from trip selection with result: $result');
+
+    if (result != null && result is TripModel) {
+      controller.setSelectedTrip(result);
+      print('✅ Trip received back: ${result.origin} → ${result.destination}');
+
+      // Show confirmation
+      Get.snackbar(
+        'Trip Selected',
+        '${result.origin} → ${result.destination}',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+        colorText: Colors.white,
+      );
+    } else {
+      print('❌ No trip selected or invalid result');
+    }
   }
 }
