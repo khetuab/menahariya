@@ -122,7 +122,7 @@ class AboutView extends StatelessWidget {
                 ),
                 const SizedBox(height: AppDimens.margin4),
                 Text(
-                  '© 2024 Menahariya. All rights reserved.',
+                  '© 2026 Menahariya. All rights reserved.',
                   style: theme.textTheme.bodySmall,
                 ),
               ],

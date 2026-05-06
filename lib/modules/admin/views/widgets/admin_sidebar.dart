@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../../../config/environment/env_config.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/routes/app_routes.dart';
 import '../../../auth/controllers/auth_controller.dart';
 import '../admin_profile_view.dart';
 
@@ -58,77 +59,84 @@ class AdminDrawer extends StatelessWidget {
                   index: 0,
                   icon: Icons.dashboard_rounded,
                   label: 'Dashboard',
-                  route: '/admin/dashboard',
+                  route: AppRoutes.adminDashboard,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 1,
                   icon: Icons.directions_bus_rounded,
                   label: 'Trips',
-                  route: '/admin/trips',
+                  route: AppRoutes.adminTrips,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 2,
                   icon: Icons.confirmation_number_rounded,
                   label: 'Bookings',
-                  route: '/admin/bookings',
+                  route: AppRoutes.adminBookings,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 3,
                   icon: Icons.people_rounded,
                   label: 'Users',
-                  route: '/admin/users',
+                  route: AppRoutes.adminUsers,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 4,
                   icon: Icons.inventory_2_rounded,
                   label: 'Cargo',
-                  route: '/admin/cargo',
+                  route: AppRoutes.adminCargo,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 5,
                   icon: Icons.analytics_rounded,
                   label: 'Reports',
-                  route: '/admin/reports',
+                  route: AppRoutes.adminReports,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 6,
                   icon: Icons.payments_rounded,
                   label: 'Payments',
-                  route: '/admin/payments',
+                  route: AppRoutes.adminPayments,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 7,
                   icon: Icons.map_rounded,
                   label: 'Routes',
-                  route: '/admin/routes',
+                  route: AppRoutes.adminRoutes,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 8,
                   icon: Icons.local_shipping_rounded,
                   label: 'Vehicles',
-                  route: '/admin/vehicles',
+                  route: AppRoutes.adminVehicles,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 9,
                   icon: Icons.notifications_rounded,
                   label: 'Notifications',
-                  route: '/admin/notifications',
+                  route: AppRoutes.adminNotifications,
                 ),
                 _buildDrawerItem(
                   context,
                   index: 10,
+                  icon: Icons.headset_mic_outlined,
+                  label: 'Support',
+                  route: AppRoutes.adminSupport,
+                ),
+                _buildDrawerItem(
+                  context,
+                  index: 11,
                   icon: Icons.settings_rounded,
                   label: 'Settings',
-                  route: '/admin/settings',
+                  route: AppRoutes.adminSettings,
                 ),
               ],
             ),
@@ -223,9 +231,12 @@ class AdminDrawer extends StatelessWidget {
           ? AppColors.primaryGreen.withOpacity(0.1)
           : AppColors.primaryGreen.withOpacity(0.05),
       onTap: () {
+        // Close drawer first
         Navigator.pop(context);
+
         if (currentIndex != index) {
-          Get.offAllNamed(route);
+          // Use toNamed instead of offAllNamed to keep navigation stack
+          Get.toNamed(route);
         }
       },
     );

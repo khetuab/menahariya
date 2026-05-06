@@ -1,6 +1,7 @@
 // lib/modules/admin/bindings/admin_binding.dart
 
 import 'package:get/get.dart';
+import 'package:menahariya/modules/admin/controllers/admin_support_controller.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/admin_dashboard_controller.dart';
 import '../controllers/admin_profile_controller.dart';
@@ -40,6 +41,7 @@ class AdminBinding extends Bindings {
     // System Management
     Get.lazyPut<AdminNotificationController>(() => AdminNotificationController(), fenix: true);
     Get.lazyPut<AdminSettingsController>(() => AdminSettingsController(), fenix: true);
+    Get.lazyPut<AdminSupportController>(() => AdminSupportController(), fenix: true);
   }
 }
 

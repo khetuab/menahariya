@@ -397,14 +397,10 @@ class PassengerNotificationController extends GetxController {
         );
         break;
       case 'payment':
-        Get.toNamed(
-          '/passenger/payment/${notification.data?['paymentId']}',
-        );
+        Get.toNamed('/passenger/payment/${notification.data?['paymentId']}');
         break;
       case 'trip':
-        Get.toNamed(
-          '/passenger/trip/${notification.data?['tripId']}',
-        );
+        Get.toNamed('/passenger/trip/${notification.data?['tripId']}');
         break;
       case 'cargo':
         Get.toNamed(
@@ -412,12 +408,14 @@ class PassengerNotificationController extends GetxController {
           arguments: {'trackingCode': notification.data?['trackingCode']},
         );
         break;
-      default:
-      // Just open notification details
+      case 'support':  // Add this case
         Get.toNamed(
-          '/passenger/notification/${notification.id}',
-          arguments: {'notification': notification},
+          '/passenger/support/tickets',
+          arguments: {'ticketId': notification.data?['ticketId']},
         );
+        break;
+      default:
+        Get.toNamed('/passenger/notification/${notification.id}');
     }
   }
 

@@ -7,6 +7,8 @@ import 'package:menahariya/core/constants/app_dimens.dart';
 import 'package:menahariya/core/constants/app_fonts.dart';
 import 'package:menahariya/modules/passenger/controllers/profile_controller.dart';
 
+import '../../../../core/routes/app_routes.dart';
+
 class PrivacySecurityView extends GetView<PassengerProfileController> {
   const PrivacySecurityView({Key? key}) : super(key: key);
 
@@ -34,7 +36,7 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
                 icon: Icons.lock_rounded,
                 title: 'Change Password',
                 subtitle: 'Update your password regularly',
-                onTap: () => _showChangePasswordDialog(context),
+                onTap: () => Get.toNamed(AppRoutes.changePassword),
                 showArrow: true,
               ),
               _buildMenuItem(
@@ -81,7 +83,7 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
                 icon: Icons.visibility_off_rounded,
                 title: 'Profile Visibility',
                 subtitle: _getVisibilityText(controller.profileVisibility),
-                onTap: () => _showVisibilityDialog(context),
+                onTap: () {},
                 showArrow: true,
               ),
               _buildMenuItem(
@@ -91,7 +93,7 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
                 subtitle: controller.locationSharingEnabled
                     ? '${controller.locationAccuracy == 'precise' ? 'Precise' : 'Approximate'} location sharing'
                     : 'Location sharing disabled',
-                onTap: () => _showLocationPrivacyDialog(context),
+                onTap: () {},
                 showArrow: true,
               ),
               _buildMenuItem(
@@ -99,7 +101,7 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
                 icon: Icons.notifications_rounded,
                 title: 'Notification Preferences',
                 subtitle: 'Customize what you receive',
-                onTap: () => Get.toNamed('/settings/notifications'),
+                onTap: () {},
                 showArrow: true,
               ),
             ],
@@ -532,7 +534,7 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
           ElevatedButton(
             onPressed: () {
               Get.back();
-              controller.requestDataDownload();
+              //controller.requestDataDownload();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).brightness == Brightness.dark

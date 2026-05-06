@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:menahariya/modules/passenger/controllers/dashboard_controller.dart';
 import 'package:menahariya/modules/passenger/controllers/home_controller.dart';
 import 'package:menahariya/modules/passenger/controllers/search_controller.dart';
+import 'package:menahariya/modules/passenger/controllers/support_controller.dart';
 import 'package:menahariya/modules/passenger/controllers/trip_detail_controller.dart';
 import 'package:menahariya/modules/passenger/controllers/booking_controller.dart';
 import 'package:menahariya/modules/passenger/controllers/payment_controller.dart';
@@ -25,6 +26,7 @@ class PassengerBinding extends Bindings {
     Get.lazyPut<PassengerTripDetailController>(() => PassengerTripDetailController(), fenix: true);
     Get.lazyPut<PassengerBookingController>(() => PassengerBookingController(), fenix: true);
     Get.lazyPut<PassengerPaymentController>(() => PassengerPaymentController(), fenix: true);
+    Get.lazyPut<SupportController>(() => SupportController(), fenix: true);
     Get.lazyPut<PassengerTicketController>(() => PassengerTicketController(), fenix: true);
     Get.lazyPut<PassengerCargoController>(() => PassengerCargoController(), fenix: true);
     Get.lazyPut<PassengerHistoryController>(() => PassengerHistoryController(), fenix: true);

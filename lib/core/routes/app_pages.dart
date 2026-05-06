@@ -64,8 +64,11 @@ import 'package:menahariya/modules/admin/views/admin_notifications_view.dart';
 import 'package:menahariya/modules/admin/views/admin_settings_view.dart';
 
 // ==================== OTHER IMPORTS ====================
+import '../../modules/admin/controllers/admin_support_controller.dart';
 import '../../modules/admin/views/admin_profile_view.dart';
+import '../../modules/admin/views/admin_support_view.dart';
 import '../../modules/auth/controllers/auth_controller.dart';
+import '../../modules/auth/views/change_password_view.dart';
 import '../../modules/auth/views/forgot_password_view.dart';
 import '../../modules/auth/views/two_factor_verify_view.dart';
 import '../../modules/driver/trips/assigned_trips_view.dart';
@@ -77,9 +80,11 @@ import '../../modules/legal/view/terms_view.dart';
 import '../../modules/onboarding/bindings/onboarding_binding.dart';
 import '../../modules/onboarding/views/onboarding_view.dart';
 import '../../modules/passenger/views/cargo/cargo_trip_select_view.dart';
+import '../../modules/passenger/views/support/my_support_tickets_view.dart';
 import '../../modules/passenger/views/support/privacy_security_view.dart';
 import '../../modules/passenger/views/support/about_view.dart';
 import '../../modules/passenger/views/support/help_support_view.dart';
+import '../../modules/passenger/views/support/ticket_detail_view.dart';
 import '../../modules/passenger/views/tickets/ticket_trip_select_view.dart';
 
 class AppPages {
@@ -364,10 +369,36 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.helpSupport,
-      page: () => const HelpSupportView(),
+      page: () =>  HelpSupportView(),
       binding: PassengerBinding(),
       transition: Transition.rightToLeft,
       middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.mySupportTickets,
+      page: () => const MySupportTicketsView(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.adminSupport,
+      page: () =>  AdminSupportView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.ticketDetail,
+      page: () => const TicketDetailView(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.adminTicketDetail,
+      page: () => const AdminTicketDetailView(),
+      binding: AdminBinding(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'admin')],
     ),
     GetPage(
       name: AppRoutes.about,
@@ -458,6 +489,12 @@ class AppPages {
       name: AppRoutes.twoFactorVerify,
       page: () => const TwoFactorVerifyView(),
       transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.changePassword,
+      page: () => const ChangePasswordView(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerCargoHistory,

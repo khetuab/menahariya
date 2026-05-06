@@ -19,6 +19,7 @@ class AppRoutes {
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
   static const String adminProfile = '/admin/profile';
+  static const String changePassword = '/auth/change-password';
 // In app_routes.dart, add
   static const String driverEditProfile = '/driver/profile/edit';
   // Passenger Routes
@@ -55,6 +56,11 @@ class AppRoutes {
   static const String faqs = '/passenger/faqs';
   static const String terms = '/passenger/terms';
   static const String privacy = '/passenger/privacy';
+  static const String adminSupport = '/admin/support';
+  static const String mySupportTickets = '/passenger/support/tickets';
+  static const String supportTicketDetail = '/passenger/support/ticket/:id';
+  static const String ticketDetail = '/passenger/support/ticket/:id';
+  static const String adminTicketDetail = '/admin/support/ticket/:id';
 
 
   // Driver Routes

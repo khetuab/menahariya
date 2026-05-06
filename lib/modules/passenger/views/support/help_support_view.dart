@@ -1,5 +1,3 @@
-// lib/modules/passenger/views/support/help_support_view.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -9,9 +7,22 @@ import 'package:menahariya/core/constants/app_fonts.dart';
 import 'package:menahariya/core/widgets/buttons/primary_button.dart';
 import 'package:menahariya/core/widgets/inputs/custom_textfield.dart';
 import 'package:menahariya/core/utils/validators/auth_validator.dart';
+import 'package:menahariya/modules/passenger/controllers/support_controller.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class HelpSupportView extends StatelessWidget {
-  const HelpSupportView({Key? key}) : super(key: key);
+class HelpSupportView extends GetView<SupportController> {
+   HelpSupportView({Key? key}) : super(key: key);
+
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController subjectController = TextEditingController();
+  final TextEditingController messageController = TextEditingController();
+
+  final RxBool isSubmitted = false.obs;
+  final RxString nameError = RxString('');
+  final RxString emailError = RxString('');
+  final RxString subjectError = RxString('');
+  final RxString messageError = RxString('');
 
   @override
   Widget build(BuildContext context) {
@@ -23,28 +34,25 @@ class HelpSupportView extends StatelessWidget {
         title: const Text('Help & Support'),
         backgroundColor: isDark ? AppColors.surfaceDark : AppColors.white,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppDimens.padding16),
-        children: [
-          // Quick Actions
-          _buildQuickActions(context),
-
-          const SizedBox(height: AppDimens.margin16),
-
-          // FAQs Section
-          _buildFAQSection(context),
-
-          const SizedBox(height: AppDimens.margin16),
-
-          // Contact Support Form
-          _buildContactForm(context),
-
-          const SizedBox(height: AppDimens.margin16),
-
-          // Contact Info
-          _buildContactInfo(context),
-        ],
-      ),
+      body: Obx(() {
+        if (isSubmitted.value) {
+          return _buildSuccessView(context);
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(AppDimens.padding16),
+          child: Column(
+            children: [
+              _buildQuickActions(context),
+              const SizedBox(height: AppDimens.margin16),
+              _buildFAQSection(context),
+              const SizedBox(height: AppDimens.margin16),
+              _buildContactForm(context),
+              const SizedBox(height: AppDimens.margin16),
+              _buildContactInfo(context),
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -183,20 +191,6 @@ class HelpSupportView extends StatelessWidget {
             question: 'How do I track my cargo?',
             answer: 'Use the tracking code provided in your cargo receipt to track your shipment in the Cargo Tracking section.',
           ),
-          _buildFAQItem(
-            context,
-            question: 'How do I change my profile picture?',
-            answer: 'Go to Profile, tap on your profile picture, and select "Take Photo" or "Choose from Gallery".',
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppDimens.padding16),
-            child: Center(
-              child: TextButton(
-                onPressed: () => Get.toNamed('/faqs'),
-                child: const Text('View All FAQs'),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -234,11 +228,6 @@ class HelpSupportView extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final nameController = TextEditingController();
-    final emailController = TextEditingController();
-    final subjectController = TextEditingController();
-    final messageController = TextEditingController();
-
     return Container(
       padding: const EdgeInsets.all(AppDimens.padding16),
       decoration: BoxDecoration(
@@ -267,42 +256,51 @@ class HelpSupportView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppDimens.margin16),
-          CustomTextField(
+
+          Obx(() => CustomTextField(
             label: 'Your Name',
             controller: nameController,
+            onChanged: (_) => _validateName(),
             prefixIcon: Icons.person_rounded,
-          ),
+            errorText: nameError.value.isEmpty ? null : nameError.value,
+          )),
           const SizedBox(height: AppDimens.margin12),
-          CustomTextField(
+
+          Obx(() => CustomTextField(
             label: 'Email Address',
             controller: emailController,
             keyboardType: TextInputType.emailAddress,
+            onChanged: (_) => _validateEmail(),
             prefixIcon: Icons.email_rounded,
-          ),
+            errorText: emailError.value.isEmpty ? null : emailError.value,
+          )),
           const SizedBox(height: AppDimens.margin12),
-          CustomTextField(
+
+          Obx(() => CustomTextField(
             label: 'Subject',
             controller: subjectController,
+            onChanged: (_) => _validateSubject(),
             prefixIcon: Icons.title_rounded,
-          ),
+            errorText: subjectError.value.isEmpty ? null : subjectError.value,
+          )),
           const SizedBox(height: AppDimens.margin12),
-          CustomTextField(
+
+          Obx(() => CustomTextField(
             label: 'Message',
             controller: messageController,
             maxLines: 4,
+            onChanged: (_) => _validateMessage(),
             prefixIcon: Icons.message_rounded,
-          ),
+            errorText: messageError.value.isEmpty ? null : messageError.value,
+          )),
           const SizedBox(height: AppDimens.margin16),
-          PrimaryButton(
+
+          Obx(() => PrimaryButton(
             text: 'Send Message',
-            onPressed: () => _submitSupportRequest(
-              nameController.text,
-              emailController.text,
-              subjectController.text,
-              messageController.text,
-            ),
+            onPressed: controller.isLoading ? null : _submitSupportRequest,
+            isLoading: controller.isLoading,
             icon: Icons.send_rounded,
-          ),
+          )),
         ],
       ),
     );
@@ -327,7 +325,7 @@ class HelpSupportView extends StatelessWidget {
             context,
             icon: Icons.phone_rounded,
             title: 'Phone Support',
-            value: '+251-XXX-XXXXXX',
+            value: '+251-906464607',
             subtitle: 'Available 24/7',
             onTap: () => _makePhoneCall(),
           ),
@@ -386,64 +384,203 @@ class HelpSupportView extends StatelessWidget {
     );
   }
 
+  Widget _buildSuccessView(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.padding24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: (isDark ? AppColors.successLight : AppColors.success).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_circle_rounded,
+                size: 40,
+                color: isDark ? AppColors.successLight : AppColors.success,
+              ),
+            ),
+            const SizedBox(height: AppDimens.margin24),
+            Text(
+              'Message Sent!',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: AppFonts.bold,
+              ),
+            ),
+            const SizedBox(height: AppDimens.margin8),
+            Text(
+              'Thank you for contacting us.\nWe\'ll get back to you within 24 hours.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppDimens.margin32),
+            PrimaryButton(
+              text: 'Send Another Message',
+              onPressed: () {
+                nameController.clear();
+                emailController.clear();
+                subjectController.clear();
+                messageController.clear();
+                isSubmitted.value = false;
+              },
+              icon: Icons.refresh_rounded,
+            ),
+            const SizedBox(height: AppDimens.margin12),
+            OutlinedButton(
+              onPressed: () => Get.back(),
+              child: const Text('Back to Support'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _validateName() {
+    if (nameController.text.trim().isEmpty) {
+      nameError.value = 'Name is required';
+    } else {
+      nameError.value = '';
+    }
+  }
+
+  void _validateEmail() {
+    if (emailController.text.trim().isEmpty) {
+      emailError.value = 'Email is required';
+    } else {
+      final validationError = AuthValidator.validateEmail(emailController.text);
+      emailError.value = validationError ?? '';
+    }
+  }
+
+  void _validateSubject() {
+    if (subjectController.text.trim().isEmpty) {
+      subjectError.value = 'Subject is required';
+    } else {
+      subjectError.value = '';
+    }
+  }
+
+  void _validateMessage() {
+    if (messageController.text.trim().isEmpty) {
+      messageError.value = 'Message is required';
+    } else {
+      messageError.value = '';
+    }
+  }
+
+  bool _isFormValid() {
+    _validateName();
+    _validateEmail();
+    _validateSubject();
+    _validateMessage();
+
+    return nameError.value.isEmpty &&
+        emailError.value.isEmpty &&
+        subjectError.value.isEmpty &&
+        messageError.value.isEmpty &&
+        nameController.text.trim().isNotEmpty &&
+        emailController.text.trim().isNotEmpty &&
+        subjectController.text.trim().isNotEmpty &&
+        messageController.text.trim().isNotEmpty;
+  }
+
+  Future<void> _submitSupportRequest() async {
+    if (!_isFormValid()) {
+      Get.snackbar(
+        'Validation Error',
+        'Please fix the errors before submitting',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final success = await controller.submitSupportRequest(
+      name: nameController.text.trim(),
+      email: emailController.text.trim(),
+      subject: subjectController.text.trim(),
+      message: messageController.text.trim(),
+    );
+
+    if (success) {
+      isSubmitted.value = true;
+      Get.snackbar(
+        'Message Sent',
+        'We\'ll get back to you soon!',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } else {
+      Get.snackbar(
+        'Error',
+        'Failed to send message. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
   void _startLiveChat() {
     Get.snackbar(
       'Live Chat',
       'Connecting to support agent...',
       snackPosition: SnackPosition.BOTTOM,
     );
-    // Implement live chat navigation
   }
 
   void _makePhoneCall() async {
-    const phoneNumber = '+251XXXXXXXXX';
-    await Clipboard.setData(const ClipboardData(text: phoneNumber));
-    Get.snackbar(
-      'Phone Number Copied',
-      phoneNumber,
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    // Use url_launcher to make call: launch('tel:$phoneNumber')
+    const phoneNumber = '+251906464607';
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      await Clipboard.setData(ClipboardData(text: phoneNumber));
+      Get.snackbar(
+        'Phone Number Copied',
+        phoneNumber,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+    }
   }
 
   void _sendEmail() async {
     const email = 'support@menahariya.com';
-    await Clipboard.setData(const ClipboardData(text: email));
-    Get.snackbar(
-      'Email Copied',
-      email,
-      snackPosition: SnackPosition.BOTTOM,
-    );
-    // Use url_launcher to send email: launch('mailto:$email')
+    final Uri emailUri = Uri(scheme: 'mailto', path: email);
+
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      await Clipboard.setData(ClipboardData(text: email));
+      Get.snackbar(
+        'Email Copied',
+        email,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+    }
   }
 
-  void _submitSupportRequest(String name, String email, String subject, String message) {
-    if (name.isEmpty || email.isEmpty || subject.isEmpty || message.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please fill all fields',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
-    if (AuthValidator.validateEmail(email) != null) {
-      Get.snackbar(
-        'Error',
-        'Please enter a valid email',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
-    Get.snackbar(
-      'Message Sent',
-      'We\'ll get back to you soon!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
-
-    // Implement API call to submit support request
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    subjectController.dispose();
+    messageController.dispose();
+    //super.dispose();
   }
 }

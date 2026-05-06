@@ -9,6 +9,7 @@ import 'package:menahariya/core/widgets/buttons/primary_button.dart';
 import 'package:menahariya/modules/passenger/controllers/profile_controller.dart';
 
 import '../../controllers/notification_controller.dart';
+import '../support/my_support_tickets_view.dart';
 
 class ProfileView extends GetView<PassengerProfileController> {
   const ProfileView({Key? key}) : super(key: key);
@@ -336,6 +337,12 @@ class ProfileView extends GetView<PassengerProfileController> {
           icon: Icons.help_rounded,
           title: 'Help & Support',
           onTap: controller.contactSupport,
+        ),
+        _buildMenuItem(
+          context,
+          icon: Icons.headset_mic_outlined,
+          title: 'My Support Tickets',
+          onTap: () => Get.to(() => const MySupportTicketsView()),
         ),
         _buildMenuItem(
           context,

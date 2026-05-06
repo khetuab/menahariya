@@ -1,9 +1,12 @@
 // lib/core/constants/api_endpoints.dart
 
 class ApiEndpoints {
-  // Base URL - Will be replaced by environment config
-  static const String baseUrl = 'http://10.194.117.58/api/v1';
-  static const String socketUrl = 'https://10.194.117.58:3000';
+  // // Base URL - Will be replaced by environment config
+  // static const String baseUrl = 'http://10.194.117.58/api/v1';
+  // static const String socketUrl = 'https://10.194.117.58:3000';
+
+  static const String baseUrl = 'https://menahariya-backend.onrender.com/api';
+  static const String socketUrl = 'https://menahariya-backend.onrender.com';
 
   // Auth Endpoints
   static const String auth = '/auth';
