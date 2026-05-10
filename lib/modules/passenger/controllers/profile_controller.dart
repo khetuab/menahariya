@@ -326,43 +326,94 @@ class PassengerProfileController extends GetxController {
     }
   }
 
-// Add this helper method to show password dialog
+// Add this helper method to show password dialog with validation
   Future<String?> _showPasswordDialog() async {
     final passwordController = TextEditingController();
     final isPasswordVisible = false.obs;
+    final isLoading = false.obs;
+    final errorMessage = ''.obs;
 
     return await Get.dialog<String>(
       AlertDialog(
         title: const Text('Confirm Password'),
-        content: Obx(() => TextField(
-          controller: passwordController,
-          obscureText: !isPasswordVisible.value,
-          decoration: InputDecoration(
-            labelText: 'Enter your password',
-            border: const OutlineInputBorder(),
-            suffixIcon: IconButton(
-              icon: Icon(
-                isPasswordVisible.value ? Icons.visibility_off : Icons.visibility,
+        content: Obx(() => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: passwordController,
+              obscureText: !isPasswordVisible.value,
+              decoration: InputDecoration(
+                labelText: 'Enter your password',
+                border: const OutlineInputBorder(),
+                errorText: errorMessage.value.isEmpty ? null : errorMessage.value,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    isPasswordVisible.value ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () => isPasswordVisible.toggle(),
+                ),
               ),
-              onPressed: () => isPasswordVisible.toggle(),
             ),
-          ),
+            if (isLoading.value)
+              const Padding(
+                padding: EdgeInsets.only(top: 12.0),
+                child: CircularProgressIndicator(),
+              ),
+          ],
         )),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: null),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            onPressed: () => Get.back(result: passwordController.text),
+          Obx(() => ElevatedButton(
+            onPressed: isLoading.value
+                ? null
+                : () async {
+              final password = passwordController.text.trim();
+              if (password.isEmpty) {
+                errorMessage.value = 'Please enter your password';
+                return;
+              }
+
+              isLoading.value = true;
+              errorMessage.value = '';
+
+              // Verify password with backend
+              final isValid = await _verifyPassword(password);
+
+              isLoading.value = false;
+
+              if (isValid) {
+                Get.back(result: password);
+              } else {
+                errorMessage.value = 'Incorrect password. Please try again.';
+                passwordController.clear();
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
             ),
             child: const Text('Confirm'),
-          ),
+          )),
         ],
       ),
+      barrierDismissible: false,
     );
+  }
+
+// Add this helper method to verify password with backend
+  Future<bool> _verifyPassword(String password) async {
+    try {
+      final response = await _apiClient.post(
+        '/auth/verify-password',
+        data: {'password': password},
+      );
+      return response != null && response['valid'] == true;
+    } catch (e) {
+      print('Error verifying password: $e');
+      return false;
+    }
   }
 
 // Add a method to authenticate when the app starts (if biometric login is enabled)
@@ -692,8 +743,6 @@ class PassengerProfileController extends GetxController {
     }
   }
 
-  // In profile_controller.dart, update _verifyAndEnable2FA:
-
   Future<void> _verifyAndEnable2FA(String code) async {
     try {
       _isLoading.value = true;
@@ -767,6 +816,7 @@ class PassengerProfileController extends GetxController {
       }
     }
   }
+
   Future<void> _loadStatistics() async {
     try {
       print('📊 Loading statistics...');

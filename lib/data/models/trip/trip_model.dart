@@ -64,12 +64,13 @@ class TripModel {
   });
 
   factory TripModel.fromJson(Map<String, dynamic> json) {
+    print('🔍 TripModel.fromJson called with keys: ${json.keys}');
+
     // Helper function to extract ID from either string or object
     String extractId(dynamic field) {
       if (field == null) return '';
       if (field is String) return field;
       if (field is Map<String, dynamic>) {
-        // Handle MongoDB ObjectId format
         if (field.containsKey('_id')) {
           if (field['_id'] is Map && field['_id'].containsKey('\$oid')) {
             return field['_id']['\$oid']?.toString() ?? '';
@@ -83,13 +84,68 @@ class TripModel {
       return field.toString();
     }
 
+    // CHECK: Is this a simplified trip object from booking response?
+    // The simplified object has 'id', 'origin', 'destination' at top level
+    if (json.containsKey('origin') && json.containsKey('destination')) {
+      print('✅ Creating TripModel from simplified booking format');
+
+      // Create a minimal RouteModel from the simplified data
+      final simpleRoute = RouteModel(
+        id: json['id'] ?? '',
+        name: '${json['origin']} to ${json['destination']}',
+        origin: json['origin'] ?? '',
+        destination: json['destination'] ?? '',
+        distance: 0,
+        duration: 0,
+        basePrice: json['price']?.toDouble() ?? 0,
+        createdAt: DateTime.now(),
+      );
+
+      DateTime parseDate(dynamic date) {
+        if (date == null) return DateTime.now();
+        try {
+          if (date is String) return DateTime.parse(date);
+          if (date is Map && date.containsKey('\$date')) {
+            return DateTime.parse(date['\$date'].toString());
+          }
+        } catch (e) {
+          print('⚠️ Date parsing error: $e');
+        }
+        return DateTime.now();
+      }
+
+      return TripModel(
+        id: json['id']?.toString() ?? extractId(json['_id']),
+        routeId: '',
+        route: simpleRoute,
+        vehicleId: '',
+        driverId: '',
+        departureTime: parseDate(json['departureTime']),
+        arrivalTime: parseDate(json['arrivalTime']),
+        price: (json['price'] ?? 0).toDouble(),
+        availableSeats: json['availableSeats'] ?? 0,
+        totalSeats: json['totalSeats'] ?? 0,
+        status: json['status'] ?? 'scheduled',
+        amenities: List<String>.from(json['amenities'] ?? []),
+        seatLayout: json['seatLayout'],
+        cargoCapacity: json['cargoCapacity']?.toDouble(),
+        currentCargoWeight: json['currentCargoWeight']?.toDouble(),
+        passengerCount: json['passengerCount'],
+        cargoCount: json['cargoCount'],
+        notes: json['notes'],
+        createdAt: DateTime.now(),
+        updatedAt: null,
+        metadata: json['metadata'],
+      );
+    }
+
+    // Original parsing for full trip objects
     // Parse vehicle - could be object or string
     VehicleModel? vehicle;
     String? vehicleId;
 
     if (json['vehicleId'] != null) {
       if (json['vehicleId'] is Map<String, dynamic>) {
-        // It's a populated vehicle object
         vehicle = VehicleModel.fromJson(json['vehicleId']);
         vehicleId = vehicle.id;
       } else if (json['vehicleId'] is String) {
@@ -103,7 +159,6 @@ class TripModel {
 
     if (json['driverId'] != null) {
       if (json['driverId'] is Map<String, dynamic>) {
-        // It's a populated driver object
         driver = UserModel.fromJson(json['driverId']);
         driverId = driver.id;
       } else if (json['driverId'] is String) {
@@ -124,22 +179,29 @@ class TripModel {
       }
     }
 
+    DateTime parseDate(dynamic date) {
+      if (date == null) return DateTime.now();
+      try {
+        if (date is String) return DateTime.parse(date);
+        if (date is Map && date.containsKey('\$date')) {
+          return DateTime.parse(date['\$date'].toString());
+        }
+      } catch (e) {
+        print('⚠️ Date parsing error: $e');
+      }
+      return DateTime.now();
+    }
+
     return TripModel(
-      id: json['_id'] is Map
-          ? (json['_id']['\$oid'] ?? json['_id'].toString())
-          : (json['_id'] ?? json['id'] ?? '').toString(),
+      id: extractId(json['_id']),
       routeId: routeId ?? extractId(json['routeId']),
       route: route,
       vehicleId: vehicleId ?? extractId(json['vehicleId']),
       vehicle: vehicle,
       driverId: driverId ?? extractId(json['driverId']),
       driver: driver,
-      departureTime: DateTime.parse(json['departureTime'] is Map
-          ? json['departureTime']['\$date']
-          : json['departureTime']),
-      arrivalTime: DateTime.parse(json['arrivalTime'] is Map
-          ? json['arrivalTime']['\$date']
-          : json['arrivalTime']),
+      departureTime: parseDate(json['departureTime']),
+      arrivalTime: parseDate(json['arrivalTime']),
       price: (json['price'] ?? 0).toDouble(),
       availableSeats: json['availableSeats'] ?? 0,
       totalSeats: json['totalSeats'] ?? 0,
@@ -151,18 +213,8 @@ class TripModel {
       passengerCount: json['passengerCount'],
       cargoCount: json['cargoCount'],
       notes: json['notes'],
-      createdAt: DateTime.parse(
-          json['createdAt'] is Map
-              ? json['createdAt']['\$date']
-              : (json['createdAt'] ?? DateTime.now().toIso8601String())
-      ),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(
-          json['updatedAt'] is Map
-              ? json['updatedAt']['\$date']
-              : json['updatedAt']
-      )
-          : null,
+      createdAt: parseDate(json['createdAt']),
+      updatedAt: json['updatedAt'] != null ? parseDate(json['updatedAt']) : null,
       metadata: json['metadata'],
     );
   }

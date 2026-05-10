@@ -65,6 +65,43 @@ class AdminBookingController extends GetxController {
     fetchBookings();
   }
 
+  Future<void> updateBookingStatus(String bookingId, String status) async {
+    try {
+      _isLoading.value = true;
+      final response = await _apiClient.patch(
+        '/bookings/admin/bookings/$bookingId/status',  // Updated path
+        data: {'bookingStatus': status},
+      );
+      if (response != null && response['success'] == true) {
+        await fetchBookings(refresh: true);
+        AppSnackbar.show('Success', 'Booking status updated');
+        Get.back();
+      }
+    } catch (e) {
+      AppSnackbar.show('Error', 'Failed to update status');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  Future<void> updatePaymentStatus(String bookingId, String status) async {
+    try {
+      _isLoading.value = true;
+      final response = await _apiClient.patch(
+        '/bookings/admin/bookings/$bookingId/payment',  // Updated path
+        data: {'paymentStatus': status},
+      );
+      if (response != null && response['success'] == true) {
+        await fetchBookings(refresh: true);
+        AppSnackbar.show('Success', 'Payment status updated');
+        Get.back();
+      }
+    } catch (e) {
+      AppSnackbar.show('Error', 'Failed to update payment status');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
   Future<void> fetchBookings({bool refresh = false}) async {
     if (refresh) {
       _currentPage.value = 1;
@@ -87,14 +124,36 @@ class AdminBookingController extends GetxController {
       if (_paymentStatusFilter.value.isNotEmpty) params['paymentStatus'] = _paymentStatusFilter.value;
       if (_dateFilter.value != null) params['date'] = _dateFilter.value!.toIso8601String();
 
+      print('🔍 Fetching bookings with params: $params');
+
       final response = await _apiClient.get(
-      "/admin/bookings",
+        "/admin/bookings",
         queryParameters: params,
       );
 
+      print('📦 Raw API Response: ${response?.toString()}');
+
       if (response != null && response['data'] != null) {
         final List<dynamic> bookingsData = response['data'];
+
+        // Debug first booking to see structure
+        if (bookingsData.isNotEmpty) {
+          print('🔍 First booking raw data: ${bookingsData.first}');
+          print('🔍 First booking tripId: ${bookingsData.first['tripId']}');
+          print('🔍 First booking trip: ${bookingsData.first['trip']}');
+          if (bookingsData.first['trip'] != null) {
+            print('🔍 First booking trip origin: ${bookingsData.first['trip']['origin']}');
+            print('🔍 First booking trip destination: ${bookingsData.first['trip']['destination']}');
+          }
+        }
+
         final newBookings = bookingsData.map((b) => BookingModel.fromJson(b)).toList();
+
+        // Debug after parsing
+        if (newBookings.isNotEmpty) {
+          print('✅ Parsed booking - origin: ${newBookings.first.trip?.origin}');
+          print('✅ Parsed booking - destination: ${newBookings.first.trip?.destination}');
+        }
 
         if (_currentPage.value == 1) {
           _bookings.value = newBookings;
@@ -108,9 +167,11 @@ class AdminBookingController extends GetxController {
         _currentPage.value++;
 
         _calculateTotalRevenue();
+      } else {
+        print('❌ No data in response or response is null');
       }
     } catch (e) {
-      print('Error fetching bookings: $e');
+      print('❌ Error fetching bookings: $e');
       AppSnackbar.show('Error', 'Failed to load bookings');
     } finally {
       _isLoading.value = false;

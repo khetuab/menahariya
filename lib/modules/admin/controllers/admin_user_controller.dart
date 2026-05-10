@@ -262,7 +262,7 @@ class AdminUserController extends GetxController {
       );
 
       if (response != null && response['success'] == true) {
-        AppSnackbar.show('Success', 'Password reset successfully');
+        //AppSnackbar.show('Success', 'Password reset successfully');
         return true;
       }
       return false;
@@ -278,9 +278,11 @@ class AdminUserController extends GetxController {
   Future<bool> deleteUser(String userId) async {
     try {
       _isSaving.value = true;
-      final response = await _apiClient.delete('${ApiEndpoints.users}/$userId');
+      // Remove 'users/' from the path - use just '/admin/$userId'
+      final response = await _apiClient.delete('/admin/$userId');
+
       if (response != null && response['success'] == true) {
-        await fetchUsers(refresh: true); // Refresh instead of local removal
+        await fetchUsers(refresh: true);
         AppSnackbar.show('Success', 'User deleted successfully');
         return true;
       }

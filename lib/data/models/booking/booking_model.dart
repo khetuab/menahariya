@@ -3,6 +3,8 @@
 import 'package:menahariya/data/models/trip/trip_model.dart';
 import 'package:menahariya/data/models/ticket/ticket_model.dart';
 
+import '../trip/route_model.dart';
+
 // Add a PassengerDetail class to properly handle passenger data
 class PassengerDetail {
   final String? id;
@@ -101,29 +103,24 @@ class BookingModel {
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     print('📦 Parsing BookingModel from JSON');
 
-    // Parse passenger details - handle both List and Map formats
+    // Parse passenger details
     List<PassengerDetail> passengers = [];
 
     if (json['passengerDetails'] != null) {
       if (json['passengerDetails'] is List) {
-        // Handle List format (what the server returns)
         passengers = (json['passengerDetails'] as List)
             .map((p) => PassengerDetail.fromJson(p as Map<String, dynamic>))
             .toList();
         print('✅ Parsed ${passengers.length} passenger details from List');
       } else if (json['passengerDetails'] is Map) {
-        // Handle Map format (old format)
         final map = json['passengerDetails'] as Map<String, dynamic>;
-        // Try to extract passengers from map or create a single passenger
         if (map.containsKey('passengers') && map['passengers'] is List) {
           passengers = (map['passengers'] as List)
               .map((p) => PassengerDetail.fromJson(p as Map<String, dynamic>))
               .toList();
         } else {
-          // Single passenger object
           passengers = [PassengerDetail.fromJson(map)];
         }
-        print('✅ Parsed ${passengers.length} passenger details from Map');
       }
     }
 
@@ -131,7 +128,7 @@ class BookingModel {
     List<String> seatNumbers = [];
     if (json['seatNumbers'] != null) {
       if (json['seatNumbers'] is List) {
-        seatNumbers = List<String>.from(json['seatNumbers']);
+        seatNumbers = List<String>.from(json['seatNumbers'].map((s) => s.toString()));
       } else if (json['seatNumbers'] is String) {
         seatNumbers = [json['seatNumbers'] as String];
       }
@@ -144,18 +141,103 @@ class BookingModel {
         if (date is Map && date.containsKey('\$date')) {
           return DateTime.parse(date['\$date'].toString());
         }
-        return DateTime.parse(date.toString());
+        if (date is String) {
+          return DateTime.parse(date);
+        }
+        return DateTime.now();
       } catch (e) {
         print('⚠️ Error parsing date: $date - $e');
         return DateTime.now();
       }
     }
 
+    // CRITICAL FIX: Parse trip data correctly
+    TripModel? trip;
+
+// Check if there's a 'trip' field in the response (from backend transformation)
+    if (json['trip'] != null) {
+      print('🔍 Found trip field in response');
+      try {
+        trip = TripModel.fromJson(json['trip']);
+        print('✅ Parsed trip from trip field - origin: ${trip?.origin}, destination: ${trip?.destination}');
+      } catch (e, stackTrace) {
+        print('❌ Error parsing trip from trip field: $e');
+        print('Stack trace: $stackTrace');
+      }
+    }
+// Fallback: check if tripId is populated with route data
+    else if (json['tripId'] != null && json['tripId'] is Map) {
+      print('🔍 tripId is a populated object');
+      try {
+        trip = TripModel.fromJson(json['tripId']);
+        print('✅ Parsed trip from tripId - origin: ${trip?.origin}, destination: ${trip?.destination}');
+      } catch (e, stackTrace) {
+        print('❌ Error parsing trip from tripId: $e');
+        print('Stack trace: $stackTrace');
+      }
+    }
+    // Last fallback: try to extract from various possible structures
+    else {
+      print('⚠️ No trip object found, trying to extract from other fields');
+      // Try to build a simple trip object from available data
+      String origin = '';
+      String destination = '';
+      DateTime? departureTime;
+      DateTime? arrivalTime;
+      double price = 0;
+
+      // Extract from nested routeId if available
+      if (json['tripId'] != null && json['tripId'] is Map) {
+        var tripData = json['tripId'] as Map;
+        if (tripData['routeId'] != null && tripData['routeId'] is Map) {
+          var routeData = tripData['routeId'] as Map;
+          origin = routeData['origin']?.toString() ?? '';
+          destination = routeData['destination']?.toString() ?? '';
+        }
+        departureTime = tripData['departureTime'] != null ? parseDate(tripData['departureTime']) : null;
+        arrivalTime = tripData['arrivalTime'] != null ? parseDate(tripData['arrivalTime']) : null;
+        price = (tripData['price'] ?? 0).toDouble();
+      }
+
+      if (origin.isNotEmpty && destination.isNotEmpty) {
+        // Create a minimal TripModel
+        trip = TripModel(
+          id: json['tripId'] is Map ? (json['tripId']['_id']?.toString() ?? '') : '',
+          routeId: '',
+          route: RouteModel(
+            id: '',
+            name: '$origin to $destination',
+            origin: origin,
+            destination: destination,
+            distance: 0,
+            duration: 0,
+            basePrice: price,
+            createdAt: DateTime.now(),
+          ),
+          vehicleId: '',
+          driverId: '',
+          departureTime: departureTime ?? DateTime.now(),
+          arrivalTime: arrivalTime ?? DateTime.now(),
+          price: price,
+          availableSeats: 0,
+          totalSeats: 0,
+          status: 'scheduled',
+          amenities: const [],
+          createdAt: DateTime.now(),
+        );
+        print('✅ Created fallback trip - origin: $origin, destination: $destination');
+      }
+    }
+
     return BookingModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
-      userId: json['userId']?.toString() ?? '',
-      tripId: json['tripId']?.toString() ?? json['trip']?['_id']?.toString() ?? '',
-      trip: json['trip'] != null ? TripModel.fromJson(json['trip']) : null,
+      userId: json['userId'] is Map
+          ? (json['userId']['_id']?.toString() ?? '')
+          : (json['userId']?.toString() ?? ''),
+      tripId: json['tripId'] is Map
+          ? (json['tripId']['_id']?.toString() ?? '')
+          : (json['tripId']?.toString() ?? ''),
+      trip: trip,
       seatNumbers: seatNumbers,
       tickets: json['tickets'] != null
           ? (json['tickets'] as List)

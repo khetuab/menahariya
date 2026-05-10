@@ -724,10 +724,10 @@ class AdminDashboardView extends GetView<AdminDashboardController> {
                   fontWeight: AppFonts.semiBold,
                 ),
               ),
-              TextButton(
-                onPressed: () => Get.toNamed('/admin/audit-logs'),
-                child: const Text('View All'),
-              ),
+              // TextButton(
+              //   onPressed: () {},
+              //   child: const Text('View All'),
+              // ),
             ],
           ),
           const SizedBox(height: AppDimens.margin16),

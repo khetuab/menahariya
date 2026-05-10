@@ -164,7 +164,7 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
             children: [
               Icon(
                 icon,
-                color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                color: isDark ? AppColors.primaryGreenLight : AppColors.primaryYellowLight,
                 size: 20,
               ),
               const SizedBox(width: AppDimens.margin8),
@@ -226,8 +226,8 @@ class PrivacySecurityView extends GetView<PassengerProfileController> {
               child: Icon(
                 icon,
                 color: isDanger
-                    ? (isDark ? AppColors.errorLight : AppColors.error)
-                    : (isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen),
+                    ? (isDark ? AppColors.errorDark : AppColors.error)
+                    : (isDark ? AppColors.primaryOrange : AppColors.primaryGreen),
                 size: 20,
               ),
             ),

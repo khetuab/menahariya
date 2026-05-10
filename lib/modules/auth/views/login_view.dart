@@ -783,7 +783,7 @@ class LoginView extends GetView<LoginController> {
   Color _getRoleColor(String role) {
     switch (role.toLowerCase()) {
       case 'passenger':
-        return AppColors.primaryGreen;
+        return AppColors.primaryYellow;
       case 'driver':
         return AppColors.primaryOrange;
       case 'administrator':

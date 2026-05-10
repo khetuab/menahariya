@@ -27,18 +27,35 @@ class AdminSupportController extends GetxController {
   final _isLoadingReplies = false.obs;
   List<ReplyModel> get replies => _replies;
   bool get isLoadingReplies => _isLoadingReplies.value;
+
   final List<String> statusOptions = [
     'all',
     'pending',
     'in_progress',
-    'resolved',
     'closed',
   ];
+
+  // Make counts reactive - these will update when _tickets changes
+  final pendingCount = 0.obs;
+  final inProgressCount = 0.obs;
+  final closedCount = 0.obs;
 
   @override
   void onInit() {
     super.onInit();
+    // Listen to changes in _tickets and update counts
+    ever(_tickets, (_) {
+      _updateCounts();
+    });
     fetchTickets();
+  }
+
+  void _updateCounts() {
+    pendingCount.value = _tickets.where((t) => t.status == 'pending').length;
+    inProgressCount.value = _tickets.where((t) => t.status == 'in_progress').length;
+    closedCount.value = _tickets.where((t) => t.status == 'closed').length;
+
+    print('📊 Counts updated - Pending: ${pendingCount.value}, In Progress: ${inProgressCount.value}, Closed: ${closedCount.value}');
   }
 
   Future<void> fetchTicketReplies(String ticketId) async {
@@ -76,6 +93,7 @@ class AdminSupportController extends GetxController {
       return false;
     }
   }
+
   Future<void> fetchTickets() async {
     try {
       _isLoading.value = true;
@@ -90,15 +108,26 @@ class AdminSupportController extends GetxController {
         _tickets.value = data.map((t) => SupportTicketModel.fromJson(t)).toList();
         print('✅ Loaded ${_tickets.length} tickets');
 
-        // Print statuses for debugging
         final statuses = _tickets.map((t) => t.status).toList();
-        print('📊 Ticket statuses: $statuses');
+        print('📊 ALL Ticket statuses from backend: $statuses');
+
+        final statusCount = <String, int>{};
+        for (var ticket in _tickets) {
+          statusCount[ticket.status] = (statusCount[ticket.status] ?? 0) + 1;
+        }
+        print('📊 Status counts: $statusCount');
+
+        if (_tickets.isNotEmpty) {
+          print('🔍 First ticket: ${_tickets.first.toJson()}');
+        }
 
         _applyFilters();
+        _updateCounts(); // Update counts after loading
       } else {
         print('⚠️ No tickets data found');
         _tickets.clear();
         _filteredTickets.clear();
+        _updateCounts();
       }
     } catch (e) {
       print('❌ Error fetching support tickets: $e');
@@ -111,12 +140,10 @@ class AdminSupportController extends GetxController {
   void _applyFilters() {
     var filtered = List<SupportTicketModel>.from(_tickets);
 
-    // Apply status filter
     if (_selectedStatus.value != 'all') {
       filtered = filtered.where((t) => t.status == _selectedStatus.value).toList();
     }
 
-    // Apply search
     if (_searchQuery.value.isNotEmpty) {
       final query = _searchQuery.value.toLowerCase();
       filtered = filtered.where((t) =>
@@ -168,14 +195,15 @@ class AdminSupportController extends GetxController {
       );
 
       if (response != null && response['success'] == true) {
-        // Update local list
         final index = _tickets.indexWhere((t) => t.id == ticketId);
         if (index != -1) {
-          _tickets[index] = _tickets[index].copyWith(status: status);
+          final updatedTicket = _tickets[index].copyWith(status: status);
           if (adminResponse != null && adminResponse.isNotEmpty) {
-            _tickets[index] = _tickets[index].copyWith(adminResponse: adminResponse);
+            updatedTicket.copyWith(adminResponse: adminResponse);
           }
+          _tickets[index] = updatedTicket;
           _applyFilters();
+          _updateCounts();
         }
 
         Get.snackbar(
@@ -187,7 +215,6 @@ class AdminSupportController extends GetxController {
           duration: const Duration(seconds: 2),
         );
 
-        // Refresh to get latest data
         await fetchTickets();
       }
     } catch (e) {
@@ -204,25 +231,5 @@ class AdminSupportController extends GetxController {
 
   void clearSelectedTicket() {
     _selectedTicket.value = null;
-  }
-
-  // Fix the count getters - use _tickets instead of _filteredTickets
-  int get pendingCount {
-    final count = _tickets.where((t) => t.status == 'pending').length;
-    print('📊 Pending count: $count');
-    return count;
-  }
-
-  int get inProgressCount {
-    final count = _tickets.where((t) => t.status == 'in_progress').length;
-    print('📊 In Progress count: $count');
-    return count;
-  }
-
-  int get resolvedCount {
-    // Count both 'resolved' and 'closed' as resolved
-    final count = _tickets.where((t) => t.status == 'resolved' || t.status == 'closed').length;
-    print('📊 Resolved/Closed count: $count');
-    return count;
   }
 }

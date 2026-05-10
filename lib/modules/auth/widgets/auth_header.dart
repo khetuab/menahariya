@@ -32,10 +32,10 @@ class AuthHeader extends StatelessWidget {
         if (showLogo) ...[
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(70),
               border: Border.all(width: 2,color: Colors.white),
               color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.green,blurRadius: 5)]
+              boxShadow: [BoxShadow(color: Colors.blue,blurRadius: 5)]
             ),
             child: SizedBox(
               width: 120,

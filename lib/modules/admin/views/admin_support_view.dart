@@ -87,29 +87,35 @@ class AdminSupportView extends GetView<AdminSupportController> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.padding12),
-      margin: const EdgeInsets.all(AppDimens.margin16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(AppDimens.radius12),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.transparent : Colors.grey.shade200,
-            blurRadius: 4,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          _buildStatItem(context, label: 'Pending', count: controller.pendingCount, color: Colors.orange),
-          Container(width: 1, height: 30, color: isDark ? AppColors.borderDark : AppColors.borderLight),
-          _buildStatItem(context, label: 'In Progress', count: controller.inProgressCount, color: Colors.blue),
-          Container(width: 1, height: 30, color: isDark ? AppColors.borderDark : AppColors.borderLight),
-          _buildStatItem(context, label: 'Resolved', count: controller.resolvedCount, color: Colors.green),
-        ],
-      ),
-    );
+    // Wrap the entire row in Obx to listen to _tickets changes
+    return Obx(() {
+      // Force a read of _tickets to make Obx reactive
+      final ticketCount = controller.tickets.length;
+
+      return Container(
+        padding: const EdgeInsets.all(AppDimens.padding12),
+        margin: const EdgeInsets.all(AppDimens.margin16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(AppDimens.radius12),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? Colors.transparent : Colors.grey.shade200,
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            _buildStatItem(context, label: 'Pending', count: controller.pendingCount.value, color: Colors.orange),
+            Container(width: 1, height: 30, color: isDark ? AppColors.borderDark : AppColors.borderLight),
+            _buildStatItem(context, label: 'In Progress', count: controller.inProgressCount.value, color: Colors.blue),
+            Container(width: 1, height: 30, color: isDark ? AppColors.borderDark : AppColors.borderLight),
+            _buildStatItem(context, label: 'Closed', count: controller.closedCount.value, color: Colors.green),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildStatItem(BuildContext context, {required String label, required int count, required Color color}) {

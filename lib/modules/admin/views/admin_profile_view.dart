@@ -37,7 +37,7 @@ class AdminProfileView extends GetView<AdminProfileController> {
                   Tab(text: 'Security', icon: Icon(Icons.security_rounded)),
                   Tab(text: 'Activity', icon: Icon(Icons.history_rounded)),
                 ],
-                labelColor: AppColors.primaryGreen,
+                labelColor: AppColors.primaryYellow,
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: AppColors.primaryGreen,
               ),
@@ -390,6 +390,143 @@ class AdminProfileView extends GetView<AdminProfileController> {
           ),
 
           const SizedBox(height: AppDimens.margin16),
+          // Add this after the Change Password card, before the Security Tips card
+
+// Biometric Login Section
+          Container(
+            padding: const EdgeInsets.all(AppDimens.padding16),
+            margin: const EdgeInsets.only(bottom: AppDimens.margin16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: BorderRadius.circular(AppDimens.radius12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.fingerprint_rounded,
+                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppDimens.margin8),
+                    Text(
+                      'Biometric Login',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: AppFonts.semiBold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppDimens.margin12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Use fingerprint or face ID to login'),
+                          Text(
+                            'Enable biometric authentication for faster access',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Obx(() => Switch(
+                      value: controller.isBiometricEnabled,
+                      onChanged: controller.toggleBiometricLogin,
+                      activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                    )),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+// Two-Factor Authentication Section
+          Container(
+            padding: const EdgeInsets.all(AppDimens.padding16),
+            margin: const EdgeInsets.only(bottom: AppDimens.margin16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: BorderRadius.circular(AppDimens.radius12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.smartphone_rounded,
+                      color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppDimens.margin8),
+                    Text(
+                      'Two-Factor Authentication',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: AppFonts.semiBold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppDimens.margin12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Add an extra layer of security'),
+                          Text(
+                            controller.is2FAEnabled ? '2FA is currently enabled' : 'Protect your account with 2FA',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Obx(() => Switch(
+                      value: controller.is2FAEnabled,
+                      onChanged: (_) => controller.is2FAEnabled
+                          ? controller.disableTwoFactorAuth()
+                          : controller.setupTwoFactorAuth(),
+                      activeColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                    )),
+                  ],
+                ),
+                if (!controller.is2FAEnabled && controller.is2FAEnabled == false)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppDimens.margin12),
+                    child: TextButton.icon(
+                      onPressed: () => controller.setupTwoFactorAuth(),
+                      icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                      label: const Text('Set up 2FA now'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
 
           // Security Tips Card
           Container(

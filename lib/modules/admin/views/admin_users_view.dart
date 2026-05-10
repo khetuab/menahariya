@@ -10,6 +10,8 @@ import 'package:menahariya/modules/admin/views/widgets/admin_status_badge.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimens.dart';
 import '../../../core/constants/app_fonts.dart';
+import '../../../core/utils/validators/auth_validator.dart';
+import '../../../core/utils/validators/input_validator.dart';
 import '../../../core/widgets/buttons/primary_button.dart';
 import '../../../core/widgets/buttons/secondary_button.dart';
 import '../../../core/widgets/inputs/custom_textfield.dart';
@@ -562,6 +564,7 @@ class AdminUsersView extends GetView<AdminUserController> {
   void _showCreateUserDialog(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final formKey = GlobalKey<FormState>();
 
     // Reset form
     controller.fullNameController.clear();
@@ -582,148 +585,253 @@ class AdminUsersView extends GetView<AdminUserController> {
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(AppDimens.padding20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Create New User',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: AppFonts.bold,
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Create New User',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: AppFonts.bold,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Get.back(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppDimens.margin24),
-                // Full Name
-                CustomTextField(
-                  label: 'Full Name',
-                  controller: controller.fullNameController,
-                  hint: 'Enter full name',
-                ),
-                const SizedBox(height: AppDimens.margin16),
-                // Phone
-                CustomTextField(
-                  label: 'Phone Number',
-                  controller: controller.phoneController,
-                  hint: '09xxxxxxxx',
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: AppDimens.margin16),
-                // Email
-                CustomTextField(
-                  label: 'Email (Optional)',
-                  controller: controller.emailController,
-                  hint: 'example@email.com',
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: AppDimens.margin16),
-                // Role
-                DropdownButtonFormField<String>(
-                  value: controller.selectedRole,
-                  decoration: const InputDecoration(
-                    labelText: 'Role',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: controller.availableRoles.map((role) {
-                    return DropdownMenuItem(
-                      value: role,
-                      child: Text(_getRoleDisplayName(role)),
-                    );
-                  }).toList(),
-                  onChanged: (value) => controller.setSelectedRole(value ?? 'passenger'),
-                ),
-                const SizedBox(height: AppDimens.margin16),
-                // Password
-                CustomTextField(
-                  label: 'Password',
-                  controller: controller.passwordController,
-                  obscureText: true,
-                  hint: 'Minimum 6 characters',
-                ),
-                const SizedBox(height: AppDimens.margin16),
-                // Confirm Password
-                CustomTextField(
-                  label: 'Confirm Password',
-                  controller: controller.confirmPasswordController,
-                  obscureText: true,
-                ),
-                // Driver specific fields
-                Obx(() {
-                  if (controller.selectedRole == 'driver') {
-                    return Column(
-                      children: [
-                        const SizedBox(height: AppDimens.margin16),
-                        CustomTextField(
-                          label: 'License Number',
-                          controller: controller.licenseNumberController,
-                          hint: 'Enter license number',
-                        ),
-                        const SizedBox(height: AppDimens.margin16),
-                        CustomTextField(
-                          label: 'License Expiry',
-                          controller: controller.licenseExpiryController,
-                          hint: 'YYYY-MM-DD',
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-                            );
-                            if (date != null) {
-                              controller.licenseExpiryController.text =
-                              '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-                            }
-                          },
-                        ),
-                      ],
-                    );
-                  }
-                  return const SizedBox();
-                }),
-                const SizedBox(height: AppDimens.margin24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SecondaryButton(
-                        text: 'Cancel',
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
                         onPressed: () => Get.back(),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimens.margin24),
+
+                  // Full Name
+                  CustomTextField(
+                    label: 'Full Name *',
+                    controller: controller.fullNameController,
+                    hint: 'Enter full name',
+                    validator: (value) => AuthValidator.validateFullName(value),
+                  ),
+                  const SizedBox(height: AppDimens.margin16),
+
+                  // Phone
+                  CustomTextField(
+                    label: 'Phone Number *',
+                    controller: controller.phoneController,
+                    hint: '0912345678',
+                    keyboardType: TextInputType.phone,
+                    validator: (value) => AuthValidator.validatePhone(value),
+                  ),
+                  const SizedBox(height: AppDimens.margin16),
+
+                  // Email (Optional)
+                  CustomTextField(
+                    label: 'Email (Optional)',
+                    controller: controller.emailController,
+                    hint: 'example@email.com',
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) => AuthValidator.validateEmail(value),
+                  ),
+                  const SizedBox(height: AppDimens.margin16),
+
+                  // Role
+                  DropdownButtonFormField<String>(
+                    value: controller.selectedRole,
+                    decoration: const InputDecoration(
+                      labelText: 'Role *',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(width: AppDimens.margin12),
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Create User',
-                        onPressed: () async {
-                          if (controller.passwordController.text != controller.confirmPasswordController.text) {
-                            Get.snackbar('Error', 'Passwords do not match');
-                            return;
-                          }
-                          final success = await controller.createUser({
-                            'fullName': controller.fullNameController.text.trim(),
-                            'phone': controller.phoneController.text.trim(),
-                            'email': controller.emailController.text.trim().isEmpty ? null : controller.emailController.text.trim(),
-                            'password': controller.passwordController.text,
-                            'role': controller.selectedRole,
-                            'licenseNumber': controller.licenseNumberController.text.trim().isEmpty ? null : controller.licenseNumberController.text.trim(),
-                            'licenseExpiry': controller.licenseExpiryController.text.trim().isEmpty ? null : controller.licenseExpiryController.text.trim(),
-                          });
-                          if (success) Get.back();
-                        },
-                        isLoading: controller.isLoading,
+                    items: controller.availableRoles.map((role) {
+                      return DropdownMenuItem(
+                        value: role,
+                        child: Text(_getRoleDisplayName(role)),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      controller.setSelectedRole(value ?? 'passenger');
+                      // Clear driver-specific field validators when role changes
+                      if (value != 'driver') {
+                        controller.licenseNumberController.clear();
+                        controller.licenseExpiryController.clear();
+                      }
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a role';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppDimens.margin16),
+
+                  // Password
+                  CustomTextField(
+                    label: 'Password *',
+                    controller: controller.passwordController,
+                    obscureText: true,
+                    hint: 'Minimum 8 characters',
+                    validator: (value) => AuthValidator.validatePassword(value),
+                  ),
+                  const SizedBox(height: AppDimens.margin16),
+
+                  // Confirm Password
+                  CustomTextField(
+                    label: 'Confirm Password *',
+                    controller: controller.confirmPasswordController,
+                    obscureText: true,
+                    validator: (value) => AuthValidator.validateConfirmPassword(
+                      controller.passwordController.text,
+                      value,
+                    ),
+                  ),
+
+                  // Driver specific fields
+                  Obx(() {
+                    if (controller.selectedRole == 'driver') {
+                      return Column(
+                        children: [
+                          const SizedBox(height: AppDimens.margin16),
+                          CustomTextField(
+                            label: 'License Number *',
+                            controller: controller.licenseNumberController,
+                            hint: 'Enter license number',
+                            validator: (value) => InputValidator.validateRequired(
+                              value,
+                              fieldName: 'License number',
+                            ),
+                          ),
+                          const SizedBox(height: AppDimens.margin16),
+                          CustomTextField(
+                            label: 'License Expiry *',
+                            controller: controller.licenseExpiryController,
+                            hint: 'YYYY-MM-DD',
+                            readOnly: true,
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                              );
+                              if (date != null) {
+                                controller.licenseExpiryController.text =
+                                '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                              }
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'License expiry date is required';
+                              }
+                              // Validate date format
+                              final dateRegex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+                              if (!dateRegex.hasMatch(value)) {
+                                return 'Please enter a valid date (YYYY-MM-DD)';
+                              }
+                              // Validate that date is not in the past
+                              try {
+                                final expiryDate = DateTime.parse(value);
+                                final today = DateTime.now();
+                                if (expiryDate.isBefore(today)) {
+                                  return 'License expiry date cannot be in the past';
+                                }
+                              } catch (e) {
+                                return 'Please enter a valid date';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      );
+                    }
+                    return const SizedBox();
+                  }),
+
+                  const SizedBox(height: AppDimens.margin24),
+
+                  // Form helper text
+                  Obx(() {
+                    if (controller.selectedRole == 'driver') {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: AppDimens.margin12),
+                        child: Text(
+                          'Note: Driver license information will be verified before approval.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isDark ? AppColors.warningLight : AppColors.warning,
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox();
+                  }),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          text: 'Cancel',
+                          onPressed: () => Get.back(),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: AppDimens.margin12),
+                      Expanded(
+                        child: PrimaryButton(
+                          text: 'Create User',
+                          onPressed: () async {
+                            // Validate form
+                            if (formKey.currentState?.validate() ?? false) {
+                              // Additional validation for driver license expiry
+                              if (controller.selectedRole == 'driver') {
+                                final expiryDate = controller.licenseExpiryController.text.trim();
+                                if (expiryDate.isEmpty) {
+                                  Get.snackbar(
+                                    'Validation Error',
+                                    'License expiry date is required for drivers',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    backgroundColor: Colors.red,
+                                    colorText: Colors.white,
+                                  );
+                                  return;
+                                }
+                              }
+
+                              final success = await controller.createUser({
+                                'fullName': controller.fullNameController.text.trim(),
+                                'phone': controller.phoneController.text.trim(),
+                                'email': controller.emailController.text.trim().isEmpty
+                                    ? null
+                                    : controller.emailController.text.trim(),
+                                'password': controller.passwordController.text,
+                                'role': controller.selectedRole,
+                                'licenseNumber': controller.selectedRole == 'driver'
+                                    ? controller.licenseNumberController.text.trim()
+                                    : null,
+                                'licenseExpiry': controller.selectedRole == 'driver'
+                                    ? controller.licenseExpiryController.text.trim()
+                                    : null,
+                              });
+
+                              if (success) {
+                                Get.back();
+                                Get.snackbar(
+                                  'Success',
+                                  'User created successfully',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: Colors.green,
+                                  colorText: Colors.white,
+                                );
+                              }
+                            }
+                          },
+                          isLoading: controller.isLoading,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -731,6 +839,23 @@ class AdminUsersView extends GetView<AdminUserController> {
     );
   }
 
+// Helper method to get role display name
+  String _getRoleDisplayName(String role) {
+    switch (role) {
+      case 'passenger':
+        return 'Passenger';
+      case 'driver':
+        return 'Driver';
+      case 'ticketing_staff':
+        return 'Ticketing Staff';
+      case 'cargo_staff':
+        return 'Cargo Staff';
+      case 'admin':
+        return 'Administrator';
+      default:
+        return role;
+    }
+  }
   void _showUserDetailsDialog(dynamic user) async {
     final theme = Get.context!.theme;
     final isDark = theme.brightness == Brightness.dark;
@@ -819,6 +944,7 @@ class AdminUsersView extends GetView<AdminUserController> {
   void _showEditUserDialog(dynamic user) {
     final theme = Get.context!.theme;
     final isDark = theme.brightness == Brightness.dark;
+    final formKey = GlobalKey<FormState>();
 
     // Pre-fill controllers
     controller.fullNameController.text = user.fullName;
@@ -835,88 +961,218 @@ class AdminUsersView extends GetView<AdminUserController> {
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(AppDimens.padding20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Edit User',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: AppFonts.bold,
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Edit User',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: AppFonts.bold,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Get.back(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppDimens.margin24),
-                CustomTextField(
-                  label: 'Full Name',
-                  controller: controller.fullNameController,
-                ),
-                const SizedBox(height: AppDimens.margin16),
-                CustomTextField(
-                  label: 'Phone',
-                  controller: controller.phoneController,
-                ),
-                const SizedBox(height: AppDimens.margin16),
-                CustomTextField(
-                  label: 'Email',
-                  controller: controller.emailController,
-                ),
-                const SizedBox(height: AppDimens.margin16),
-                DropdownButtonFormField<String>(
-                  value: controller.selectedRole,
-                  decoration: const InputDecoration(
-                    labelText: 'Role',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: controller.availableRoles.map((role) {
-                    return DropdownMenuItem(
-                      value: role,
-                      child: Text(_getRoleDisplayName(role)),
-                    );
-                  }).toList(),
-                  onChanged: (value) => controller.setSelectedRole(value ?? 'passenger'),
-                ),
-                const SizedBox(height: AppDimens.margin24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SecondaryButton(
-                        text: 'Cancel',
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
                         onPressed: () => Get.back(),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimens.margin24),
+
+                  // Full Name
+                  CustomTextField(
+                    label: 'Full Name',
+                    controller: controller.fullNameController,
+                    validator: (value) => AuthValidator.validateFullName(value),
+                  ),
+                  const SizedBox(height: AppDimens.margin16),
+
+                  // Phone
+                  CustomTextField(
+                    label: 'Phone',
+                    controller: controller.phoneController,
+                    keyboardType: TextInputType.phone,
+                    validator: (value) => AuthValidator.validatePhone(value),
+                  ),
+                  const SizedBox(height: AppDimens.margin16),
+
+                  // Email
+                  CustomTextField(
+                    label: 'Email',
+                    controller: controller.emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) => AuthValidator.validateEmail(value),
+                  ),
+                  const SizedBox(height: AppDimens.margin16),
+
+                  // Role
+                  DropdownButtonFormField<String>(
+                    value: controller.selectedRole,
+                    decoration: const InputDecoration(
+                      labelText: 'Role',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(width: AppDimens.margin12),
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Save Changes',
-                        onPressed: () async {
-                          final success = await controller.updateUser(user.id, {
-                            'fullName': controller.fullNameController.text.trim(),
-                            'phone': controller.phoneController.text.trim(),
-                            'email': controller.emailController.text.trim().isEmpty ? null : controller.emailController.text.trim(),
-                            'role': controller.selectedRole,
-                          });
-                          if (success) Get.back();
-                        },
-                        isLoading: controller.isSaving,
+                    items: controller.availableRoles.map((role) {
+                      return DropdownMenuItem(
+                        value: role,
+                        child: Text(_getRoleDisplayName(role)),
+                      );
+                    }).toList(),
+                    onChanged: (value) => controller.setSelectedRole(value ?? 'passenger'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a role';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  // Warning message when changing role to/from admin
+                  Obx(() {
+                    if (user.role != controller.selectedRole && controller.selectedRole == 'admin') {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: AppDimens.margin12),
+                        child: Container(
+                          padding: const EdgeInsets.all(AppDimens.padding12),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.warning.withOpacity(0.1) : AppColors.warning.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(AppDimens.radius8),
+                            border: Border.all(
+                              color: AppColors.warning.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.warning),
+                              const SizedBox(width: AppDimens.margin8),
+                              Expanded(
+                                child: Text(
+                                  'Promoting user to admin will give them full system access',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.warning,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox();
+                  }),
+
+                  const SizedBox(height: AppDimens.margin24),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          text: 'Cancel',
+                          onPressed: () => Get.back(),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: AppDimens.margin12),
+                      Expanded(
+                        child: PrimaryButton(
+                          text: 'Save Changes',
+                          onPressed: () async {
+                            // Validate form
+                            if (formKey.currentState?.validate() ?? false) {
+                              // Check if any changes were made
+                              final hasChanges =
+                                  controller.fullNameController.text.trim() != user.fullName ||
+                                      controller.phoneController.text.trim() != user.phone ||
+                                      (controller.emailController.text.trim() != (user.email ?? '')) ||
+                                      controller.selectedRole != user.role;
+
+                              if (!hasChanges) {
+                                Get.snackbar(
+                                  'No Changes',
+                                  'No changes were made to the user',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: Colors.orange,
+                                  colorText: Colors.white,
+                                );
+                                Get.back();
+                                return;
+                              }
+
+                              // Confirm role change if promoting to admin
+                              if (user.role != controller.selectedRole && controller.selectedRole == 'admin') {
+                                final confirmed = await _showRoleChangeConfirmation(user.fullName);
+                                if (!confirmed) return;
+                              }
+
+                              final success = await controller.updateUser(user.id, {
+                                'fullName': controller.fullNameController.text.trim(),
+                                'phone': controller.phoneController.text.trim(),
+                                'email': controller.emailController.text.trim().isEmpty
+                                    ? null
+                                    : controller.emailController.text.trim(),
+                                'role': controller.selectedRole,
+                              });
+
+                              if (success) {
+                                Get.back();
+                                Get.snackbar(
+                                  'Success',
+                                  'User updated successfully',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: Colors.green,
+                                  colorText: Colors.white,
+                                );
+                              }
+                            }
+                          },
+                          isLoading: controller.isSaving,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+// Helper method to show role change confirmation
+  Future<bool> _showRoleChangeConfirmation(String userName) async {
+    return await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Confirm Role Change'),
+        content: Text(
+          'Are you sure you want to promote $userName to Administrator?\n\n'
+              'Administrators have full access to all system features including:\n'
+              '• User management\n'
+              '• System settings\n'
+              '• Financial data\n'
+              '• All reports\n\n'
+              'This action cannot be undone easily.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    ) ?? false;
   }
 
   void _showToggleStatusDialog(dynamic user) async {
@@ -1041,9 +1297,7 @@ class AdminUsersView extends GetView<AdminUserController> {
                         onPressed: () async {
                           Get.back();
                           final success = await controller.deleteUser(user.id);
-                          if (success) {
-                            Get.snackbar('Success', 'Password reset successfully');
-                          }
+
                         },
                       ),
                     ),
@@ -1115,16 +1369,6 @@ class AdminUsersView extends GetView<AdminUserController> {
     return controller.roleFilter.isNotEmpty || controller.statusFilter != true;
   }
 
-  String _getRoleDisplayName(String role) {
-    switch (role) {
-      case 'passenger': return 'Passenger';
-      case 'driver': return 'Driver';
-      case 'ticketing_staff': return 'Ticketing Staff';
-      case 'cargo_staff': return 'Cargo Staff';
-      case 'admin': return 'Administrator';
-      default: return role;
-    }
-  }
 
   Color _getRoleColor(String role) {
     switch (role) {

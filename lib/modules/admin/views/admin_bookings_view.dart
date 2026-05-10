@@ -647,7 +647,7 @@ class AdminBookingsView extends GetView<AdminBookingController> {
                 _buildDetailSection(
                   title: 'Trip Information',
                   children: [
-                    _buildDetailRow('Route', '${fullBooking.trip?.origin ?? 'N/A'} → ${fullBooking.trip?.destination ?? 'N/A'}'),
+                    _buildDetailRow('Route', '${booking.trip?.origin ?? 'N/A'} → ${booking.trip?.destination ?? 'N/A'}'),
                     _buildDetailRow('Departure', fullBooking.trip?.departureTime != null ? _formatDateTime(fullBooking.trip!.departureTime) : 'N/A'),
                     _buildDetailRow('Seats', fullBooking.seatNumbers.join(', ')),
                   ],
@@ -685,6 +685,56 @@ class AdminBookingsView extends GetView<AdminBookingController> {
                     _buildDetailRow('Payment Method', fullBooking.paymentMethod ?? 'N/A'),
                     if (fullBooking.insuranceSelected)
                       _buildDetailRow('Insurance Fee', 'ETB ${fullBooking.insuranceFee?.toStringAsFixed(2) ?? '0'}'),
+                  ],
+                ),
+                // Add this in the dialog, after Payment Information section
+                const SizedBox(height: AppDimens.margin16),
+
+// Status Update Section
+                _buildDetailSection(
+                  title: 'Update Status',
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: fullBooking.bookingStatus,
+                            decoration: const InputDecoration(
+                              labelText: 'Booking Status',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'pending', child: Text('Pending',style: TextStyle(fontSize: 12),)),
+                              DropdownMenuItem(value: 'confirmed', child: Text('Confirmed',style: TextStyle(fontSize: 12),)),
+                              DropdownMenuItem(value: 'cancelled', child: Text('Cancelled',style: TextStyle(fontSize: 12),)),
+                            ],
+                            onChanged: (newStatus) {
+                              // Call update status API
+                              controller.updateBookingStatus(fullBooking.id, newStatus!);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: fullBooking.paymentStatus,
+                            decoration: const InputDecoration(
+                              labelText: 'Payment Status',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'pending', child: Text('Pending',style: TextStyle(fontSize: 12),)),
+                              DropdownMenuItem(value: 'paid', child: Text('Paid',style: TextStyle(fontSize: 12),)),
+                              DropdownMenuItem(value: 'failed', child: Text('Failed',style: TextStyle(fontSize: 12),)),
+                              DropdownMenuItem(value: 'refunded', child: Text('Refunded',style: TextStyle(fontSize: 12),)),
+                            ],
+                            onChanged: (newStatus) {
+                              controller.updatePaymentStatus(fullBooking.id, newStatus!);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppDimens.margin24),
