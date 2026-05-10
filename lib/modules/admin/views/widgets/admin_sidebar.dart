@@ -105,6 +105,13 @@ class AdminDrawer extends StatelessWidget {
                 ),
                 _buildDrawerItem(
                   context,
+                  index: 12,
+                  icon: Icons.local_offer_rounded,
+                  label: 'Promotions',
+                  route: '/admin/promotions',
+                ),
+                _buildDrawerItem(
+                  context,
                   index: 7,
                   icon: Icons.map_rounded,
                   label: 'Routes',

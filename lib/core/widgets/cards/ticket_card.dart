@@ -44,14 +44,18 @@ class TicketCard extends StatelessWidget {
       case 'confirmed':
       case 'paid':
         return isDark ? AppColors.successLight : AppColors.success;
+
       case 'pending':
       case 'reserved':
         return isDark ? AppColors.warningLight : AppColors.warning;
+
       case 'cancelled':
       case 'expired':
         return isDark ? AppColors.errorLight : AppColors.error;
+
       case 'used':
         return isDark ? AppColors.infoLight : AppColors.info;
+
       default:
         return isDark ? AppColors.grey500 : AppColors.grey600;
     }
@@ -62,15 +66,20 @@ class TicketCard extends StatelessWidget {
       case 'confirmed':
       case 'paid':
         return 'Confirmed';
+
       case 'pending':
       case 'reserved':
         return 'Pending';
+
       case 'cancelled':
         return 'Cancelled';
+
       case 'used':
         return 'Used';
+
       case 'expired':
         return 'Expired';
+
       default:
         return status;
     }
@@ -91,7 +100,9 @@ class TicketCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppDimens.radius16),
           boxShadow: [
             BoxShadow(
-              color: isDark ? Colors.transparent : AppColors.grey200.withOpacity(0.5),
+              color: isDark
+                  ? Colors.transparent
+                  : AppColors.grey200.withOpacity(0.5),
               blurRadius: AppDimens.shadowBlurSmall,
               spreadRadius: AppDimens.shadowSpreadNone,
               offset: const Offset(0, 2),
@@ -115,16 +126,25 @@ class TicketCard extends StatelessWidget {
                   Icon(
                     Icons.confirmation_number_rounded,
                     size: AppDimens.iconSize20,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                   ),
+
                   const SizedBox(width: AppDimens.margin8),
-                  Text(
-                    'Ticket #${ticketId.substring(0, 8).toUpperCase()}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: AppFonts.medium,
+
+                  Expanded(
+                    child: Text(
+                      'Ticket #${ticketId.substring(0, 8).toUpperCase()}',
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: AppFonts.medium,
+                      ),
                     ),
                   ),
-                  const Spacer(),
+
+                  const SizedBox(width: AppDimens.margin8),
+
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDimens.padding8,
@@ -132,7 +152,8 @@ class TicketCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppDimens.radius20),
+                      borderRadius:
+                      BorderRadius.circular(AppDimens.radius20),
                     ),
                     child: Text(
                       _getStatusText(),
@@ -150,15 +171,19 @@ class TicketCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(AppDimens.padding16),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Left decorative border with dots
                   Container(
                     width: 2,
                     height: 80,
-                    margin: const EdgeInsets.only(right: AppDimens.margin16),
+                    margin:
+                    const EdgeInsets.only(right: AppDimens.margin16),
                     child: CustomPaint(
                       painter: DottedLinePainter(
-                        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight,
                       ),
                     ),
                   ),
@@ -172,44 +197,75 @@ class TicketCard extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     origin,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodySmall
+                                        ?.copyWith(
+                                      color: isDark
+                                          ? AppColors.textSecondaryDark
+                                          : AppColors
+                                          .textSecondaryLight,
                                     ),
                                   ),
+
                                   Text(
                                     destination,
-                                    style: theme.textTheme.titleMedium?.copyWith(
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
                                       fontWeight: AppFonts.semiBold,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppDimens.padding12,
-                                vertical: AppDimens.padding6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppColors.primaryGreen.withOpacity(0.2) : AppColors.primaryGreen.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(AppDimens.radius20),
-                              ),
-                              child: Text(
-                                seatNumber,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                                  fontWeight: AppFonts.bold,
+
+                            const SizedBox(
+                                width: AppDimens.margin8),
+
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal:
+                                  AppDimens.padding12,
+                                  vertical:
+                                  AppDimens.padding6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColors.primaryGreen
+                                      .withOpacity(0.2)
+                                      : AppColors.primaryGreen
+                                      .withOpacity(0.1),
+                                  borderRadius:
+                                  BorderRadius.circular(
+                                    AppDimens.radius20,
+                                  ),
+                                ),
+                                child: Text(
+                                  seatNumber,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium
+                                      ?.copyWith(
+                                    color: isDark
+                                        ? AppColors
+                                        .primaryGreenLight
+                                        : AppColors.primaryGreen,
+                                    fontWeight: AppFonts.bold,
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
 
-                        const SizedBox(height: AppDimens.margin16),
+                        const SizedBox(
+                            height: AppDimens.margin16),
 
                         // Time and Price
                         Row(
@@ -217,19 +273,43 @@ class TicketCard extends StatelessWidget {
                             Icon(
                               Icons.access_time_rounded,
                               size: AppDimens.iconSize16,
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors
+                                  .textSecondaryDark
+                                  : AppColors
+                                  .textSecondaryLight,
                             ),
-                            const SizedBox(width: AppDimens.margin4),
-                            Text(
-                              DateFormatter.forTicket(departureTime),
-                              style: theme.textTheme.bodyMedium,
+
+                            const SizedBox(
+                                width: AppDimens.margin4),
+
+                            Expanded(
+                              child: Text(
+                                DateFormatter.forTicket(
+                                    departureTime),
+                                overflow: TextOverflow.ellipsis,
+                                style:
+                                theme.textTheme.bodyMedium,
+                              ),
                             ),
-                            const Spacer(),
-                            Text(
-                              CurrencyFormatter.forTicketPrice(price),
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-                                fontWeight: AppFonts.bold,
+
+                            const SizedBox(
+                                width: AppDimens.margin8),
+
+                            Flexible(
+                              child: Text(
+                                CurrencyFormatter
+                                    .forTicketPrice(price),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(
+                                  color: isDark
+                                      ? AppColors
+                                      .primaryGreenLight
+                                      : AppColors.primaryGreen,
+                                  fontWeight: AppFonts.bold,
+                                ),
                               ),
                             ),
                           ],
@@ -241,34 +321,55 @@ class TicketCard extends StatelessWidget {
               ),
             ),
 
-            // QR Code Preview (if for boarding)
+            // QR Code Preview
             if (isForBoarding) ...[
               Container(
                 height: 1,
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                color: isDark
+                    ? AppColors.borderDark
+                    : AppColors.borderLight,
               ),
+
               Container(
-                padding: const EdgeInsets.all(AppDimens.padding12),
+                padding:
+                const EdgeInsets.all(AppDimens.padding12),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
                   children: [
                     Container(
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.grey800 : AppColors.grey100,
-                        borderRadius: BorderRadius.circular(AppDimens.radius8),
+                        color: isDark
+                            ? AppColors.grey800
+                            : AppColors.grey100,
+                        borderRadius: BorderRadius.circular(
+                          AppDimens.radius8,
+                        ),
                       ),
                       child: Icon(
                         Icons.qr_code_scanner_rounded,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
                     ),
-                    const SizedBox(width: AppDimens.margin8),
-                    Text(
-                      'Tap to show QR code',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+
+                    const SizedBox(
+                        width: AppDimens.margin8),
+
+                    Flexible(
+                      child: Text(
+                        'Tap to show QR code',
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                        theme.textTheme.bodyMedium
+                            ?.copyWith(
+                          color: isDark
+                              ? AppColors.primaryGreenLight
+                              : AppColors.primaryGreen,
+                        ),
                       ),
                     ),
                   ],
@@ -280,26 +381,39 @@ class TicketCard extends StatelessWidget {
             if (showActions) ...[
               Container(
                 height: 1,
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                color: isDark
+                    ? AppColors.borderDark
+                    : AppColors.borderLight,
               ),
+
               Padding(
-                padding: const EdgeInsets.all(AppDimens.padding12),
+                padding:
+                const EdgeInsets.all(AppDimens.padding12),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     if (onShare != null)
-                      _buildActionButton(
-                        context,
-                        icon: Icons.share_rounded,
-                        label: 'Share',
-                        onTap: onShare!,
+                      Expanded(
+                        child: _buildActionButton(
+                          context,
+                          icon: Icons.share_rounded,
+                          label: 'Share',
+                          onTap: onShare!,
+                        ),
                       ),
+
+                    if (onShare != null &&
+                        onDownload != null)
+                      const SizedBox(
+                          width: AppDimens.margin8),
+
                     if (onDownload != null)
-                      _buildActionButton(
-                        context,
-                        icon: Icons.download_rounded,
-                        label: 'Download',
-                        onTap: onDownload!,
+                      Expanded(
+                        child: _buildActionButton(
+                          context,
+                          icon: Icons.download_rounded,
+                          label: 'Download',
+                          onTap: onDownload!,
+                        ),
                       ),
                   ],
                 ),
@@ -317,31 +431,47 @@ class TicketCard extends StatelessWidget {
         required String label,
         required VoidCallback onTap,
       }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.padding16,
+          horizontal: AppDimens.padding12,
           vertical: AppDimens.padding8,
         ),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.grey800 : AppColors.grey50,
-          borderRadius: BorderRadius.circular(AppDimens.radius20),
+          color: isDark
+              ? AppColors.grey800
+              : AppColors.grey50,
+          borderRadius:
+          BorderRadius.circular(AppDimens.radius20),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment:
+          MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
           children: [
             Icon(
               icon,
               size: AppDimens.iconSize16,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
             ),
+
             const SizedBox(width: AppDimens.margin4),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
+
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style:
+                Theme.of(context).textTheme.bodySmall,
+              ),
             ),
           ],
         ),
@@ -364,6 +494,7 @@ class DottedLinePainter extends CustomPainter {
 
     const dashWidth = 4;
     const dashSpace = 4;
+
     double startY = 0;
 
     while (startY < size.height) {
@@ -372,10 +503,13 @@ class DottedLinePainter extends CustomPainter {
         Offset(0, startY + dashWidth),
         paint,
       );
+
       startY += dashWidth + dashSpace;
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(
+      covariant CustomPainter oldDelegate) =>
+      false;
 }

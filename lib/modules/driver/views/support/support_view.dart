@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:menahariya/core/constants/app_colors.dart';
 import 'package:menahariya/core/constants/app_dimens.dart';
 
+import '../driver_help_support_view.dart';
+
 class SupportView extends StatelessWidget {
   const SupportView({Key? key}) : super(key: key);
 
@@ -27,18 +29,16 @@ class SupportView extends StatelessWidget {
           ),
           _buildTile(
             context,
-            icon: Icons.chat_rounded,
-            title: 'Live Chat',
-            onTap: () {
-              Get.snackbar('Coming Soon', 'Live chat will be available soon');
-            },
+            icon: Icons.headset_mic_outlined,
+            title: 'Help And Support',
+            onTap: () => Get.to(() =>  DriverHelpSupportView()),
           ),
           _buildTile(
             context,
             icon: Icons.phone_rounded,
             title: 'Call Support',
             onTap: () {
-              Get.snackbar('Support', '+251 900 000 000');
+              Get.snackbar('Support', '+251 906464607');
             },
           ),
           _buildTile(
@@ -48,12 +48,6 @@ class SupportView extends StatelessWidget {
             onTap: () {
               Get.snackbar('Email', 'support@menahariya.com');
             },
-          ),
-          _buildTile(
-            context,
-            icon: Icons.report_problem_rounded,
-            title: 'Report Issue',
-            onTap: () => Get.to(() => const ReportIssueView()),
           ),
         ],
       ),

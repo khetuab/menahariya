@@ -50,6 +50,26 @@ class AppRoutes {
   static const String passengerCargoSuccess = '/passenger/cargo/success';
   static const String passengerTicketSelectTrip = '/passenger/tickets/select-trip';
 
+// Add these to AppRoutes class
+  static const String ticketingDashboard = '/staff/ticketing/dashboard';
+  static const String cargoDashboard = '/staff/cargo/dashboard';
+  static const String ticketingBookings = '/staff/ticketing/bookings';
+  static const String ticketingTrips = '/staff/ticketing/trips';
+  static const String ticketingPayments = '/staff/ticketing/payments';
+  static const String cargoList = '/staff/cargo/list';
+  static const String cargoUpdate = '/staff/cargo/update';
+  static const String cargoReceipt = '/staff/cargo/receipt';
+  static const String staffSupport = '/staff/support';
+  static const String ticketingBoarding = '/staff/ticketing/boarding';
+  static const String adminPromotions = '/admin/promotions';
+
+  // ADD THESE MISSING PASSENGER ROUTES
+  static const String passengerTripDetails = '/passenger/trip';  // For /passenger/trip/:id
+  static const String passengerTicketDetails = '/passenger/ticket';  // For /passenger/ticket/:id
+  static const String passengerPaymentDetails = '/passenger/payment';  // For /passenger/payment/:id
+  static const String passengerCargoTrack = '/passenger/cargo/track';  // For /passenger/cargo/track
+  static const String passengerNotificationDetail = '/passenger/notification';
+
   static const String privacySecurity = '/passenger/privacy-security';
   static const String helpSupport = '/passenger/help-support';
   static const String about = '/passenger/about';
@@ -67,6 +87,9 @@ class AppRoutes {
   static const String driverTripDetail = '/driver/trip/:tripId';  // Add this
   static const String driverTripStatus = '/driver/trip/:tripId/status';  // Add this
   static const String driverBoarding = '/driver/boarding/:tripId';  // Add this
+  static const String driverHelpSupport = '/driver/support';
+  static const String driverMyTickets = '/driver/support/tickets';
+  static const String driverTicketDetail = '/driver/support/ticket/:id';
   static const String driver = '/driver';
   static const String driverDashboard = '/driver/dashboard';
   static const String driverAssignedTrips = '/driver/assigned-trips';

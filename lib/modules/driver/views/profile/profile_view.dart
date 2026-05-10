@@ -8,6 +8,7 @@ import 'package:menahariya/core/constants/app_fonts.dart';
 import 'package:menahariya/core/widgets/buttons/primary_button.dart';
 import 'package:menahariya/modules/driver/controllers/profile_controller.dart';
 
+import '../support/driver_my_tickets_view.dart';
 import '../support/support_view.dart';
 import 'edit_profile_view.dart';
 
@@ -461,6 +462,12 @@ class DriverProfileView extends GetView<DriverProfileController> {
           icon: Icons.help_rounded,
           title: 'Help & Support',
           onTap: () => Get.to(()=> SupportView()),
+        ),
+        _buildMenuItem(
+          context,
+          icon: Icons.chat,
+          title: 'Chats with admin',
+          onTap: () => Get.to(()=> DriverMyTicketsView()),
         ),
       ],
     );

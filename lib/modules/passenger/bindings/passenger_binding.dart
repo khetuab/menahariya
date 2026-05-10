@@ -14,6 +14,8 @@ import 'package:menahariya/modules/passenger/controllers/history_controller.dart
 import 'package:menahariya/modules/passenger/controllers/profile_controller.dart';
 import 'package:menahariya/modules/passenger/controllers/notification_controller.dart';
 
+import '../../promotion/controllers/promotion_controller.dart';
+
 class PassengerBinding extends Bindings {
   @override
   void dependencies() {
@@ -31,6 +33,7 @@ class PassengerBinding extends Bindings {
     Get.lazyPut<PassengerCargoController>(() => PassengerCargoController(), fenix: true);
     Get.lazyPut<PassengerHistoryController>(() => PassengerHistoryController(), fenix: true);
     Get.lazyPut<PassengerProfileController>(() => PassengerProfileController(), fenix: true);
+    Get.lazyPut<PromotionController>(() => PromotionController(), fenix: true);
     Get.lazyPut<PassengerNotificationController>(() => PassengerNotificationController(), fenix: true);
   }
 }

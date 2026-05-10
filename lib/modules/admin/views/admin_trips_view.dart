@@ -621,288 +621,296 @@ class AdminTripsView extends GetView<AdminTripController> {
     controller.priceController.clear();
     controller.notesController.clear();
 
+    // Use a StatefulBuilder to manage local state
     Get.bottomSheet(
-      Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimens.radius20)),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppDimens.padding20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Create New Trip',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: AppFonts.bold,
-                        fontSize: 22,
-                      ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.grey800 : AppColors.grey100,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 20),
-                        onPressed: () => Get.back(),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppDimens.margin24),
-
-                // Route Selection
-                _buildFormField(
-                  label: 'Route',
-                  child: DropdownButtonFormField<String>(
-                    decoration: _buildInputDecoration('Select route', Icons.route_rounded),
-                    items: controller.routes.map((route) {
-                      return DropdownMenuItem(
-                        value: route.id,
-                        child: Text(
-                          '${route.origin} → ${route.destination}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) => controller.routeIdController.text = value ?? '',
-                  ),
-                ),
-
-                const SizedBox(height: AppDimens.margin16),
-
-                // Vehicle Selection
-                _buildFormField(
-                  label: 'Vehicle',
-                  child: DropdownButtonFormField<String>(
-                    decoration: _buildInputDecoration('Select vehicle', Icons.directions_bus_rounded),
-                    items: controller.vehicles.map((vehicle) {
-                      return DropdownMenuItem(
-                        value: vehicle.id,
-                        child: Text(
-                          '${vehicle.plateNumber} - ${vehicle.model}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) => controller.vehicleIdController.text = value ?? '',
-                  ),
-                ),
-
-                const SizedBox(height: AppDimens.margin16),
-
-                // Driver Selection with refresh
-                _buildFormField(
-                  label: 'Driver',
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Obx(() {
-                          if (controller.drivers.isEmpty) {
-                            return DropdownButtonFormField<String>(
-                              decoration: _buildInputDecoration('No drivers available', Icons.person_rounded),
-                              value: null,
-                              items: const [
-                                DropdownMenuItem(value: null, child: Text('No drivers available'))
-                              ],
-                              onChanged: null,
-                            );
-                          }
-                          return DropdownButtonFormField<String>(
-                            decoration: _buildInputDecoration('Select driver', Icons.person_rounded),
-                            value: controller.driverIdController.text.isEmpty ? null : controller.driverIdController.text,
-                            items: [
-                              const DropdownMenuItem(value: null, child: Text('Select Driver')),
-                              ...controller.drivers.map((driver) {
-                                return DropdownMenuItem(
-                                  value: driver.id,
-                                  child: Text(
-                                    driver.fullName ?? 'Unknown Driver',
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                );
-                              }).toList(),
-                            ],
-                            onChanged: (value) {
-                              controller.driverIdController.text = value ?? '';
-                            },
-                          );
-                        }),
-                      ),
-                      const SizedBox(width: AppDimens.margin8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.grey800 : AppColors.grey100,
-                          borderRadius: BorderRadius.circular(AppDimens.radius12),
-                        ),
-                        child: IconButton(
-                          icon: Icon(Icons.refresh_rounded, size: 20, color: AppColors.primaryGreen),
-                          onPressed: () async {
-                            await controller.fetchDropdownData();
-                            Get.snackbar(
-                              'Refreshed',
-                              'Drivers list refreshed',
-                              snackPosition: SnackPosition.TOP,
-                              duration: const Duration(seconds: 1),
-                              backgroundColor: isDark ? AppColors.grey800 : Colors.white,
-                              colorText: isDark ? Colors.white : Colors.black,
-                            );
-                          },
-                          tooltip: 'Refresh Drivers',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: AppDimens.margin16),
-
-                // Departure Time
-                _buildFormField(
-                  label: 'Departure Time',
-                  child: GestureDetector(
-                    onTap: () => _selectDateTime(context, isDeparture: true),
-                    child: AbsorbPointer(
-                      child: TextField(
-                        controller: controller.departureTimeController,
-                        style: const TextStyle(fontSize: 14),
-                        decoration: _buildInputDecoration('Select date and time', Icons.calendar_today_rounded),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: AppDimens.margin16),
-
-                // Arrival Time
-                _buildFormField(
-                  label: 'Arrival Time',
-                  child: GestureDetector(
-                    onTap: () => _selectDateTime(context, isDeparture: false),
-                    child: AbsorbPointer(
-                      child: TextField(
-                        controller: controller.arrivalTimeController,
-                        style: const TextStyle(fontSize: 14),
-                        decoration: _buildInputDecoration('Select date and time', Icons.calendar_today_rounded),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: AppDimens.margin16),
-
-                // Price
-                _buildFormField(
-                  label: 'Price',
-                  child: CustomTextField(
-                    controller: controller.priceController,
-                    hint: 'Enter price in ETB',
-                    keyboardType: TextInputType.number,
-                    prefixIcon: Icons.attach_money_rounded,
-                    label: 'Price',
-                  ),
-                ),
-
-                const SizedBox(height: AppDimens.margin16),
-
-                // Notes
-                _buildFormField(
-                  label: 'Notes (Optional)',
-                  child: CustomTextField(
-                    controller: controller.notesController,
-                    hint: 'Any additional information...',
-                    maxLines: 2,
-                    prefixIcon: Icons.note_rounded,
-                    label: 'Notes',
-                  ),
-                ),
-
-                const SizedBox(height: AppDimens.margin24),
-
-                // Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: SecondaryButton(
-                        text: 'Cancel',
-                        onPressed: () => Get.back(),
-                      ),
-                    ),
-                    const SizedBox(width: AppDimens.margin12),
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Create Trip',
-                        onPressed: () async {
-                          // Validate
-                          if (controller.routeIdController.text.isEmpty) {
-                            Get.snackbar('Error', 'Please select a route',
-                                snackPosition: SnackPosition.TOP);
-                            return;
-                          }
-                          if (controller.vehicleIdController.text.isEmpty) {
-                            Get.snackbar('Error', 'Please select a vehicle',
-                                snackPosition: SnackPosition.TOP);
-                            return;
-                          }
-                          if (controller.driverIdController.text.isEmpty) {
-                            Get.snackbar('Error', 'Please select a driver',
-                                snackPosition: SnackPosition.TOP);
-                            return;
-                          }
-                          if (controller.departureTimeController.text.isEmpty) {
-                            Get.snackbar('Error', 'Please select departure time',
-                                snackPosition: SnackPosition.TOP);
-                            return;
-                          }
-                          if (controller.arrivalTimeController.text.isEmpty) {
-                            Get.snackbar('Error', 'Please select arrival time',
-                                snackPosition: SnackPosition.TOP);
-                            return;
-                          }
-                          if (controller.priceController.text.isEmpty) {
-                            Get.snackbar('Error', 'Please enter price',
-                                snackPosition: SnackPosition.TOP);
-                            return;
-                          }
-
-                          final success = await controller.createTrip({
-                            'routeId': controller.routeIdController.text,
-                            'vehicleId': controller.vehicleIdController.text,
-                            'driverId': controller.driverIdController.text,
-                            'departureTime': controller.departureTimeController.text,
-                            'arrivalTime': controller.arrivalTimeController.text,
-                            'price': double.tryParse(controller.priceController.text) ?? 0,
-                            'totalSeats': controller.vehicles.firstWhere(
-                                  (v) => v.id == controller.vehicleIdController.text,
-                              orElse: () => controller.vehicles.first,
-                            ).capacity,
-                            'notes': controller.notesController.text.isEmpty ? null : controller.notesController.text,
-                          });
-                          if (success) Get.back();
-                        },
-                        isLoading: controller.isLoading,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: AppDimens.margin8),
-              ],
+      StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimens.radius20)),
             ),
-          ),
-        ),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppDimens.padding20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Create New Trip',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: AppFonts.bold,
+                            fontSize: 22,
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.grey800 : AppColors.grey100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 20),
+                            onPressed: () => Get.back(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppDimens.margin24),
+
+                    // Route Selection
+                    _buildFormField(
+                      label: 'Route',
+                      child: DropdownButtonFormField<String>(
+                        decoration: _buildInputDecoration('Select route', Icons.route_rounded),
+                        items: controller.routes.map((route) {
+                          return DropdownMenuItem(
+                            value: route.id,
+                            child: Text(
+                              '${route.origin} → ${route.destination}',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) => controller.routeIdController.text = value ?? '',
+                      ),
+                    ),
+
+                    const SizedBox(height: AppDimens.margin16),
+
+                    // Vehicle Selection
+                    _buildFormField(
+                      label: 'Vehicle',
+                      child: DropdownButtonFormField<String>(
+                        decoration: _buildInputDecoration('Select vehicle', Icons.directions_bus_rounded),
+                        items: controller.vehicles.map((vehicle) {
+                          return DropdownMenuItem(
+                            value: vehicle.id,
+                            child: Text(
+                              '${vehicle.plateNumber} - ${vehicle.model}',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) => controller.vehicleIdController.text = value ?? '',
+                      ),
+                    ),
+
+                    const SizedBox(height: AppDimens.margin16),
+
+                    // Driver Selection with availability check
+                    // Driver Selection
+                    _buildFormField(
+                      label: 'Driver',
+                      child: DropdownButtonFormField<String>(
+                        value: controller.driverIdController.text.isEmpty
+                            ? null
+                            : controller.driverIdController.text,
+                        decoration: _buildInputDecoration('Select driver', Icons.person_rounded),
+                        isExpanded: true,
+                        items: [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Text('Select Driver', overflow: TextOverflow.ellipsis),
+                          ),
+                          ...controller.drivers.map((driver) {
+                            final isOnline = driver.isOnline ?? false;
+                            return DropdownMenuItem(
+                              value: driver.id,
+                              child: Container(
+                                constraints: const BoxConstraints(maxWidth: 280),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            driver.fullName ?? 'Unknown Driver',
+                                            style: const TextStyle(fontSize: 14),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+
+                                        ],
+                                      ),
+                                    ),
+                                    if (isOnline)
+                                      const Icon(Icons.circle, size: 10, color: Colors.green),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                        onChanged: (value) {
+                          controller.driverIdController.text = value ?? '';
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: AppDimens.margin16),
+
+                    // Departure Time
+                    _buildFormField(
+                      label: 'Departure Time',
+                      child: GestureDetector(
+                        onTap: () => _selectDateTime(context, isDeparture: true, setState: setState),
+                        child: AbsorbPointer(
+                          child: TextField(
+                            controller: controller.departureTimeController,
+                            style: const TextStyle(fontSize: 14),
+                            decoration: _buildInputDecoration('Select date and time', Icons.calendar_today_rounded),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: AppDimens.margin16),
+
+                    // Arrival Time
+                    _buildFormField(
+                      label: 'Arrival Time',
+                      child: GestureDetector(
+                        onTap: () => _selectDateTime(context, isDeparture: false, setState: setState),
+                        child: AbsorbPointer(
+                          child: TextField(
+                            controller: controller.arrivalTimeController,
+                            style: const TextStyle(fontSize: 14),
+                            decoration: _buildInputDecoration('Select date and time', Icons.calendar_today_rounded),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: AppDimens.margin16),
+
+                    // Price
+                    _buildFormField(
+                      label: 'Price',
+                      child: CustomTextField(
+                        controller: controller.priceController,
+                        hint: 'Enter price in ETB',
+                        keyboardType: TextInputType.number,
+                        prefixIcon: Icons.attach_money_rounded,
+                        label: 'Price',
+                      ),
+                    ),
+
+                    const SizedBox(height: AppDimens.margin16),
+
+                    // Notes
+                    _buildFormField(
+                      label: 'Notes (Optional)',
+                      child: CustomTextField(
+                        controller: controller.notesController,
+                        hint: 'Any additional information...',
+                        maxLines: 2,
+                        prefixIcon: Icons.note_rounded,
+                        label: 'Notes',
+                      ),
+                    ),
+
+                    const SizedBox(height: AppDimens.margin24),
+
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            text: 'Cancel',
+                            onPressed: () => Get.back(),
+                          ),
+                        ),
+                        const SizedBox(width: AppDimens.margin12),
+                        Expanded(
+                          child: Obx(() => PrimaryButton(
+                            text: 'Create Trip',
+                            onPressed: controller.isLoading ? null : () async {
+                              // Validate
+                              if (controller.routeIdController.text.isEmpty) {
+                                Get.snackbar('Error', 'Please select a route',
+                                    snackPosition: SnackPosition.TOP);
+                                return;
+                              }
+                              if (controller.vehicleIdController.text.isEmpty) {
+                                Get.snackbar('Error', 'Please select a vehicle',
+                                    snackPosition: SnackPosition.TOP);
+                                return;
+                              }
+                              if (controller.driverIdController.text.isEmpty) {
+                                Get.snackbar('Error', 'Please select a driver',
+                                    snackPosition: SnackPosition.TOP);
+                                return;
+                              }
+                              if (controller.departureTimeController.text.isEmpty) {
+                                Get.snackbar('Error', 'Please select departure time',
+                                    snackPosition: SnackPosition.TOP);
+                                return;
+                              }
+                              if (controller.arrivalTimeController.text.isEmpty) {
+                                Get.snackbar('Error', 'Please select arrival time',
+                                    snackPosition: SnackPosition.TOP);
+                                return;
+                              }
+                              if (controller.priceController.text.isEmpty) {
+                                Get.snackbar('Error', 'Please enter price',
+                                    snackPosition: SnackPosition.TOP);
+                                return;
+                              }
+
+                              // Check if driver is available before creating
+                              final driverId = controller.driverIdController.text;
+                              final availability = controller.driverAvailabilityMap[driverId];
+
+                              if (availability != null && !availability.available) {
+                                Get.snackbar(
+                                  'Driver Unavailable',
+                                  'Please select a different driver',
+                                  snackPosition: SnackPosition.TOP,
+                                  backgroundColor: Colors.red,
+                                );
+                                return;
+                              }
+
+                              final success = await controller.createTripWithValidation({
+                                'routeId': controller.routeIdController.text,
+                                'vehicleId': controller.vehicleIdController.text,
+                                'driverId': controller.driverIdController.text,
+                                'departureTime': controller.departureTimeController.text,
+                                'arrivalTime': controller.arrivalTimeController.text,
+                                'price': double.tryParse(controller.priceController.text) ?? 0,
+                                'totalSeats': controller.vehicles.firstWhere(
+                                      (v) => v.id == controller.vehicleIdController.text,
+                                  orElse: () => controller.vehicles.first,
+                                ).capacity,
+                                'notes': controller.notesController.text.isEmpty ? null : controller.notesController.text,
+                                'distance': 100, // Get from route if available
+                                'type': 'Standard',
+                              });
+
+                              if (success) Get.back();
+                            },
+                            isLoading: controller.isLoading,
+                          )),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: AppDimens.margin8),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
-
 // Helper method to build form field with label
   Widget _buildFormField({
     required String label,
@@ -1451,7 +1459,7 @@ class AdminTripsView extends GetView<AdminTripController> {
     }
   }
 
-  Future<void> _selectDateTime(BuildContext context, {required bool isDeparture}) async {
+  Future<void> _selectDateTime(BuildContext context, {required bool isDeparture, StateSetter? setState}) async {
     final DateTime? date = await showDatePicker(
       context: context,
       initialDate: DateTime.now().add(const Duration(days: 1)),
@@ -1470,10 +1478,28 @@ class AdminTripsView extends GetView<AdminTripController> {
           date.year, date.month, date.day,
           time.hour, time.minute,
         );
+        final formattedDateTime = DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+
         if (isDeparture) {
-          controller.departureTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+          controller.departureTimeController.text = formattedDateTime;
         } else {
-          controller.arrivalTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+          controller.arrivalTimeController.text = formattedDateTime;
+        }
+
+        // If departure time was selected and a driver is already selected, re-check availability
+        if (isDeparture && controller.driverIdController.text.isNotEmpty) {
+          // Show loading
+          Get.dialog(
+            const Center(child: CircularProgressIndicator()),
+            barrierDismissible: false,
+          );
+
+          await controller.checkDriverAvailabilityForTrip(controller.driverIdController.text);
+
+          Get.back(); // Close loading
+          if (setState != null) {
+            setState(() {}); // Refresh the bottom sheet
+          }
         }
       }
     }

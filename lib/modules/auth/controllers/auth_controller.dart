@@ -874,9 +874,13 @@ class AuthController extends GetxController {
         Get.offAllNamed(AppRoutes.driverDashboard);
         break;
       case AppConstants.roleAdmin:
-      case AppConstants.roleTicketingStaff:
-      case AppConstants.roleCargoStaff:
         Get.offAllNamed(AppRoutes.adminDashboard);
+        break;
+      case AppConstants.roleTicketingStaff:
+        Get.offAllNamed(AppRoutes.ticketingDashboard);
+        break;
+      case AppConstants.roleCargoStaff:
+        Get.offAllNamed(AppRoutes.cargoDashboard);
         break;
       default:
         Get.offAllNamed(AppRoutes.passengerDashboard);

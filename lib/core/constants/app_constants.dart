@@ -76,6 +76,7 @@ class AppConstants {
   static const String roleTicketingStaff = 'ticketing_staff';
   static const String roleCargoStaff = 'cargo_staff';
 
+
   // Trip Status
   static const String tripStatusScheduled = 'scheduled';
   static const String tripStatusDeparted = 'departed';

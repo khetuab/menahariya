@@ -13,6 +13,7 @@ import 'package:menahariya/modules/driver/views/boarding/boarding_management_vie
 import 'package:menahariya/modules/driver/views/boarding/validation_view.dart';
 import 'package:menahariya/modules/driver/views/profile/profile_view.dart';
 
+import '../../../core/widgets/promotion/promotion_banner_row.dart';
 import '../trips/assigned_trips_view.dart';
 
 class DriverDashboardView extends GetView<DriverDashboardController> {
@@ -43,8 +44,8 @@ class DriverDashboardView extends GetView<DriverDashboardController> {
         actions: [
           // Online/Offline Toggle
           Obx(() => Switch(
-            value: controller.isOnline,
-            onChanged: controller.updateDriverStatus,
+            value: controller.isOnline, // This will now reflect centralized state
+            onChanged: (value) => controller.toggleDriverStatus(value), // Call toggle method
             activeColor: isDark ? AppColors.successLight : AppColors.success,
             inactiveThumbColor: isDark ? AppColors.errorLight : AppColors.error,
           )),
@@ -193,7 +194,8 @@ class _DashboardContent extends GetView<DriverDashboardController> {
             _buildStatsGrid(context),
 
             const SizedBox(height: AppDimens.margin24),
-
+            PromotionBannerRow(),
+            const SizedBox(height: AppDimens.margin24),
             // Current Trip Section
             if (controller.currentTrip != null)
               _buildCurrentTrip(context),
@@ -206,7 +208,7 @@ class _DashboardContent extends GetView<DriverDashboardController> {
             const SizedBox(height: AppDimens.margin24),
 
             // Quick Actions
-            _buildQuickActions(context),
+            //_buildQuickActions(context),
           ],
         ),
       ),
@@ -257,6 +259,7 @@ class _DashboardContent extends GetView<DriverDashboardController> {
     );
   }
 
+  // In the _buildStatCard method, make sure you're using the correct values
   Widget _buildStatCard(
       BuildContext context, {
         required IconData icon,
@@ -265,6 +268,8 @@ class _DashboardContent extends GetView<DriverDashboardController> {
         required Color color,
       }) {
     final theme = Theme.of(context);
+
+    print('📊 Building stat card: $label = $value'); // Debug print
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.padding12),

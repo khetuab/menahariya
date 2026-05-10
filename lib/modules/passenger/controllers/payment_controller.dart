@@ -282,32 +282,36 @@ class PassengerPaymentController extends GetxController {
 
   Future<PaymentModel?> _processCashPayment() async {
     try {
+      print('💰 Processing cash payment for booking: ${booking!.id}');
+
       final response = await _apiClient.post('/payments/cash', data: {
         'bookingId': booking!.id,
         'amount': amount,
         'station': stationNameController.text.isNotEmpty ? stationNameController.text : 'Bus Station',
       });
 
+      print('📥 Cash payment response: $response');
+
       if (response != null && response['data'] != null) {
-        print('✅ Cash payment recorded in backend');
+        print('✅ Cash payment successful, booking confirmed');
+
+        // After successful cash payment, the backend has already created tickets
+        // Just return the payment model
         return PaymentModel.fromJson(response['data']);
       }
       return null;
     } catch (e) {
-      print('Cash payment error: $e');
-      return PaymentModel(
-        id: 'cash_${DateTime.now().millisecondsSinceEpoch}',
-        bookingId: booking!.id,
-        userId: booking!.userId,
-        amount: amount,
-        currency: 'ETB',
-        method: 'cash',
-        status: 'completed',
-        transactionId: 'CASH_${DateTime.now().millisecondsSinceEpoch}',
-        reference: booking!.reference ?? booking!.id,
-        createdAt: DateTime.now(),
-        completedAt: DateTime.now(),
+      print('❌ Cash payment error: $e');
+
+      // Don't fall back to mock payment - show error instead
+      Get.snackbar(
+        'Payment Error',
+        'Failed to process payment. Please contact support.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
+      return null;
     }
   }
 

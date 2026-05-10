@@ -12,6 +12,7 @@ import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
 import 'package:menahariya/data/models/trip/trip_model.dart';
 
 import '../../../../core/routes/app_routes.dart';
+import '../../../../core/widgets/promotion/promotion_banner_row.dart';
 import '../../controllers/notification_controller.dart';
 
 class HomeView extends GetView<HomeController> {
@@ -89,6 +90,8 @@ class HomeView extends GetView<HomeController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              PromotionBannerRow(),
+              const SizedBox(height: AppDimens.margin24),
               // Quick Actions Grid
               _buildQuickActions(context),
 

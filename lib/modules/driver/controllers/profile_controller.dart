@@ -16,9 +16,11 @@ import 'package:menahariya/modules/auth/controllers/auth_controller.dart';
 import 'package:permission_handler/permission_handler.dart' as perm;
 
 import '../../../core/utils/app_snackbar.dart';
+import 'driver_state_controller.dart';
 
 class DriverProfileController extends GetxController {
   static DriverProfileController get instance => Get.find();
+  final DriverStateController _driverStateController = Get.find<DriverStateController>();
 
   final ApiClient _apiClient = ApiClient.instance;
   final SecureStorage _secureStorage = SecureStorage();
@@ -57,6 +59,13 @@ class DriverProfileController extends GetxController {
   final _autoAcceptTrips = false.obs;
   final _maxTripDistance = 100.obs;
 
+  // Availability Settings
+  final _workingHours = <String, WorkingHours>{}.obs;
+  final _customWorkingHours = <String, WorkingHours>{}.obs;
+  final _restDays = <String, bool>{}.obs;
+  final _preferredTripTypes = <String, bool>{}.obs;
+  final _isAvailabilitySaving = false.obs;
+
   // Getters
   bool get isLoading => _isLoading.value;
   bool get isSaving => _isSaving.value;
@@ -64,7 +73,7 @@ class DriverProfileController extends GetxController {
   File? get profileImage => _profileImage.value;
   String? get profileImageUrl => _profileImageUrl.value;
   bool get isEditing => _isEditing.value;
-  bool get isOnline => _driverStatus.value;
+  bool get isOnline => _driverStateController.isOnline.value;
 
   // Statistics
   int get totalTrips => _totalTrips.value;
@@ -79,14 +88,22 @@ class DriverProfileController extends GetxController {
   String get language => _language.value;
   bool get autoAcceptTrips => _autoAcceptTrips.value;
   int get maxTripDistance => _maxTripDistance.value;
+  bool get isAvailabilitySaving => _isAvailabilitySaving.value;
+
+  // Availability Getters
+  Map<String, WorkingHours> get workingHours => _workingHours;
+  Map<String, WorkingHours> get customWorkingHours => _customWorkingHours;
+  Map<String, bool> get restDays => _restDays;
+  Map<String, bool> get preferredTripTypes => _preferredTripTypes;
 
   @override
   void onInit() {
     super.onInit();
     _initializeControllers();
-    _loadUserData(); // This will set _user.value
+    _loadUserData();
     _loadDriverStats();
     _loadPreferences();
+    loadAvailabilitySettings();
   }
 
   void _loadUserData() {
@@ -96,7 +113,6 @@ class DriverProfileController extends GetxController {
       _profileImageUrl.value = currentUser.profileImage;
       _driverSince.value = currentUser.createdAt;
 
-      // Update controllers after user is loaded
       nameController.text = currentUser.fullName;
       emailController.text = currentUser.email ?? '';
       phoneController.text = currentUser.phone;
@@ -106,7 +122,6 @@ class DriverProfileController extends GetxController {
   }
 
   void _initializeControllers() {
-    // Initialize with empty values first, will be updated when user loads
     nameController = TextEditingController();
     emailController = TextEditingController();
     phoneController = TextEditingController();
@@ -137,6 +152,224 @@ class DriverProfileController extends GetxController {
       _maxTripDistance.value = await _secureStorage.readIntOrDefault('max_trip_distance', 100);
     } catch (e) {
       print('Error loading preferences: $e');
+    }
+  }
+
+  Future<void> toggleDriverStatus(bool value) async {
+    await _driverStateController.updateDriverStatus(value);
+    // Refresh availability settings after status change
+    await loadAvailabilitySettings();
+  }
+  Future<void> loadAvailabilitySettings() async {
+    _isLoading.value = true;
+    try {
+      final response = await _apiClient.get('/driver/availability-settings');
+      if (response != null && response['data'] != null) {
+        final data = response['data'];
+
+        // Load working hours
+        if (data['workingHours'] != null) {
+          final hours = data['workingHours'] as Map<String, dynamic>;
+          hours.forEach((day, schedule) {
+            if (schedule['isCustom'] == true) {
+              _customWorkingHours[day] = WorkingHours.fromJson(schedule);
+            } else {
+              _workingHours[day] = WorkingHours.fromJson(schedule);
+            }
+          });
+        } else {
+          // Set default working hours
+          _setDefaultWorkingHours();
+        }
+
+        // Load rest days
+        if (data['restDays'] != null) {
+          _restDays.addAll((data['restDays'] as Map).map((key, value) => MapEntry(key, value as bool)));
+        } else {
+          _setDefaultRestDays();
+        }
+
+        // Load preferred trip types
+        if (data['preferredTripTypes'] != null) {
+          _preferredTripTypes.addAll((data['preferredTripTypes'] as Map).map((key, value) => MapEntry(key, value as bool)));
+        } else {
+          _setDefaultTripTypes();
+        }
+
+        // Load driver status
+        if (data['isOnline'] != null) {
+          _driverStatus.value = data['isOnline'] as bool;
+        }
+
+        // Load auto-accept setting
+        if (data['autoAcceptTrips'] != null) {
+          _autoAcceptTrips.value = data['autoAcceptTrips'] as bool;
+        }
+
+        // Load max trip distance
+        if (data['maxTripDistance'] != null) {
+          _maxTripDistance.value = data['maxTripDistance'] as int;
+        }
+      } else {
+        _setDefaultWorkingHours();
+        _setDefaultRestDays();
+        _setDefaultTripTypes();
+      }
+    } catch (e) {
+      print('Error loading availability settings: $e');
+      _setDefaultWorkingHours();
+      _setDefaultRestDays();
+      _setDefaultTripTypes();
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  void _setDefaultWorkingHours() {
+    _workingHours.clear();
+    _workingHours['Monday - Friday'] = WorkingHours(
+      startTime: '08:00',
+      endTime: '18:00',
+      isClosed: false,
+    );
+    _workingHours['Saturday'] = WorkingHours(
+      startTime: '09:00',
+      endTime: '16:00',
+      isClosed: false,
+    );
+    _workingHours['Sunday'] = WorkingHours(
+      startTime: '00:00',
+      endTime: '00:00',
+      isClosed: true,
+    );
+  }
+
+  void _setDefaultRestDays() {
+    _restDays.clear();
+    _restDays['Monday'] = false;
+    _restDays['Tuesday'] = false;
+    _restDays['Wednesday'] = false;
+    _restDays['Thursday'] = false;
+    _restDays['Friday'] = false;
+    _restDays['Saturday'] = false;
+    _restDays['Sunday'] = false;
+  }
+
+  void _setDefaultTripTypes() {
+    _preferredTripTypes.clear();
+    _preferredTripTypes['Standard'] = true;
+    _preferredTripTypes['Executive'] = false;
+    _preferredTripTypes['VIP'] = true;
+    _preferredTripTypes['Luxury'] = false;
+    _preferredTripTypes['Night trips'] = true;
+    _preferredTripTypes['Long distance'] = false;
+  }
+
+  // Working Hours Methods
+  void updateWorkingHours(String day, String startTime, String endTime) {
+    if (_workingHours.containsKey(day)) {
+      _workingHours[day] = WorkingHours(
+        startTime: startTime,
+        endTime: endTime,
+        isClosed: false,
+      );
+    } else if (_customWorkingHours.containsKey(day)) {
+      _customWorkingHours[day] = WorkingHours(
+        startTime: startTime,
+        endTime: endTime,
+        isClosed: false,
+        isCustom: true,
+      );
+    }
+  }
+
+  void addCustomWorkingHours(String day, String startTime, String endTime) {
+    // Remove from regular working hours if exists
+    _workingHours.remove(day);
+
+    _customWorkingHours[day] = WorkingHours(
+      startTime: startTime,
+      endTime: endTime,
+      isClosed: false,
+      isCustom: true,
+    );
+  }
+
+  void removeCustomWorkingHours(String day) {
+    _customWorkingHours.remove(day);
+    // Optionally restore default
+    if (day == 'Monday - Friday' || day == 'Saturday' || day == 'Sunday') {
+      if (day == 'Monday - Friday') {
+        _workingHours[day] = WorkingHours(startTime: '08:00', endTime: '18:00');
+      } else if (day == 'Saturday') {
+        _workingHours[day] = WorkingHours(startTime: '09:00', endTime: '16:00');
+      } else if (day == 'Sunday') {
+        _workingHours[day] = WorkingHours(startTime: '00:00', endTime: '00:00', isClosed: true);
+      }
+    }
+  }
+
+  void updateRestDay(String day, bool isRestDay) {
+    _restDays[day] = isRestDay;
+  }
+
+  void updateTripPreference(String type, bool isSelected) {
+    _preferredTripTypes[type] = isSelected;
+  }
+
+  Future<bool> saveAvailabilitySettings() async {
+    _isAvailabilitySaving.value = true;
+
+    try {
+      final Map<String, dynamic> workingHoursMap = {};
+
+      _workingHours.forEach((day, hours) {
+        workingHoursMap[day] = {
+          'startTime': hours.startTime,
+          'endTime': hours.endTime,
+          'isClosed': hours.isClosed,
+          'isCustom': false,
+        };
+      });
+
+      _customWorkingHours.forEach((day, hours) {
+        workingHoursMap[day] = {
+          'startTime': hours.startTime,
+          'endTime': hours.endTime,
+          'isClosed': hours.isClosed,
+          'isCustom': true,
+        };
+      });
+
+      final data = {
+        'workingHours': workingHoursMap,
+        'restDays': Map.from(_restDays),
+        'preferredTripTypes': Map.from(_preferredTripTypes),
+        'autoAcceptTrips': _autoAcceptTrips.value,
+        'maxTripDistance': _maxTripDistance.value,
+      };
+
+      final response = await _apiClient.post(
+        '/driver/availability-settings',
+        data: data,
+      );
+
+      if (response != null && response['success'] == true) {
+        // Refresh centralized state
+        await _driverStateController.refreshStatus();
+
+        AppSnackbar.show('Success', 'Availability settings saved successfully');
+        return true;
+      } else {
+        AppSnackbar.show('Error', response?['message'] ?? 'Failed to save settings');
+        return false;
+      }
+    } catch (e) {
+      print('Error saving availability settings: $e');
+      AppSnackbar.show('Error', 'Failed to save settings. Please try again.');
+      return false;
+    } finally {
+      _isAvailabilitySaving.value = false;
     }
   }
 
@@ -196,15 +429,11 @@ class DriverProfileController extends GetxController {
       );
 
       if (pickedFile != null) {
-        print('✅ Image selected: ${pickedFile.path}');
-        print('📏 File size: ${await pickedFile.length()} bytes');
         _profileImage.value = File(pickedFile.path);
         await _uploadProfileImage();
-      } else {
-        print('⚠️ No image selected by user');
       }
     } catch (e) {
-      print('❌ Error picking image from gallery: $e');
+      print('Error picking image from gallery: $e');
       Get.snackbar(
         'Error',
         'Failed to pick image: ${e.toString().split('\n')[0]}',
@@ -342,8 +571,6 @@ class DriverProfileController extends GetxController {
         fieldName: 'avatar',
       );
 
-      print('📥 Upload response: $response');
-
       if (response != null && response['data'] != null) {
         String? imageUrl;
 
@@ -364,7 +591,6 @@ class DriverProfileController extends GetxController {
             'profileImage': imageUrl,
           });
 
-          // Update local user
           if (_user.value != null) {
             _user.value = _user.value!.copyWith(profileImage: imageUrl);
           }
@@ -384,17 +610,6 @@ class DriverProfileController extends GetxController {
     }
   }
 
-  void toggleDriverStatus(bool value) async {
-    try {
-      await _apiClient.post(
-        '/driver/update-status',
-        data: {'status': value ? 'online' : 'offline'},
-      );
-      _driverStatus.value = value;
-    } catch (e) {
-      print('Error toggling driver status: $e');
-    }
-  }
 
   void toggleNotifications(bool value) async {
     _notificationsEnabled.value = value;
@@ -459,5 +674,38 @@ class DriverProfileController extends GetxController {
     licenseNumberController.dispose();
     licenseExpiryController.dispose();
     super.onClose();
+  }
+}
+
+// Working Hours Model
+class WorkingHours {
+  final String startTime;
+  final String endTime;
+  final bool isClosed;
+  final bool isCustom;
+
+  WorkingHours({
+    required this.startTime,
+    required this.endTime,
+    this.isClosed = false,
+    this.isCustom = false,
+  });
+
+  factory WorkingHours.fromJson(Map<String, dynamic> json) {
+    return WorkingHours(
+      startTime: json['startTime'] ?? '00:00',
+      endTime: json['endTime'] ?? '00:00',
+      isClosed: json['isClosed'] ?? false,
+      isCustom: json['isCustom'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'startTime': startTime,
+      'endTime': endTime,
+      'isClosed': isClosed,
+      'isCustom': isCustom,
+    };
   }
 }

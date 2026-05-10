@@ -6,14 +6,19 @@ class ProdConfig {
   static const String appVersion = '1.0.0';
   static const String buildNumber = '1';
 
+  // static const String apiBaseUrl = 'http://10.156.108.200:3000/api';
+  // static const String socketUrl = 'http://10.156.108.200:3000';
+
+  static const String apiBaseUrl = 'http://10.194.117.58:3000/api';
+  static const String socketUrl = 'http://10.194.117.58:3000';
   // API Configuration
-  static const String apiBaseUrl = 'https://api.menahariya.com';
-  static const String socketUrl = 'https://socket.menahariya.com';
+  // static const String apiBaseUrl = 'https://menahariya-backend.onrender.com/api';
+  // static const String socketUrl = 'https://menahariya-backend.onrender.com';
   static const String apiVersion = 'v1';
 
   // Timeouts
-  static const int connectTimeout = 15000; // 15 seconds
-  static const int receiveTimeout = 15000; // 15 seconds
+  static const int connectTimeout = 60000; // 15 seconds
+  static const int receiveTimeout = 60000; // 15 seconds
 
   // Feature Flags
   static const bool enableLogging = false;

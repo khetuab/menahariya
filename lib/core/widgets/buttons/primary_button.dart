@@ -62,8 +62,8 @@ class PrimaryButton extends StatelessWidget {
           disabledForegroundColor: AppColors.white.withOpacity(AppDimens.opacityMedium),
           elevation: hasShadow ? AppDimens.elevation2 : AppDimens.elevation0,
           shadowColor: AppColors.primaryGreen.withOpacity(AppDimens.opacityLow),
-          padding: padding ?? EdgeInsets.symmetric(
-            horizontal: AppDimens.padding24,
+          padding: padding ?? const EdgeInsets.symmetric(
+            horizontal: AppDimens.padding16, // Reduced from 24 to 16
             vertical: AppDimens.padding12,
           ),
           shape: RoundedRectangleBorder(
@@ -80,6 +80,7 @@ class PrimaryButton extends StatelessWidget {
     if (isLoading) {
       return Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center, // Add center alignment
         children: [
           SizedBox(
             width: AppDimens.iconSize20,
@@ -89,12 +90,15 @@ class PrimaryButton extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
             ),
           ),
-          const SizedBox(width: AppDimens.margin12),
-          Text(
-            'Processing...',
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: fontWeight,
+          const SizedBox(width: AppDimens.margin8), // Reduced from 12 to 8
+          Flexible( // Make text flexible
+            child: Text(
+              'Processing...',
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: fontWeight,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -106,13 +110,17 @@ class PrimaryButton extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: AppDimens.iconSize20),
+          Icon(icon, size: AppDimens.iconSize18), // Reduced from 20 to 18
           const SizedBox(width: AppDimens.margin8),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: fontWeight,
+          Flexible( // Make text flexible to prevent overflow
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: fontWeight,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
@@ -125,6 +133,8 @@ class PrimaryButton extends StatelessWidget {
         fontSize: fontSize,
         fontWeight: fontWeight,
       ),
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
     );
   }
 }

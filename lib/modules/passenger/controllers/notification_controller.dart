@@ -1,6 +1,7 @@
 // lib/modules/passenger/controllers/notification_controller.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/constants/api_endpoints.dart';
 import 'package:menahariya/core/constants/app_constants.dart';
@@ -8,6 +9,9 @@ import 'package:menahariya/core/services/api/api_client.dart';
 import 'package:menahariya/core/services/socket/socket_service.dart';
 import 'package:menahariya/core/services/notification/local_notification.dart';
 import 'package:menahariya/data/models/notification/notification_model.dart';
+
+import '../../../core/routes/app_routes.dart';
+import '../views/cargo/cargo_tracking_view.dart';
 
 class PassengerNotificationController extends GetxController {
   static PassengerNotificationController get instance => Get.find();
@@ -380,8 +384,13 @@ class PassengerNotificationController extends GetxController {
   void clearSelectedNotification() {
     _selectedNotification.value = null;
   }
+// In passenger/controllers/notification_controller.dart
 
   void handleNotificationTap(NotificationModel notification) {
+    print('👆 Notification tapped: ${notification.title}');
+    print('📋 Type: ${notification.type}');
+    print('📋 Data: ${notification.data}');
+
     // Mark as read
     if (!notification.isRead) {
       markAsRead(notification.id);
@@ -389,36 +398,828 @@ class PassengerNotificationController extends GetxController {
 
     // Navigate based on notification type
     switch (notification.type) {
+    // ============ BOOKING & TICKET ============
       case 'booking':
       case 'ticket':
-        Get.toNamed(
-          '/passenger/ticket/${notification.data?['ticketId']}',
-          arguments: {'ticketId': notification.data?['ticketId']},
-        );
+        final ticketId = notification.data?['ticketId'] ?? notification.data?['id'];
+        if (ticketId != null) {
+          Get.toNamed('/passenger/my-tickets');
+          _showTicketInfoDialog(notification, ticketId);
+        } else {
+          _showNotificationDialog(notification);
+        }
         break;
+
+    // ============ PAYMENT ============
       case 'payment':
-        Get.toNamed('/passenger/payment/${notification.data?['paymentId']}');
+        final paymentId = notification.data?['paymentId'] ?? notification.data?['id'];
+        if (paymentId != null) {
+          _showPaymentSuccessDialog(notification);
+        } else {
+          _showNotificationDialog(notification);
+        }
         break;
+
+    // ============ TRIP ============
       case 'trip':
-        Get.toNamed('/passenger/trip/${notification.data?['tripId']}');
+        final tripId = notification.data?['tripId'] ?? notification.data?['id'];
+        if (tripId != null) {
+          _showTripInfoDialog(notification, tripId);
+        } else {
+          _showNotificationDialog(notification);
+        }
         break;
+
+    // ============ CARGO ============
       case 'cargo':
-        Get.toNamed(
-          '/passenger/cargo/track',
-          arguments: {'trackingCode': notification.data?['trackingCode']},
-        );
+        final trackingCode = notification.data?['trackingCode'] ??
+            notification.data?['code'] ??
+            notification.data?['cargoId'];
+        if (trackingCode != null) {
+          _showCargoStatusDialog(notification, trackingCode);
+        } else {
+          _showNotificationDialog(notification);
+        }
         break;
-      case 'support':  // Add this case
-        Get.toNamed(
-          '/passenger/support/tickets',
-          arguments: {'ticketId': notification.data?['ticketId']},
-        );
+
+    // ============ SUPPORT ============
+      case 'support':
+        final ticketId = notification.data?['ticketId'] ?? notification.data?['id'];
+        if (ticketId != null) {
+          Get.toNamed('/passenger/support/tickets');
+          _showSupportReplyDialog(notification, ticketId);
+        } else {
+          _showNotificationDialog(notification);
+        }
         break;
+
+    // ============ PROMOTIONS ============
+      case 'promo':
+      case 'promotion':
+      case 'offer':
+        _showPromotionDialog(notification);
+        break;
+
+    // ============ SYSTEM ALERTS ============
+      case 'system':
+      case 'system_alert':
+      case 'alert':
+        _showSystemAlertDialog(notification);
+        break;
+
+    // ============ REMINDERS ============
+      case 'reminder':
+        _showReminderDialog(notification);
+        break;
+
+    // ============ UPDATE ============
+      case 'update':
+      case 'app_update':
+        _showUpdateDialog(notification);
+        break;
+
+    // ============ SECURITY ============
+      case 'security':
+        _showSecurityAlertDialog(notification);
+        break;
+
+    // ============ DEFAULT ============
       default:
-        Get.toNamed('/passenger/notification/${notification.id}');
+        _showNotificationDialog(notification);
     }
   }
 
+// ============ DIALOG METHODS ============
+
+  void _showNotificationDialog(NotificationModel notification) {
+    Get.dialog(
+      AlertDialog(
+        title: Text(notification.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            if (notification.data != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Additional info: ${notification.data}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTicketInfoDialog(NotificationModel notification, String ticketId) {
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.confirmation_number_rounded, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text(notification.title),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.qr_code, size: 40, color: Colors.blue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ticket ID',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        Text(
+                          ticketId,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              Get.toNamed('/passenger/ticket/$ticketId');
+            },
+            child: const Text('View Ticket'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPaymentSuccessDialog(NotificationModel notification) {
+    final amount = notification.data?['amount'] ?? '';
+    final method = notification.data?['method'] ?? '';
+
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.green),
+            const SizedBox(width: 8),
+            const Text('Payment Successful'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  if (amount.isNotEmpty) ...[
+                    const Text('Amount Paid', style: TextStyle(color: Colors.grey)),
+                    Text(
+                      amount,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                  if (method.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text('via $method', style: const TextStyle(color: Colors.grey)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              Get.toNamed('/passenger/my-tickets');
+            },
+            child: const Text('View Tickets'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTripInfoDialog(NotificationModel notification, String tripId) {
+    final origin = notification.data?['origin'] ?? '';
+    final destination = notification.data?['destination'] ?? '';
+    final date = notification.data?['date'] ?? notification.data?['departureTime'] ?? '';
+
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.directions_bus_rounded, color: Colors.orange),
+            const SizedBox(width: 8),
+            Text(notification.title),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('From', style: TextStyle(color: Colors.grey)),
+                            Text(origin, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_rounded, color: Colors.orange),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text('To', style: TextStyle(color: Colors.grey)),
+                            Text(destination, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (date.isNotEmpty) ...[
+                    const Divider(),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(date),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              Get.toNamed('/passenger/trip/$tripId');
+            },
+            child: const Text('View Trip'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCargoStatusDialog(NotificationModel notification, String trackingCode) {
+    final status = notification.data?['status'] ?? '';
+    final location = notification.data?['location'] ?? '';
+
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.local_shipping_rounded, color: Colors.purple),
+            const SizedBox(width: 8),
+            Text(notification.title),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.purple.shade200),
+              ),
+              child: Column(
+                children: [
+                  // Tracking Code Row with Copy Button
+                  Row(
+                    children: [
+                      const Icon(Icons.qr_code, size: 24, color: Colors.purple),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Tracking Code', style: TextStyle(color: Colors.grey)),
+                            Text(
+                              trackingCode,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Copy Button
+                      InkWell(
+                        onTap: () {
+                          _copyToClipboard(trackingCode, 'Tracking code copied');
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.purple,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.copy_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (status.isNotEmpty) ...[
+                    const Divider(),
+                    Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(status),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            status,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (location.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(location)),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              Get.to(() => const CargoTrackingView(), arguments: {'code': trackingCode});
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+            ),
+            child: const Text('Track Cargo'),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Add this helper method at the end of your controller
+  void _copyToClipboard(String text, String successMessage) {
+    Clipboard.setData(ClipboardData(text: text));
+    Get.snackbar(
+      'Copied!',
+      successMessage,
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(10),
+      borderRadius: 8,
+    );
+  }
+  void _showSupportReplyDialog(NotificationModel notification, String ticketId) {
+    final reply = notification.data?['reply'] ?? notification.data?['message'] ?? '';
+
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.headset_mic_outlined, color: Colors.teal),
+            const SizedBox(width: 8),
+            const Text('Support Reply'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            if (reply.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Admin Response:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(reply),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          // TextButton(
+          //   onPressed: () => Get.back(),
+          //   child: const Text('Close'),
+          // ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              //Get.toNamed('/passenger/support/ticket/$ticketId');
+            },
+            child: const Text('View Ticket'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPromotionDialog(NotificationModel notification) {
+    final promoCode = notification.data?['code'] ?? notification.data?['promoCode'] ?? '';
+    final discount = notification.data?['discount'] ?? '';
+    final expiry = notification.data?['expiry'] ?? notification.data?['validUntil'] ?? '';
+
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.local_offer_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(notification.title),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(notification.body),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.red, Colors.orange],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  if (discount.isNotEmpty) ...[
+                    Text(
+                      discount,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  if (promoCode.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        promoCode,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (expiry.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Valid until: $expiry',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              if (promoCode.isNotEmpty) {
+                Get.toNamed('/passenger/home', arguments: {'promoCode': promoCode});
+              } else {
+                Get.toNamed('/passenger/home');
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Apply Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSystemAlertDialog(NotificationModel notification) {
+    final priority = notification.data?['priority'] ?? 'normal';
+    final actionUrl = notification.data?['action_url'] ?? '';
+
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              priority == 'high' ? Icons.warning_rounded : Icons.info_rounded,
+              color: priority == 'high' ? Colors.red : Colors.blue,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(notification.title)),
+          ],
+        ),
+        content: Text(notification.body),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Dismiss'),
+          ),
+          if (actionUrl.isNotEmpty)
+            ElevatedButton(
+              onPressed: () {
+                Get.back();
+                // Handle action URL if needed
+              },
+              child: const Text('Learn More'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showReminderDialog(NotificationModel notification) {
+    final reminderTime = notification.data?['time'] ?? '';
+    final item = notification.data?['item'] ?? '';
+
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.alarm_rounded, color: Colors.amber),
+            const SizedBox(width: 8),
+            Text(notification.title),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(notification.body),
+            if (reminderTime.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Time: $reminderTime',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Dismiss'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              if (item.isNotEmpty) {
+                // Navigate to relevant page based on item type
+              }
+            },
+            child: const Text('Remind Me Later'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUpdateDialog(NotificationModel notification) {
+    final version = notification.data?['version'] ?? '';
+    final isRequired = notification.data?['required'] ?? false;
+
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.system_update_rounded, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text(notification.title),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            if (version.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Version $version available',
+                  style: const TextStyle(color: Colors.blue),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          if (!isRequired)
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('Later'),
+            ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              // Open app store link
+            },
+            child: const Text('Update Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSecurityAlertDialog(NotificationModel notification) {
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.security_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(notification.title),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_rounded, color: Colors.red),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'For your security, please review your recent account activity.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Ignore'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              Get.toNamed('/passenger/privacy-security');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Review Security'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return Colors.green;
+      case 'transit':
+      case 'in_transit':
+        return Colors.blue;
+      case 'processing':
+        return Colors.orange;
+      case 'pending':
+        return Colors.grey;
+      default:
+        return Colors.purple;
+    }
+  }
   @override
   void onClose() {
     _socketService.off('notification', _handleNewNotification);

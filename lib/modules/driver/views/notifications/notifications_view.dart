@@ -14,69 +14,108 @@ class DriverNotificationsView extends GetView<DriverNotificationController> {
 
   @override
   Widget build(BuildContext context) {
+    print('🏗️ Building Notifications View');
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // Force fetch when view is built (if empty)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.notifications.isEmpty && !controller.isLoading) {
+        print('🔄 View detected empty notifications, fetching...');
+        controller.fetchNotifications();
+        controller.fetchUnreadCount();
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
         backgroundColor: isDark ? AppColors.surfaceDark : AppColors.white,
-        actions: [
-          if (controller.unreadCount > 0)
-            IconButton(
-              icon: const Icon(Icons.mark_email_read_rounded),
-              onPressed: controller.markAllAsRead,
-              tooltip: 'Mark all as read',
-            ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (value) {
-              if (value == 'delete_all') {
-                _showDeleteAllDialog();
-              } else if (value == 'settings') {
-                _showNotificationSettings();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings_rounded),
-                    SizedBox(width: 8),
-                    Text('Settings'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete_all',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_sweep_rounded, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Delete All'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.refresh_rounded),
+        //     onPressed: () async {
+        //       await controller.refreshNotifications();
+        //       if (controller.notifications.isEmpty) {
+        //         Get.snackbar(
+        //           'No Notifications',
+        //           'No notifications found. Pull down to refresh again.',
+        //           snackPosition: SnackPosition.BOTTOM,
+        //           duration: const Duration(seconds: 3),
+        //         );
+        //       } else {
+        //         Get.snackbar(
+        //           'Success',
+        //           'Loaded ${controller.notifications.length} notifications',
+        //           snackPosition: SnackPosition.BOTTOM,
+        //           backgroundColor: Colors.green,
+        //           colorText: Colors.white,
+        //         );
+        //       }
+        //     },
+        //     tooltip: 'Refresh',
+        //   ),
+        //   if (controller.unreadCount > 0)
+        //     IconButton(
+        //       icon: const Icon(Icons.mark_email_read_rounded),
+        //       onPressed: controller.markAllAsRead,
+        //       tooltip: 'Mark all as read',
+        //     ),
+        //   PopupMenuButton<String>(
+        //     icon: const Icon(Icons.more_vert_rounded),
+        //     onSelected: (value) {
+        //       if (value == 'delete_all') {
+        //         _showDeleteAllDialog();
+        //       } else if (value == 'settings') {
+        //         _showNotificationSettings();
+        //       }
+        //     },
+        //     itemBuilder: (context) => [
+        //       const PopupMenuItem(
+        //         value: 'settings',
+        //         child: Row(
+        //           children: [
+        //             Icon(Icons.settings_rounded),
+        //             SizedBox(width: 8),
+        //             Text('Settings'),
+        //           ],
+        //         ),
+        //       ),
+        //       const PopupMenuItem(
+        //         value: 'delete_all',
+        //         child: Row(
+        //           children: [
+        //             Icon(Icons.delete_sweep_rounded, color: Colors.red),
+        //             SizedBox(width: 8),
+        //             Text('Delete All'),
+        //           ],
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ],
       ),
       body: Obx(() {
+        // Show loading only on initial load
         if (controller.isLoading && controller.notifications.isEmpty) {
           return _buildLoadingShimmer();
         }
 
+        // Show empty state
+        if (controller.notifications.isEmpty && !controller.isLoading) {
+          return _buildEmptyState(context);
+        }
+
+        // Show notifications list
         return Column(
           children: [
             // Filter Tabs
-            _buildFilterTabs(context),
+           // _buildFilterTabs(context),
 
             // Notifications List
             Expanded(
-              child: controller.notifications.isEmpty
-                  ? _buildEmptyState(context)
-                  : RefreshIndicator(
+              child: RefreshIndicator(
                 onRefresh: controller.refreshNotifications,
                 child: ListView.builder(
                   padding: const EdgeInsets.all(AppDimens.padding16),
@@ -101,8 +140,17 @@ class DriverNotificationsView extends GetView<DriverNotificationController> {
               ),
             ),
 
-            // Load More
-            if (controller.hasMorePages && controller.notifications.isNotEmpty)
+            // Loading indicator for pagination
+            if (controller.isLoading && controller.notifications.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.all(AppDimens.padding16),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+
+            // Load More button
+            if (controller.hasMorePages && controller.notifications.isNotEmpty && !controller.isLoading)
               Padding(
                 padding: const EdgeInsets.all(AppDimens.padding16),
                 child: Center(
@@ -132,20 +180,18 @@ class DriverNotificationsView extends GetView<DriverNotificationController> {
     return Container(
       height: 50,
       margin: const EdgeInsets.all(AppDimens.padding16),
-      child: ListView(
+      child: Obx(() => ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _buildFilterChip(context, 'All', null, true),
+          _buildFilterChip(context, 'All', null, controller.currentFilter == null),
           const SizedBox(width: AppDimens.margin8),
-          _buildFilterChip(context, 'Trip Assignments', 'trip_assigned', false),
+          _buildFilterChip(context, 'Trip Assignments', 'trip_assigned', controller.currentFilter == 'trip_assigned'),
           const SizedBox(width: AppDimens.margin8),
-          _buildFilterChip(context, 'Updates', 'trip_update', false),
+          _buildFilterChip(context, 'Updates', 'trip_update', controller.currentFilter == 'trip_update'),
           const SizedBox(width: AppDimens.margin8),
-          _buildFilterChip(context, 'System', 'system_alert', false),
-          const SizedBox(width: AppDimens.margin8),
-          _buildFilterChip(context, 'Alerts', 'alert', false),
+          _buildFilterChip(context, 'System', 'system_alert', controller.currentFilter == 'system_alert'),
         ],
-      ),
+      )),
     );
   }
 
@@ -157,11 +203,12 @@ class DriverNotificationsView extends GetView<DriverNotificationController> {
       label: Text(label),
       selected: isSelected,
       onSelected: (_) {
-        // Implement filter logic
+        controller.setFilter(filterType);
         Get.snackbar(
           'Filter',
-          'Filtering by $label',
+          'Showing ${label.toLowerCase()}',
           snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 1),
         );
       },
       selectedColor: isDark
@@ -225,6 +272,23 @@ class DriverNotificationsView extends GetView<DriverNotificationController> {
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: AppDimens.margin24),
+          ElevatedButton.icon(
+            onPressed: () => controller.refreshNotifications(),
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Refresh'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.padding24,
+                vertical: AppDimens.padding12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimens.radius12),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -268,10 +332,9 @@ class DriverNotificationsView extends GetView<DriverNotificationController> {
           TextButton(
             onPressed: () {
               Get.back();
-              // controller.deleteAllNotifications();
               Get.snackbar(
-                'Success',
-                'All notifications deleted',
+                'Coming Soon',
+                'This feature will be available soon',
                 snackPosition: SnackPosition.BOTTOM,
               );
             },
@@ -337,6 +400,7 @@ class DriverNotificationsView extends GetView<DriverNotificationController> {
               onChanged: (value) {},
               activeColor: Theme.of(Get.context!).primaryColor,
             ),
+            const Divider(),
             SwitchListTile(
               title: const Text('Sound'),
               subtitle: const Text('Play sound for notifications'),

@@ -239,21 +239,21 @@ class DriverTripDetailView extends GetView<DriverTripDetailController> {
 
     return Row(
       children: [
-        Expanded(
-          child: _buildActionButton(
-            context,
-            icon: Icons.qr_code_scanner_rounded,
-            label: 'Scan Tickets',
-            color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
-            onTap: () => Get.toNamed(
-              '/driver/validation',
-              arguments: {'tripId': controller.tripId},
-            ),
-          ),
-        ),
-        const SizedBox(width: AppDimens.margin8),
-        // For Passenger Manifest - use arguments, not URL parameter
-        // In your trip detail view
+        // Expanded(
+        //   child: _buildActionButton(
+        //     context,
+        //     icon: Icons.qr_code_scanner_rounded,
+        //     label: 'Scan Tickets',
+        //     color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
+        //     onTap: () => Get.toNamed(
+        //       '/driver/validation',
+        //       arguments: {'tripId': controller.tripId},
+        //     ),
+        //   ),
+        // ),
+        // const SizedBox(width: AppDimens.margin8),
+        // // For Passenger Manifest - use arguments, not URL parameter
+        // // In your trip detail view
 
 // For Passenger Manifest - use URL parameter
         Expanded(
@@ -269,6 +269,7 @@ class DriverTripDetailView extends GetView<DriverTripDetailController> {
           ),
         ),
 
+SizedBox(width: AppDimens.padding12,),
 // For Cargo Manifest - use URL parameter
         Expanded(
           child: _buildActionButton(

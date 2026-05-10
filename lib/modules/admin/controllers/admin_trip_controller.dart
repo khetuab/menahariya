@@ -12,12 +12,106 @@ import '../../../data/models/trip/trip_model.dart';
 import '../../../data/models/vehicle/vehicle_model.dart';
 import '../../../data/models/user/user_model.dart';
 
+// ==================== MODELS ====================
+
+class DriverAvailabilityCheck {
+  final bool available;
+  final List<String> reasons;
+  final bool autoAccept;
+
+  DriverAvailabilityCheck({
+    required this.available,
+    required this.reasons,
+    this.autoAccept = false,
+  });
+
+  factory DriverAvailabilityCheck.fromJson(Map<String, dynamic> json) {
+    return DriverAvailabilityCheck(
+      available: json['available'] ?? false,
+      reasons: List<String>.from(json['reasons'] ?? []),
+      autoAccept: json['autoAccept'] ?? false,
+    );
+  }
+}
+
+class DriverAvailabilityInfo {
+  final DriverInfo driver;
+  final bool available;
+  final List<String> reasons;
+  final bool autoAccept;
+
+  DriverAvailabilityInfo({
+    required this.driver,
+    required this.available,
+    required this.reasons,
+    required this.autoAccept,
+  });
+
+  factory DriverAvailabilityInfo.fromJson(Map<String, dynamic> json) {
+    return DriverAvailabilityInfo(
+      driver: DriverInfo.fromJson(json['driver']),
+      available: json['available'] ?? false,
+      reasons: List<String>.from(json['reasons'] ?? []),
+      autoAccept: json['autoAccept'] ?? false,
+    );
+  }
+}
+
+class DriverInfo {
+  final String id;
+  final String name;
+  final String phone;
+  final double rating;
+  final int totalTrips;
+
+  DriverInfo({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.rating,
+    required this.totalTrips,
+  });
+
+  factory DriverInfo.fromJson(Map<String, dynamic> json) {
+    return DriverInfo(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      phone: json['phone'] ?? '',
+      rating: (json['rating'] ?? 0).toDouble(),
+      totalTrips: json['totalTrips'] ?? 0,
+    );
+  }
+}
+
+class DriverAvailabilityResponse {
+  final bool available;
+  final List<String> reasons;
+  final bool autoAccept;
+
+  DriverAvailabilityResponse({
+    required this.available,
+    required this.reasons,
+    this.autoAccept = false,
+  });
+
+  factory DriverAvailabilityResponse.fromJson(Map<String, dynamic> json) {
+    return DriverAvailabilityResponse(
+      available: json['available'] ?? false,
+      reasons: List<String>.from(json['reasons'] ?? []),
+      autoAccept: json['autoAccept'] ?? false,
+    );
+  }
+}
+
+// ==================== CONTROLLER ====================
+
 class AdminTripController extends GetxController {
   static AdminTripController get instance => Get.find();
 
   final ApiClient _apiClient = ApiClient.instance;
 
   final searchController = TextEditingController();
+
   // Observables
   final _isLoading = false.obs;
   final _isRefreshing = false.obs;
@@ -31,6 +125,9 @@ class AdminTripController extends GetxController {
   final _statusFilter = ''.obs;
   final _dateFilter = Rxn<DateTime>();
   final _routeFilter = Rxn<String>();
+
+  // Driver availability tracking
+  final _driverAvailabilityMap = <String, DriverAvailabilityCheck>{}.obs;
 
   // Pagination
   final _currentPage = 1.obs;
@@ -46,7 +143,12 @@ class AdminTripController extends GetxController {
   late final TextEditingController priceController;
   late final TextEditingController notesController;
 
-  // Getters
+  // Available drivers for auto-assignment
+  final _availableDrivers = <DriverAvailabilityInfo>[].obs;
+  final _isCheckingAvailability = false.obs;
+
+  // ==================== GETTERS ====================
+
   bool get isLoading => _isLoading.value;
   bool get isRefreshing => _isRefreshing.value;
   List<TripModel> get trips => _filteredTrips;
@@ -61,12 +163,19 @@ class AdminTripController extends GetxController {
   bool get hasMorePages => _hasMorePages.value;
   int get totalCount => _totalCount.value;
 
+  // Driver availability getters
+  Map<String, DriverAvailabilityCheck> get driverAvailabilityMap => _driverAvailabilityMap;
+  List<DriverAvailabilityInfo> get availableDrivers => _availableDrivers;
+  bool get isCheckingAvailability => _isCheckingAvailability.value;
+
   // Statistics
   int get totalTrips => _trips.length;
   int get scheduledTrips => _trips.where((t) => t.status == 'scheduled').length;
   int get inProgressTrips => _trips.where((t) => t.status == 'in_progress').length;
   int get completedTrips => _trips.where((t) => t.status == 'completed').length;
   int get cancelledTrips => _trips.where((t) => t.status == 'cancelled').length;
+
+  // ==================== LIFECYCLE ====================
 
   @override
   void onInit() {
@@ -86,6 +195,384 @@ class AdminTripController extends GetxController {
     notesController = TextEditingController();
   }
 
+  // ==================== DRIVER AVAILABILITY METHODS ====================
+
+  // In admin_trip_controller.dart, update the checkDriverAvailabilityForTrip method
+
+  Future<DriverAvailabilityCheck?> checkDriverAvailabilityForTrip(String driverId) async {
+    try {
+      final departureTime = departureTimeController.text;
+      final routeId = routeIdController.text;
+
+      if (departureTime.isEmpty) {
+        print('⚠️ Departure time not set');
+        return null;
+      }
+
+      // Get route details for distance
+      double distance = 100;
+      if (routeId.isNotEmpty) {
+        final route = _routes.firstWhere(
+              (r) => r.id == routeId,
+          orElse: () => RouteModel(
+            id: '',
+            origin: '',
+            destination: '',
+            distance: 100,
+            duration: 0,
+            basePrice: 0,
+            isActive: true,
+            stops: [],
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            name: '',
+          ),
+        );
+        distance = route.distance ?? 100;
+      }
+
+      print('🔍 Checking availability for driver: $driverId');
+      print('📅 Departure time: $departureTime');
+      print('📏 Distance: $distance km');
+
+      final response = await _apiClient.post(
+        '/admin/drivers/check-availability',
+        data: {
+          'driverId': driverId,
+          'departureTime': departureTime,
+          'distance': distance,
+          'type': 'Standard',
+        },
+      );
+
+      if (response != null && response['data'] != null) {
+        final availability = DriverAvailabilityCheck(
+          available: response['data']['available'] ?? false,
+          reasons: List<String>.from(response['data']['reasons'] ?? []),
+          autoAccept: response['data']['autoAccept'] ?? false,
+        );
+
+        _driverAvailabilityMap[driverId] = availability;
+
+        print('✅ Driver availability: ${availability.available}');
+        if (!availability.available) {
+          print('❌ Reasons: ${availability.reasons}');
+        }
+
+        return availability;
+      }
+
+      return null;
+
+    } catch (e) {
+      print('❌ Error checking driver availability: $e');
+
+      // Return a default response for testing
+      // This will prevent the trip from being created if driver is offline
+      final defaultAvailability = DriverAvailabilityCheck(
+        available: false,
+        reasons: ['Unable to check availability. Please ensure driver is online and available.'],
+        autoAccept: false,
+      );
+      _driverAvailabilityMap[driverId] = defaultAvailability;
+
+      return defaultAvailability;
+    }
+  }
+
+  /// Get all available drivers for a trip
+  Future<List<DriverAvailabilityInfo>> getAvailableDriversForTrip({
+    required DateTime departureTime,
+    double distance = 100,
+    String type = 'Standard',
+  }) async {
+    try {
+      _isCheckingAvailability.value = true;
+
+      final response = await _apiClient.get(
+        '/admin/trips/available-drivers',
+        queryParameters: {
+          'departureTime': departureTime.toIso8601String(),
+          'distance': distance,
+          'type': type,
+        },
+      );
+
+      if (response != null && response['data'] != null) {
+        final List<dynamic> driversData = response['data'];
+        _availableDrivers.value = driversData
+            .map((d) => DriverAvailabilityInfo.fromJson(d))
+            .toList();
+        return _availableDrivers;
+      }
+      return [];
+
+    } catch (e) {
+      print('Error getting available drivers: $e');
+      AppSnackbar.show('Error', 'Failed to get available drivers');
+      return [];
+    } finally {
+      _isCheckingAvailability.value = false;
+    }
+  }
+
+  /// Auto-assign driver to a trip
+  Future<Map<String, dynamic>?> autoAssignDriverToTrip(String tripId) async {
+    try {
+      _isLoading.value = true;
+
+      final response = await _apiClient.post(
+        '/admin/trips/$tripId/auto-assign-driver',
+      );
+
+      if (response != null && response['success'] == true) {
+        AppSnackbar.show('Success', 'Driver auto-assigned successfully');
+        await fetchTrips(refresh: true);
+        return response['data'];
+      }
+      return null;
+
+    } catch (e) {
+      print('Error auto-assigning driver: $e');
+      AppSnackbar.show('Error', 'Failed to auto-assign driver');
+      return null;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Get available drivers (alias for backward compatibility)
+  Future<List<DriverAvailabilityInfo>> getAvailableDrivers({
+    required DateTime departureTime,
+    double distance = 100,
+    String type = 'Standard',
+  }) async {
+    return getAvailableDriversForTrip(
+      departureTime: departureTime,
+      distance: distance,
+      type: type,
+    );
+  }
+
+  /// Auto-assign driver (alias for backward compatibility)
+  Future<Map<String, dynamic>?> autoAssignDriver(String tripId) async {
+    return autoAssignDriverToTrip(tripId);
+  }
+
+  // ==================== TRIP CRUD OPERATIONS ====================
+
+  /// Create trip with driver availability validation
+  Future<bool> createTripWithValidation(Map<String, dynamic> tripData) async {
+    try {
+      _isLoading.value = true;
+
+      // First check if driver is available
+      final driverId = tripData['driverId'];
+      if (driverId != null) {
+        final availability = await checkDriverAvailabilityForTrip(driverId);
+
+        if (availability != null && !availability.available) {
+          _showUnavailableDriverDialog(availability);
+          return false;
+        }
+      }
+
+      // If available, create trip
+      final response = await _apiClient.post(
+        ApiEndpoints.trips,
+        data: tripData,
+      );
+
+      if (response != null && response['success'] == true) {
+        final newTrip = TripModel.fromJson(response['data']);
+        _trips.insert(0, newTrip);
+        _applyFilters();
+
+        AppSnackbar.show('Success', 'Trip created successfully');
+
+        if (response['driverAutoAccepted'] == true) {
+          AppSnackbar.show(
+            'Auto-accepted',
+            'Driver will automatically accept this trip',
+          );
+        }
+
+        await fetchTrips(refresh: true);
+        return true;
+      }
+      return false;
+
+    } catch (e) {
+      print('Error creating trip: $e');
+      AppSnackbar.show('Error', 'Failed to create trip');
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Check driver availability (for validation)
+  Future<DriverAvailabilityResponse> checkDriverAvailability({
+    required String driverId,
+    required DateTime departureTime,
+    required double distance,
+    required String type,
+  }) async {
+    try {
+      final response = await _apiClient.post(
+        '/admin/drivers/check-availability',
+        data: {
+          'driverId': driverId,
+          'departureTime': departureTime.toIso8601String(),
+          'distance': distance,
+          'type': type,
+        },
+      );
+
+      if (response != null && response['data'] != null) {
+        return DriverAvailabilityResponse.fromJson(response['data']);
+      }
+
+      return DriverAvailabilityResponse(
+        available: false,
+        reasons: ['Unable to check availability'],
+      );
+
+    } catch (e) {
+      print('Error checking driver availability: $e');
+      return DriverAvailabilityResponse(
+        available: false,
+        reasons: ['Error checking availability'],
+      );
+    }
+  }
+
+  /// Create trip (simple version)
+  Future<bool> createTrip(Map<String, dynamic> tripData) async {
+    try {
+      _isLoading.value = true;
+
+      final response = await _apiClient.post(
+        ApiEndpoints.trips,
+        data: tripData,
+      );
+
+      if (response != null && response['success'] == true) {
+        final newTrip = TripModel.fromJson(response['data']);
+        _trips.insert(0, newTrip);
+        _applyFilters();
+        AppSnackbar.show('Success', 'Trip created successfully');
+        fetchTrips(refresh: true);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error creating trip: $e');
+      AppSnackbar.show('Error', 'Failed to create trip');
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Update trip
+  Future<bool> updateTrip(String tripId, Map<String, dynamic> updates) async {
+    try {
+      _isLoading.value = true;
+
+      final response = await _apiClient.patch(
+        '${ApiEndpoints.trips}/$tripId',
+        data: updates,
+      );
+
+      if (response != null && response['success'] == true) {
+        await fetchTrips(refresh: true);
+        AppSnackbar.show('Success', 'Trip updated successfully');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error updating trip: $e');
+      AppSnackbar.show('Error', 'Failed to update trip');
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Delete trip
+  Future<bool> deleteTrip(String tripId) async {
+    try {
+      _isLoading.value = true;
+
+      final response = await _apiClient.delete('${ApiEndpoints.trips}/$tripId');
+
+      if (response != null && response['success'] == true) {
+        _trips.removeWhere((t) => t.id == tripId);
+        _applyFilters();
+        fetchTrips(refresh: true);
+        AppSnackbar.show('Success', 'Trip deleted successfully');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error deleting trip: $e');
+      AppSnackbar.show('Error', 'Failed to delete trip');
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Cancel trip
+  Future<bool> cancelTrip(String tripId, String reason) async {
+    try {
+      _isLoading.value = true;
+
+      final response = await _apiClient.post(
+        '${ApiEndpoints.trips}/$tripId/cancel',
+        data: {'reason': reason},
+      );
+
+      if (response != null && response['success'] == true) {
+        _trips.removeWhere((trip) => trip.id == tripId);
+        _applyFilters();
+        fetchTrips(refresh: true);
+        AppSnackbar.show('Success', 'Trip cancelled successfully');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error cancelling trip: $e');
+      AppSnackbar.show('Error', 'Failed to cancel trip');
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Get trip details
+  Future<TripModel?> getTripDetails(String tripId) async {
+    try {
+      _isLoading.value = true;
+      final response = await _apiClient.get('${ApiEndpoints.trips}/$tripId');
+      if (response != null && response['data'] != null) {
+        final trip = TripModel.fromJson(response['data']);
+        _selectedTrip.value = trip;
+        return trip;
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching trip details: $e');
+      return null;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  // ==================== FETCH METHODS ====================
+
+  /// Fetch trips with pagination and filters
   Future<void> fetchTrips({bool refresh = false}) async {
     if (refresh) {
       _currentPage.value = 1;
@@ -142,41 +629,7 @@ class AdminTripController extends GetxController {
     }
   }
 
-  void _applyFilters() {
-    var filtered = List<TripModel>.from(_trips);
-
-    // Apply status filter
-    if (_statusFilter.value.isNotEmpty) {
-      filtered = filtered.where((t) => t.status == _statusFilter.value).toList();
-    }
-
-    // Apply route filter
-    if (_routeFilter.value != null && _routeFilter.value!.isNotEmpty) {
-      filtered = filtered.where((t) => t.routeId == _routeFilter.value).toList();
-    }
-
-    // Apply date filter
-    if (_dateFilter.value != null) {
-      filtered = filtered.where((t) {
-        return DateUtils.isSameDay(
-          t.departureTime.toLocal(),
-          _dateFilter.value!,
-        );
-      }).toList();
-    }
-
-    // Apply search query
-    if (_searchQuery.value.isNotEmpty) {
-      final query = _searchQuery.value.toLowerCase();
-      filtered = filtered.where((t) =>
-      t.origin.toLowerCase().contains(query) ||
-          t.destination.toLowerCase().contains(query) ||
-          t.id.toLowerCase().contains(query)).toList();
-    }
-
-    _filteredTrips.value = filtered;
-  }
-
+  /// Fetch dropdown data (vehicles, drivers, routes)
   Future<void> fetchDropdownData() async {
     try {
       await Future.wait([
@@ -204,7 +657,6 @@ class AdminTripController extends GetxController {
   Future<void> _fetchDrivers() async {
     try {
       print('🔍 [TRIP] Fetching drivers...');
-      // Change from '/users/drivers' to '/users?role=driver'
       final response = await _apiClient.get(
         ApiEndpoints.users,
         queryParameters: {
@@ -214,16 +666,11 @@ class AdminTripController extends GetxController {
         },
       );
 
-      print('📥 [TRIP] Drivers response status: ${response != null}');
-
       if (response != null && response['data'] != null) {
         final List<dynamic> driversData = response['data'];
-        print('✅ [TRIP] Found ${driversData.length} drivers');
-
         _drivers.value = driversData.map((d) => UserModel.fromJson(d)).toList();
-        print('📋 [TRIP] Drivers loaded: ${_drivers.length}');
+        print('✅ [TRIP] Found ${_drivers.length} drivers');
       } else {
-        print('⚠️ [TRIP] No drivers data found');
         _drivers.value = [];
       }
     } catch (e) {
@@ -244,133 +691,38 @@ class AdminTripController extends GetxController {
     }
   }
 
-  Future<TripModel?> getTripDetails(String tripId) async {
-    try {
-      _isLoading.value = true;
-      final response = await _apiClient.get('${ApiEndpoints.trips}/$tripId');
-      if (response != null && response['data'] != null) {
-        final trip = TripModel.fromJson(response['data']);
-        _selectedTrip.value = trip;
-        return trip;
-      }
-      return null;
-    } catch (e) {
-      print('Error fetching trip details: $e');
-      return null;
-    } finally {
-      _isLoading.value = false;
+  // ==================== FILTER METHODS ====================
+
+  void _applyFilters() {
+    var filtered = List<TripModel>.from(_trips);
+
+    if (_statusFilter.value.isNotEmpty) {
+      filtered = filtered.where((t) => t.status == _statusFilter.value).toList();
     }
-  }
 
-  Future<bool> createTrip(Map<String, dynamic> tripData) async {
-    try {
-      _isLoading.value = true;
-
-      final response = await _apiClient.post(
-        ApiEndpoints.trips,
-        data: tripData,
-      );
-
-      if (response != null && response['success'] == true) {
-
-        final newTrip = TripModel.fromJson(response['data']);
-
-        // Add immediately
-        _trips.insert(0, newTrip);
-
-        // Refresh filtered UI
-        _applyFilters();
-
-        AppSnackbar.show('Success', 'Trip created successfully');
-
-        // Optional background refresh
-        fetchTrips(refresh: true);
-
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Error creating trip: $e');
-      AppSnackbar.show('Error', 'Failed to create trip');
-      return false;
-    } finally {
-      _isLoading.value = false;
+    if (_routeFilter.value != null && _routeFilter.value!.isNotEmpty) {
+      filtered = filtered.where((t) => t.routeId == _routeFilter.value).toList();
     }
-  }
 
-  Future<bool> updateTrip(String tripId, Map<String, dynamic> updates) async {
-    try {
-      _isLoading.value = true;
-
-      final response = await _apiClient.patch(
-        '${ApiEndpoints.trips}/$tripId',
-        data: updates,
-      );
-
-      if (response != null && response['success'] == true) {
-        await fetchTrips(refresh: true);
-        AppSnackbar.show('Success', 'Trip updated successfully');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Error updating trip: $e');
-      AppSnackbar.show('Error', 'Failed to update trip');
-      return false;
-    } finally {
-      _isLoading.value = false;
+    if (_dateFilter.value != null) {
+      filtered = filtered.where((t) {
+        return DateUtils.isSameDay(
+          t.departureTime.toLocal(),
+          _dateFilter.value!,
+        );
+      }).toList();
     }
-  }
 
-  Future<bool> deleteTrip(String tripId) async {
-    try {
-      _isLoading.value = true;
-
-      final response = await _apiClient.delete('${ApiEndpoints.trips}/$tripId');
-
-      if (response != null && response['success'] == true) {
-        _trips.removeWhere((t) => t.id == tripId);
-        _applyFilters();
-        fetchTrips(refresh: true);
-        AppSnackbar.show('Success', 'Trip deleted successfully');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Error deleting trip: $e');
-      AppSnackbar.show('Error', 'Failed to delete trip');
-      return false;
-    } finally {
-      _isLoading.value = false;
+    if (_searchQuery.value.isNotEmpty) {
+      final query = _searchQuery.value.toLowerCase();
+      filtered = filtered.where((t) =>
+      t.origin.toLowerCase().contains(query) ||
+          t.destination.toLowerCase().contains(query) ||
+          t.id.toLowerCase().contains(query)
+      ).toList();
     }
-  }
 
-  Future<bool> cancelTrip(String tripId, String reason) async {
-    try {
-      _isLoading.value = true;
-
-      final response = await _apiClient.post(
-        '${ApiEndpoints.trips}/$tripId/cancel',
-        data: {'reason': reason},
-      );
-
-      if (response != null && response['success'] == true) {
-        _trips.removeWhere((trip) => trip.id == tripId);
-
-        _applyFilters();
-
-        fetchTrips(refresh: true);
-        AppSnackbar.show('Success', 'Trip cancelled successfully');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Error cancelling trip: $e');
-      AppSnackbar.show('Error', 'Failed to cancel trip');
-      return false;
-    } finally {
-      _isLoading.value = false;
-    }
+    _filteredTrips.value = filtered;
   }
 
   void setSearchQuery(String query) {
@@ -415,16 +767,141 @@ class AdminTripController extends GetxController {
     }
   }
 
+  // ==================== DIALOG METHODS ====================
+
+  void _showUnavailableDriverDialog(DriverAvailabilityCheck availability) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Driver Unavailable'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This driver cannot be assigned to the trip for the following reasons:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ...availability.reasons.map((reason) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_rounded, size: 16, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(reason)),
+                ],
+              ),
+            )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('OK'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              _showAvailableDriversDialog();
+            },
+            child: const Text('View Available Drivers'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAvailableDriversDialog() async {
+    final departureTimeStr = departureTimeController.text;
+    if (departureTimeStr.isEmpty) {
+      AppSnackbar.show('Error', 'Please select departure time first');
+      return;
+    }
+
+    final drivers = await getAvailableDriversForTrip(
+      departureTime: DateTime.parse(departureTimeStr),
+    );
+
+    final availableDrivers = drivers.where((d) => d.available).toList();
+
+    if (availableDrivers.isEmpty) {
+      Get.dialog(
+        AlertDialog(
+          title: const Text('No Drivers Available'),
+          content: const Text('No drivers are available for this trip time.'),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Available Drivers'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: availableDrivers.length,
+            itemBuilder: (context, index) {
+              final driver = availableDrivers[index];
+              return ListTile(
+                leading: CircleAvatar(
+                  child: Text(driver.driver.name[0].toUpperCase()),
+                ),
+                title: Text(driver.driver.name),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('⭐ Rating: ${driver.driver.rating.toStringAsFixed(1)}'),
+                    Text('🚕 Total Trips: ${driver.driver.totalTrips}'),
+                    if (driver.autoAccept)
+                      const Chip(
+                        label: Text('Auto-Accept', style: TextStyle(fontSize: 10)),
+                        backgroundColor: Colors.green,
+                      ),
+                  ],
+                ),
+                trailing: ElevatedButton(
+                  onPressed: () {
+                    Get.back();
+                    driverIdController.text = driver.driver.id;
+                    AppSnackbar.show('Driver Selected', driver.driver.name);
+                  },
+                  child: const Text('Select'),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== CLEANUP ====================
+
   @override
   void onClose() {
     routeIdController.dispose();
     vehicleIdController.dispose();
     driverIdController.dispose();
     departureTimeController.dispose();
-    searchController.dispose();
     arrivalTimeController.dispose();
     priceController.dispose();
     notesController.dispose();
+    searchController.dispose();
     super.onClose();
   }
 }

@@ -411,18 +411,30 @@ class AppTheme {
     // Divider Color
     dividerColor: AppColors.dividerLight,
 
-    // Primary Swatch (for backwards compatibility)
-    primarySwatch: const MaterialColor(0xFF1A5F3E, {
-      50: Color(0xFFE8F0EC),
-      100: Color(0xFFC5D9D1),
-      200: Color(0xFF9EBFB3),
-      300: Color(0xFF77A595),
-      400: Color(0xFF5A927E),
-      500: Color(0xFF1A5F3E), // primary
-      600: Color(0xFF175738),
-      700: Color(0xFF134D30),
-      800: Color(0xFF0F4328),
-      900: Color(0xFF08321B),
+    // // Primary Swatch (for backwards compatibility)
+    // primarySwatch: const MaterialColor(0xFF1A5F3E, {
+    //   50: Color(0xFFE8F0EC),
+    //   100: Color(0xFFC5D9D1),
+    //   200: Color(0xFF9EBFB3),
+    //   300: Color(0xFF77A595),
+    //   400: Color(0xFF5A927E),
+    //   500: Color(0xFF1A5F3E), // primary
+    //   600: Color(0xFF175738),
+    //   700: Color(0xFF134D30),
+    //   800: Color(0xFF0F4328),
+    //   900: Color(0xFF08321B),
+    // }),
+    primarySwatch: const MaterialColor(0xFF0F172A, {
+      50: Color(0xFFF8FAFC),
+      100: Color(0xFFF1F5F9),
+      200: Color(0xFFE2E8F0),
+      300: Color(0xFFCBD5E1),
+      400: Color(0xFF94A3B8),
+      500: Color(0xFF0F172A),
+      600: Color(0xFF0B1220),
+      700: Color(0xFF080E1A),
+      800: Color(0xFF050A14),
+      900: Color(0xFF020617),
     }),
 
     // Visual Density
@@ -839,17 +851,30 @@ class AppTheme {
     dividerColor: AppColors.dividerDark,
 
     // Primary Swatch (for backwards compatibility)
-    primarySwatch: const MaterialColor(0xFF1A5F3E, {
-      50: Color(0xFFE8F0EC),
-      100: Color(0xFFC5D9D1),
-      200: Color(0xFF9EBFB3),
-      300: Color(0xFF77A595),
-      400: Color(0xFF5A927E),
-      500: Color(0xFF1A5F3E),
-      600: Color(0xFF175738),
-      700: Color(0xFF134D30),
-      800: Color(0xFF0F4328),
-      900: Color(0xFF08321B),
+    // primarySwatch: const MaterialColor(0xFF1A5F3E, {
+    //   50: Color(0xFFE8F0EC),
+    //   100: Color(0xFFC5D9D1),
+    //   200: Color(0xFF9EBFB3),
+    //   300: Color(0xFF77A595),
+    //   400: Color(0xFF5A927E),
+    //   500: Color(0xFF1A5F3E),
+    //   600: Color(0xFF175738),
+    //   700: Color(0xFF134D30),
+    //   800: Color(0xFF0F4328),
+    //   900: Color(0xFF08321B),
+    // }),
+
+    primarySwatch: const MaterialColor(0xFF0F172A, {
+      50: Color(0xFFF8FAFC),
+      100: Color(0xFFF1F5F9),
+      200: Color(0xFFE2E8F0),
+      300: Color(0xFFCBD5E1),
+      400: Color(0xFF94A3B8),
+      500: Color(0xFF0F172A),
+      600: Color(0xFF0B1220),
+      700: Color(0xFF080E1A),
+      800: Color(0xFF050A14),
+      900: Color(0xFF020617),
     }),
 
     // Visual Density

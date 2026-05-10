@@ -1,6 +1,9 @@
 // lib/core/routes/app_pages.dart
 
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:menahariya/core/routes/app_routes.dart';
 import 'package:menahariya/modules/driver/trips/trip_detail_view.dart';
@@ -71,469 +74,807 @@ import '../../modules/auth/controllers/auth_controller.dart';
 import '../../modules/auth/views/change_password_view.dart';
 import '../../modules/auth/views/forgot_password_view.dart';
 import '../../modules/auth/views/two_factor_verify_view.dart';
+import '../../modules/cargo/views/cargo_dashboard_view.dart';
+import '../../modules/cargo/views/cargo_list_view.dart';
+import '../../modules/cargo/views/cargo_update_view.dart';
 import '../../modules/driver/trips/assigned_trips_view.dart';
+import '../../modules/driver/views/boarding/trip_selection_view.dart';
 import '../../modules/driver/views/profile/edit_profile_view.dart';
 import '../../modules/driver/views/support/support_view.dart';
+import '../../modules/driver/views/trip/trip_history_view.dart';
 import '../../modules/driver/views/trip/update_trip_status_view.dart';
 import '../../modules/legal/view/privacy_view.dart';
 import '../../modules/legal/view/terms_view.dart';
 import '../../modules/onboarding/bindings/onboarding_binding.dart';
 import '../../modules/onboarding/views/onboarding_view.dart';
 import '../../modules/passenger/views/cargo/cargo_trip_select_view.dart';
+import '../../modules/passenger/views/payment/payment_detail_view.dart';
 import '../../modules/passenger/views/support/my_support_tickets_view.dart';
 import '../../modules/passenger/views/support/privacy_security_view.dart';
 import '../../modules/passenger/views/support/about_view.dart';
 import '../../modules/passenger/views/support/help_support_view.dart';
 import '../../modules/passenger/views/support/ticket_detail_view.dart';
 import '../../modules/passenger/views/tickets/ticket_trip_select_view.dart';
+import '../../modules/promotion/views/admin_promotions_view.dart';
+import '../../modules/ticketing/views/bookings_view.dart';
+import '../../modules/ticketing/views/ticketing_boarding_view.dart';
+import '../../modules/ticketing/views/ticketing_dashboard_view.dart';
+import '../../modules/ticketing/views/ticketing_payments_view.dart';
+import '../../modules/ticketing/views/ticketing_trips_view.dart';
+
+// ==================== CUSTOM TRANSITIONS ====================
+
+/// 1. Zoom Transition - Smooth zoom in/out effect (No slide)
+class ZoomTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    final curveAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+    );
+
+    final scaleAnimation = Tween<double>(
+      begin: 0.92,
+      end: 1.0,
+    ).animate(curveAnimation);
+
+    final opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(curveAnimation);
+
+    return ScaleTransition(
+      scale: scaleAnimation,
+      child: FadeTransition(
+        opacity: opacityAnimation,
+        child: child,
+      ),
+    );
+  }
+}
+
+/// 2. Elastic Zoom Transition - With bounce effect (Very smooth)
+class ElasticZoomTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    final curveAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.elasticOut,
+    );
+
+    final scaleAnimation = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(curveAnimation);
+
+    final opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOut),
+    );
+
+    return ScaleTransition(
+      scale: scaleAnimation,
+      child: FadeTransition(
+        opacity: opacityAnimation,
+        child: child,
+      ),
+    );
+  }
+}
+
+/// 3. Fade Scale Transition - Professional fade with subtle scale
+class FadeScaleTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    final scaleAnimation = Tween<double>(
+      begin: 0.96,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
+    );
+
+    final opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+    );
+
+    return FadeTransition(
+      opacity: opacityAnimation,
+      child: ScaleTransition(
+        scale: scaleAnimation,
+        child: child,
+      ),
+    );
+  }
+}
+
+/// 4. Circular Reveal Transition (Modern material design)
+class CircularRevealTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    return ClipPath(
+      clipper: _CircleRevealClipper(animation),
+      child: child,
+    );
+  }
+}
+
+class _CircleRevealClipper extends CustomClipper<Path> {
+  final Animation<double> animation;
+
+  _CircleRevealClipper(this.animation);
+
+  @override
+  Path getClip(Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.height / 2 * animation.value;
+    return Path()..addOval(Rect.fromCircle(center: center, radius: radius));
+  }
+
+  @override
+  bool shouldReclip(_CircleRevealClipper oldClipper) {
+    return animation.value != oldClipper.animation.value;
+  }
+}
+
+/// 5. Fade In Only (Cleanest transition - No movement at all)
+class FadeInTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeIn,
+      ),
+      child: child,
+    );
+  }
+}
+
+/// 6. Fade Out In (Classic crossfade)
+class CrossFadeTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    return Stack(
+      children: [
+        FadeTransition(
+          opacity: CurvedAnimation(
+            parent: secondaryAnimation,
+            curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+          ),
+          child: secondaryAnimation.status == AnimationStatus.reverse
+              ? null
+              : const SizedBox.shrink(),
+        ),
+        FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+          ),
+          child: child,
+        ),
+      ],
+    );
+  }
+}
+
+/// 7. Size Transition (Expands from center - Modern)
+class SizeExpandTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    final sizeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+    );
+
+    return AnimatedBuilder(
+      animation: sizeAnimation,
+      builder: (context, child) {
+        return ClipRect(
+          child: Transform.scale(
+            scale: sizeAnimation.value,
+            child: Opacity(
+              opacity: sizeAnimation.value,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+/// 8. Rotate + Scale Transition (3D like effect)
+class RotateScaleTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    final rotationAnimation = Tween<double>(
+      begin: -0.1,
+      end: 0.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+    );
+
+    final scaleAnimation = Tween<double>(
+      begin: 0.9,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
+    );
+
+    final opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOut),
+    );
+
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()..rotateX(rotationAnimation.value),
+      child: ScaleTransition(
+        scale: scaleAnimation,
+        child: FadeTransition(
+          opacity: opacityAnimation,
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// 9. Blur Transition (iOS-like, very smooth)
+class BlurTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    final blurAnimation = Tween<double>(
+      begin: 8.0,
+      end: 0.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+    );
+
+    final opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOut),
+    );
+
+    return AnimatedBuilder(
+      animation: blurAnimation,
+      builder: (context, child) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blurAnimation.value, sigmaY: blurAnimation.value),
+          child: FadeTransition(
+            opacity: opacityAnimation,
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+/// 10. Material Shared Axis (Modern Google design)
+class SharedAxisTransition extends CustomTransition {
+  @override
+  Widget buildTransition(
+      BuildContext context,
+      Curve? curve,
+      Alignment? alignment,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    final scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+    );
+
+    final fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOut),
+    );
+
+    return Center(
+      child: ScaleTransition(
+        scale: scaleAnimation,
+        child: FadeTransition(
+          opacity: fadeAnimation,
+          child: child,
+        ),
+      ),
+    );
+  }
+}
 
 class AppPages {
   // Private constructor
   AppPages._();
 
   static const initial = AppRoutes.splash;
+  static const transitionDuration = Duration(milliseconds: 450);
 
   static final routes = [
-    // Splash
+    // ==================== SPLASH & ONBOARDING ====================
     GetPage(
       name: AppRoutes.splash,
       page: () => const SplashView(),
       binding: SplashBinding(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeInTransition(),
+      transitionDuration: transitionDuration,
     ),
-
     GetPage(
       name: AppRoutes.onboarding,
       page: () => const OnboardingView(),
       binding: OnboardingBinding(),
-      transition: Transition.fadeIn,
+      customTransition: ZoomTransition(),
+      transitionDuration: transitionDuration,
     ),
 
+    // ==================== LEGAL PAGES ====================
     GetPage(
       name: '/terms',
       page: () => const TermsView(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
     ),
-
     GetPage(
       name: '/privacy',
       page: () => const PrivacyView(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
     ),
-    GetPage(name: AppRoutes.adminProfile, page: () => const AdminProfileView()),
-    GetPage(name: AppRoutes.adminSettings, page: () => const AdminSettingsView()),
-    // Auth Routes
+
+    // ==================== ADMIN PAGES ====================
+    GetPage(
+      name: AppRoutes.adminProfile,
+      page: () => const AdminProfileView(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+    ),
+    GetPage(
+      name: AppRoutes.adminSettings,
+      page: () => const AdminSettingsView(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+    ),
+    GetPage(
+      name: AppRoutes.adminDashboard,
+      page: () => const AdminDashboardView(),
+      binding: AdminBinding(),
+      customTransition: ElasticZoomTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    GetPage(
+      name: AppRoutes.adminTrips,
+      page: () => const AdminTripsView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminBookings,
+      page: () => const AdminBookingsView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminCargo,
+      page: () => const AdminCargoView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminUsers,
+      page: () => const AdminUsersView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminRoutes,
+      page: () => const AdminRoutesView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminVehicles,
+      page: () => const AdminVehiclesView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminReports,
+      page: () => const AdminReportsView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminPayments,
+      page: () => const AdminPaymentsView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminNotifications,
+      page: () => const AdminNotificationsView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminSettings,
+      page: () => const AdminSettingsView(),
+      binding: AdminBinding(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+
+    // ==================== AUTH ROUTES ====================
     GetPage(
       name: AppRoutes.login,
       page: () => const LoginView(),
       binding: LoginBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: ZoomTransition(),
+      transitionDuration: transitionDuration,
     ),
     GetPage(
       name: AppRoutes.register,
       page: () => const RegisterView(),
       binding: AuthBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
     ),
     GetPage(
       name: AppRoutes.otpVerification,
       page: () => const OtpVerificationView(),
       binding: AuthBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: ZoomTransition(),
+      transitionDuration: transitionDuration,
     ),
     GetPage(
       name: AppRoutes.forgotPassword,
       page: () => const ForgotPasswordView(),
       binding: AuthBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
     ),
     GetPage(
       name: AppRoutes.resetPassword,
       page: () => const ResetPasswordView(),
       binding: AuthBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-
-    // ==================== ADMIN ROUTES ====================
-
-
-    // Admin Dashboard with middleware
-    GetPage(
-      name: AppRoutes.adminDashboard,
-      page: () => const AdminDashboardView(),
-      binding: AdminBinding(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Trips
-    GetPage(
-      name: AppRoutes.adminTrips,
-      page: () => const AdminTripsView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Bookings
-    GetPage(
-      name: AppRoutes.adminBookings,
-      page: () => const AdminBookingsView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Cargo
-    GetPage(
-      name: AppRoutes.adminCargo,
-      page: () => const AdminCargoView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Users
-    GetPage(
-      name: AppRoutes.adminUsers,
-      page: () => const AdminUsersView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Routes
-    GetPage(
-      name: AppRoutes.adminRoutes,
-      page: () => const AdminRoutesView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Vehicles
-    GetPage(
-      name: AppRoutes.adminVehicles,
-      page: () => const AdminVehiclesView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Reports
-    GetPage(
-      name: AppRoutes.adminReports,
-      page: () => const AdminReportsView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Payments
-    GetPage(
-      name: AppRoutes.adminPayments,
-      page: () => const AdminPaymentsView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Notifications
-    GetPage(
-      name: AppRoutes.adminNotifications,
-      page: () => const AdminNotificationsView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // Admin Settings
-    GetPage(
-      name: AppRoutes.adminSettings,
-      page: () => const AdminSettingsView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-
-    // In app_pages.dart
-    GetPage(
-      name: '/driver/profile/edit',
-      page: () => const DriverEditProfileView(),
-      binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'driver')],
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
     ),
     GetPage(
-      name: '/driver/passenger-manifest/:tripId',
-      page: () => const PassengerManifestView(),
-      //binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      middlewares: [AuthMiddleware(role: 'driver')],
+      name: AppRoutes.twoFactorVerify,
+      page: () => const TwoFactorVerifyView(),
+      customTransition: ZoomTransition(),
+      transitionDuration: transitionDuration,
+    ),
+    GetPage(
+      name: AppRoutes.changePassword,
+      page: () => const ChangePasswordView(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'passenger')],
     ),
 
-    GetPage(
-      name: '/driver/cargo-manifest/:tripId',
-      page: () => const CargoManifestView(),
-      //binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      middlewares: [AuthMiddleware(role: 'driver')],
-    ),
     // ==================== PASSENGER ROUTES ====================
     GetPage(
       name: AppRoutes.passengerDashboard,
       page: () => const PassengerDashboardView(),
       binding: PassengerBinding(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: ElasticZoomTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerHome,
       page: () => const HomeView(),
       binding: PassengerBinding(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeInTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerSearch,
       page: () => const PassengerSearchView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerSearchResults,
       page: () => const SearchResultsView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerTripDetail,
       page: () => const TripDetailView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerSeatSelection,
       page: () => const SeatSelectionView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: ZoomTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerBookingSummary,
       page: () => const BookingSummaryView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerPayment,
       page: () => const PaymentView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'passenger')],
-    ),
-    GetPage(
-      name: AppRoutes.privacySecurity,
-      page: () => const PrivacySecurityView(),
-      binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      middlewares: [AuthMiddleware(role: 'passenger')],
-    ),
-    GetPage(
-      name: AppRoutes.helpSupport,
-      page: () =>  HelpSupportView(),
-      binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      middlewares: [AuthMiddleware(role: 'passenger')],
-    ),
-    GetPage(
-      name: AppRoutes.mySupportTickets,
-      page: () => const MySupportTicketsView(),
-      transition: Transition.rightToLeft,
-      middlewares: [AuthMiddleware(role: 'passenger')],
-    ),
-    GetPage(
-      name: AppRoutes.adminSupport,
-      page: () =>  AdminSupportView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-    GetPage(
-      name: AppRoutes.ticketDetail,
-      page: () => const TicketDetailView(),
-      transition: Transition.rightToLeft,
-      middlewares: [AuthMiddleware(role: 'passenger')],
-    ),
-    GetPage(
-      name: AppRoutes.adminTicketDetail,
-      page: () => const AdminTicketDetailView(),
-      binding: AdminBinding(),
-      transition: Transition.rightToLeft,
-      middlewares: [AuthMiddleware(role: 'admin')],
-    ),
-    GetPage(
-      name: AppRoutes.about,
-      page: () => const AboutView(),
-      binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      middlewares: [AuthMiddleware(role: 'passenger')],
-    ),
-    GetPage(
-      name: AppRoutes.passengerCargoSelectTrip,
-      page: () => const CargoTripSelectView(),
-      binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-    ),
-    GetPage(
-      name: AppRoutes.passengerTicketSelectTrip,
-      page: () => const TicketTripSelectView(),
-      binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerPaymentSuccess,
       page: () => const PaymentSuccessView(),
-      //binding: PassengerBinding(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: ElasticZoomTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerMyTickets,
       page: () => const MyTicketsView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerTicketDetail,
       page: () => const TicketDetailView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerTicketQR,
       page: () => const TicketQRView(),
       binding: PassengerBinding(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: ZoomTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.passengerTicketSelectTrip,
+      page: () => const TicketTripSelectView(),
+      binding: PassengerBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerCargoRegistration,
       page: () => const CargoRegistrationView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerCargoTracking,
       page: () => const CargoTrackingView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerCargoReceipt,
       page: () => const CargoReceiptView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: ZoomTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.passengerCargoSelectTrip,
+      page: () => const CargoTripSelectView(),
+      binding: PassengerBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerBookingHistory,
       page: () => const BookingHistoryView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'passenger')],
-    ),
-    GetPage(
-      name: AppRoutes.twoFactorVerify,
-      page: () => const TwoFactorVerifyView(),
-      transition: Transition.rightToLeft,
-    ),
-    GetPage(
-      name: AppRoutes.changePassword,
-      page: () => const ChangePasswordView(),
-      transition: Transition.rightToLeft,
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerCargoHistory,
       page: () => const CargoHistoryView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerProfile,
       page: () => const ProfileView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerEditProfile,
       page: () => const EditProfileView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerSettings,
       page: () => const SettingsView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
     GetPage(
       name: AppRoutes.passengerNotifications,
       page: () => const PassengerNotificationsView(),
       binding: PassengerBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.privacySecurity,
+      page: () => const PrivacySecurityView(),
+      binding: PassengerBinding(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.helpSupport,
+      page: () => HelpSupportView(),
+      binding: PassengerBinding(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.mySupportTickets,
+      page: () => const MySupportTicketsView(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.ticketDetail,
+      page: () => const TicketDetailView(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'passenger')],
+    ),
+    GetPage(
+      name: AppRoutes.about,
+      page: () => const AboutView(),
+      binding: PassengerBinding(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'passenger')],
     ),
 
@@ -542,161 +883,290 @@ class AppPages {
       name: AppRoutes.driverDashboard,
       page: () => const DriverDashboardView(),
       binding: DriverBinding(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: ElasticZoomTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
     GetPage(
       name: AppRoutes.driverAssignedTrips,
       page: () => const AssignedTripsView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-      middlewares: [AuthMiddleware(role: 'driver')],
-    ),
-    GetPage(
-      name: AppRoutes.driverTripDetail,
-      page: () => const DriverTripDetailView(),
-      binding: DriverBinding(),
-      transition: Transition.downToUp,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
 
     GetPage(
+      name: AppRoutes.passengerNotifications,
+      page: () => const PassengerNotificationsView(),
+      binding: PassengerBinding()
+    ),
+    // Add these dynamic routes
+    GetPage(
+      name: '${AppRoutes.passengerTicketDetails}/:id',
+      page: () => const TicketDetailView(),
+    ),
+    GetPage(
+      name: '${AppRoutes.passengerTripDetails}/:id',
+      page: () => const TripDetailView(),
+    ),
+    GetPage(
+      name: '${AppRoutes.passengerPaymentDetails}/:id',
+      page: () => const PassengerPaymentDetailView(),
+    ),
+    GetPage(
+      name: AppRoutes.passengerCargoTrack,
+      page: () => const CargoTrackingView(),
+    ),
+    GetPage(
+      name: '/passenger/support/ticket/:id',
+      page: () => const TicketDetailView(),
+    ),
+    // In app_pages.dart
+    GetPage(
+      name: '/driver/trip/:tripId',
+      page: () => const DriverTripDetailView(),
+      binding: DriverBinding(),
+      transition: Transition.rightToLeft,
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+    GetPage(
       name: '/driver/support',
       page: () => const SupportView(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
     ),
     GetPage(
       name: AppRoutes.driverTripStatus,
       page: () => const UpdateTripStatusView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
-
     GetPage(
       name: AppRoutes.driverBoarding,
       page: () => const BoardingManagementView(),
       binding: DriverBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+    GetPage(
+      name: '/driver/boarding/trips',
+      page: () => const TripSelectionView(),
+      binding: DriverBinding(),
       transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
 
+    GetPage(
+      name: '/driver/trips',
+      page: () => const DriverTripHistoryView(),
+      binding: DriverBinding(),
+      customTransition: SharedAxisTransition(),
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
 
     GetPage(
       name: AppRoutes.driverBoardingManagement,
       page: () => const BoardingManagementView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
     GetPage(
       name: AppRoutes.driverTicketValidation,
       page: () => const ValidationView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: ZoomTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
-    // GetPage(
-    //   name: AppRoutes.driverPassengerManifest,
-    //   page: () => const PassengerManifestView(),
-    //   binding: DriverBinding(),
-    //   transition: Transition.rightToLeft,
-    //   transitionDuration: const Duration(milliseconds: 300),
-    //   middlewares: [AuthMiddleware(role: 'driver')],
-    // ),
-    // GetPage(
-    //   name: AppRoutes.driverCargoManifest,
-    //   page: () => const CargoManifestView(),
-    //   binding: DriverBinding(),
-    //   transition: Transition.rightToLeft,
-    //   transitionDuration: const Duration(milliseconds: 300),
-    //   middlewares: [AuthMiddleware(role: 'driver')],
-    // ),
     GetPage(
       name: AppRoutes.driverUpdateTripStatus,
       page: () => const UpdateTripStatusView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
     GetPage(
       name: AppRoutes.driverReportIncident,
       page: () => const ReportIncidentView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
     GetPage(
       name: AppRoutes.driverProfile,
       page: () => const DriverProfileView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+    GetPage(
+      name: '/driver/profile/edit',
+      page: () => const DriverEditProfileView(),
+      binding: DriverBinding(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
     GetPage(
       name: AppRoutes.driverAvailability,
       page: () => const AvailabilityView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
     GetPage(
       name: AppRoutes.driverSettings,
       page: () => const DriverSettingsView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
     ),
     GetPage(
       name: AppRoutes.driverNotifications,
       page: () => const DriverNotificationsView(),
       binding: DriverBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
       middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+    GetPage(
+      name: '/driver/passenger-manifest/:tripId',
+      page: () => const PassengerManifestView(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+    GetPage(
+      name: '/driver/cargo-manifest/:tripId',
+      page: () => const CargoManifestView(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'driver')],
+    ),
+
+    // ==================== ADMIN SUPPORT ====================
+    GetPage(
+      name: AppRoutes.adminSupport,
+      page: () => AdminSupportView(),
+      binding: AdminBinding(),
+      customTransition: SharedAxisTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
+    ),
+    GetPage(
+      name: AppRoutes.adminTicketDetail,
+      page: () => const AdminTicketDetailView(),
+      binding: AdminBinding(),
+      customTransition: FadeScaleTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'admin')],
     ),
 
     // ==================== COMMON ROUTES ====================
     GetPage(
       name: AppRoutes.noInternet,
       page: () => const NoInternetView(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeInTransition(),
+      transitionDuration: transitionDuration,
     ),
     GetPage(
       name: AppRoutes.serverError,
       page: () => const ServerErrorView(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeInTransition(),
+      transitionDuration: transitionDuration,
     ),
     GetPage(
       name: AppRoutes.notFound,
       page: () => const NotFoundView(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeInTransition(),
+      transitionDuration: transitionDuration,
     ),
     GetPage(
       name: AppRoutes.underConstruction,
       page: () => const UnderConstructionView(),
-      transition: Transition.fadeIn,
-      transitionDuration: const Duration(milliseconds: 300),
+      customTransition: FadeInTransition(),
+      transitionDuration: transitionDuration,
+    ),
+    // Add these to the routes list in AppPages class:
+
+// ==================== STAFF ROUTES ====================
+
+
+    // Ticketing Staff Routes
+    GetPage(
+      name: AppRoutes.ticketingDashboard,
+      page: () => const TicketingDashboardView(),
+      customTransition: ElasticZoomTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'ticketing_staff')],
+    ),
+    GetPage(
+      name: AppRoutes.ticketingBookings,
+      page: () => const TicketingBookingsView(),
+      customTransition: FadeScaleTransition(),
+      middlewares: [AuthMiddleware(role: 'ticketing_staff')],
+    ),
+    GetPage(
+      name: AppRoutes.ticketingTrips,
+      page: () => const TicketingTripsView(),
+      customTransition: FadeScaleTransition(),
+      middlewares: [AuthMiddleware(role: 'ticketing_staff')],
+    ),
+    GetPage(
+      name: AppRoutes.ticketingPayments,
+      page: () => const TicketingPaymentsView(),
+      customTransition: FadeScaleTransition(),
+      middlewares: [AuthMiddleware(role: 'ticketing_staff')],
+    ),
+
+// Cargo Staff Routes
+    GetPage(
+      name: AppRoutes.cargoDashboard,
+      page: () => const CargoDashboardView(),
+      customTransition: ElasticZoomTransition(),
+      transitionDuration: transitionDuration,
+      middlewares: [AuthMiddleware(role: 'cargo_staff')],
+    ),
+    GetPage(
+      name: AppRoutes.cargoList,
+      page: () => const CargoListView(),
+      customTransition: FadeScaleTransition(),
+      middlewares: [AuthMiddleware(role: 'cargo_staff')],
+    ),
+    GetPage(
+      name: AppRoutes.cargoUpdate,
+      page: () => const CargoUpdateView(),
+      customTransition: FadeScaleTransition(),
+      middlewares: [AuthMiddleware(role: 'cargo_staff')],
+    ),
+    GetPage(
+      name: AppRoutes.ticketingBoarding,
+      page: () => const TicketingBoardingView(),
+      customTransition: FadeScaleTransition(),
+      middlewares: [AuthMiddleware(role: 'ticketing_staff')],
+    ),
+    GetPage(
+      name: AppRoutes.adminPromotions,
+      page: () => const AdminPromotionsView(),
+      binding: AdminBinding(),
+      customTransition: FadeScaleTransition(),
+      middlewares: [AuthMiddleware(role: 'admin')],
     ),
   ];
 }
 
 // ==================== AUTH MIDDLEWARE ====================
-// Auth Middleware for role-based access control
 class AuthMiddleware extends GetMiddleware {
   final String? role;
 
@@ -707,14 +1177,11 @@ class AuthMiddleware extends GetMiddleware {
     try {
       final authController = Get.find<AuthController>();
 
-      // Check if user is logged in
       if (!authController.isAuthenticated) {
         return const RouteSettings(name: AppRoutes.login);
       }
 
-      // Check role-based access
       if (role != null && authController.userRole != role) {
-        // Redirect to appropriate dashboard based on role
         if (authController.userRole == 'passenger') {
           return const RouteSettings(name: AppRoutes.passengerDashboard);
         } else if (authController.userRole == 'driver') {
@@ -722,13 +1189,11 @@ class AuthMiddleware extends GetMiddleware {
         } else if (authController.userRole == 'admin') {
           return const RouteSettings(name: AppRoutes.adminDashboard);
         }
-        // If role doesn't match any, go to login
         return const RouteSettings(name: AppRoutes.login);
       }
 
       return null;
     } catch (e) {
-      // AuthController not found, go to login
       return const RouteSettings(name: AppRoutes.login);
     }
   }

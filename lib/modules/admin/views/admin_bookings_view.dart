@@ -460,41 +460,43 @@ class AdminBookingsView extends GetView<AdminBookingController> {
                   ),
                 ),
                 const SizedBox(height: AppDimens.margin12),
-                Wrap(
-                  spacing: AppDimens.margin8,
-                  runSpacing: AppDimens.margin8,
-                  children: [
-                    AdminFilterChip(
-                      label: 'All',
-                      value: '',
-                      selectedValue: controller.statusFilter,
-                      onSelected: (value) => controller.setStatusFilter(value),
-                    ),
-                    AdminFilterChip(
-                      label: 'Pending',
-                      value: 'pending',
-                      selectedValue: controller.statusFilter,
-                      onSelected: (value) => controller.setStatusFilter(value),
-                    ),
-                    AdminFilterChip(
-                      label: 'Confirmed',
-                      value: 'confirmed',
-                      selectedValue: controller.statusFilter,
-                      onSelected: (value) => controller.setStatusFilter(value),
-                    ),
-                    AdminFilterChip(
-                      label: 'Cancelled',
-                      value: 'cancelled',
-                      selectedValue: controller.statusFilter,
-                      onSelected: (value) => controller.setStatusFilter(value),
-                    ),
-                    AdminFilterChip(
-                      label: 'Expired',
-                      value: 'expired',
-                      selectedValue: controller.statusFilter,
-                      onSelected: (value) => controller.setStatusFilter(value),
-                    ),
-                  ],
+                Obx(
+                  () => Wrap(
+                    spacing: AppDimens.margin8,
+                    runSpacing: AppDimens.margin8,
+                    children: [
+                      AdminFilterChip(
+                        label: 'All',
+                        value: '',
+                        selectedValue: controller.statusFilter,
+                        onSelected: (value) => controller.setStatusFilter(value),
+                      ),
+                      AdminFilterChip(
+                        label: 'Pending',
+                        value: 'pending',
+                        selectedValue: controller.statusFilter,
+                        onSelected: (value) => controller.setStatusFilter(value),
+                      ),
+                      AdminFilterChip(
+                        label: 'Confirmed',
+                        value: 'confirmed',
+                        selectedValue: controller.statusFilter,
+                        onSelected: (value) => controller.setStatusFilter(value),
+                      ),
+                      AdminFilterChip(
+                        label: 'Cancelled',
+                        value: 'cancelled',
+                        selectedValue: controller.statusFilter,
+                        onSelected: (value) => controller.setStatusFilter(value),
+                      ),
+                      AdminFilterChip(
+                        label: 'Expired',
+                        value: 'expired',
+                        selectedValue: controller.statusFilter,
+                        onSelected: (value) => controller.setStatusFilter(value),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: AppDimens.margin24),
                 // Payment Status Filter

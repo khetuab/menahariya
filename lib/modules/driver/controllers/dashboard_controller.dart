@@ -20,8 +20,11 @@ import 'package:menahariya/modules/driver/controllers/incident_controller.dart';
 import 'package:menahariya/modules/driver/controllers/profile_controller.dart';
 import 'package:menahariya/modules/driver/controllers/notification_controller.dart';
 
+import 'driver_state_controller.dart';
+
 class DriverDashboardController extends GetxController {
   static DriverDashboardController get instance => Get.find();
+  final DriverStateController _driverStateController = Get.find<DriverStateController>();
 
   // Core services
   final ApiClient _apiClient = ApiClient.instance;
@@ -44,7 +47,6 @@ class DriverDashboardController extends GetxController {
   final _currentIndex = 0.obs;
   final _isLoading = false.obs;
   final _driverName = ''.obs;
-  final _driverStatus = true.obs; // true = online, false = offline
   final _todayTrips = 0.obs;
   final _completedTrips = 0.obs;
   final _totalPassengers = 0.obs;
@@ -57,7 +59,7 @@ class DriverDashboardController extends GetxController {
   int get currentIndex => _currentIndex.value;
   bool get isLoading => _isLoading.value;
   String get driverName => _driverName.value;
-  bool get isOnline => _driverStatus.value;
+  bool get isOnline => _driverStateController.isOnline.value;
   int get todayTrips => _todayTrips.value;
   int get completedTrips => _completedTrips.value;
   int get totalPassengers => _totalPassengers.value;
@@ -71,7 +73,6 @@ class DriverDashboardController extends GetxController {
     'Dashboard',
     'Trips',
     'Boarding',
-    // 'Validate',
     'Profile',
   ];
 
@@ -89,7 +90,11 @@ class DriverDashboardController extends GetxController {
     _initializeControllers();
     _loadDriverData();
     _setupSocketListeners();
-    updateDriverStatus(true);
+    // Listen to centralized state changes
+    ever(_driverStateController.isOnline, (_) {
+      // Refresh dashboard when online status changes
+      refreshDashboard();
+    });
   }
 
 
@@ -305,21 +310,8 @@ class DriverDashboardController extends GetxController {
     _currentIndex.value = index;
   }
 
-  Future<void> updateDriverStatus(bool online) async {
-    try {
-      await _apiClient.post(
-        '/driver/update-status',
-        data: {'status': online ? 'online' : 'offline'},
-      );
-      _driverStatus.value = online;
-
-      AppSnackbar.show(
-        online ? 'Online' : 'Offline',
-        online ? 'You are now online and available for trips' : 'You are now offline',
-      );
-    } catch (e) {
-      print('Error updating driver status: $e');
-    }
+  Future<void> toggleDriverStatus(bool online) async {
+    await _driverStateController.updateDriverStatus(online);
   }
 
   Future<void> refreshDashboard() async {

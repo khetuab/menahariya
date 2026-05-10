@@ -15,11 +15,9 @@ import 'package:menahariya/core/theme/light_theme.dart';
 import 'package:menahariya/modules/common/views/not_found_view.dart';
 
 import 'core/routes/app_routes.dart';
-import 'core/services/storage/secure_storage.dart';
-// In your splash controller or initial binding
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized( );
+  WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -27,7 +25,7 @@ void main() async {
 
   try {
     // Initialize environment FIRST (before anything else)
-    await EnvConfig.initialize(environment: Environment.development);
+    await EnvConfig.initialize(environment: Environment.production);
     print('✅ Environment initialized: ${EnvConfig.instance.environmentName}');
     print('✅ API Base URL: ${EnvConfig.instance.apiBaseUrl}');
 
@@ -105,7 +103,7 @@ class MenahariyaSmartApp extends StatelessWidget {
       title: AppConstants.appName,
       debugShowCheckedModeBanner: EnvConfig.instance.isDevelopment,
 
-      // Theme
+      // Theme (already has Poppins configured in AppFonts)
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
@@ -130,8 +128,8 @@ class MenahariyaSmartApp extends StatelessWidget {
       // Other Configurations
       defaultTransition: Transition.cupertinoDialog,
       transitionDuration: const Duration(milliseconds: 300),
-      //
-      // // Builder for environment badge in development
+
+      // Builder for environment badge in development
       builder: (context, child) {
         if (child == null) return const SizedBox();
 
@@ -164,6 +162,7 @@ class MenahariyaSmartApp extends StatelessWidget {
                 color: Colors.white,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
               ),
             ),
           ),

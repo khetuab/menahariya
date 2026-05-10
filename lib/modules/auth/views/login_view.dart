@@ -343,25 +343,95 @@ class LoginView extends GetView<LoginController> {
                             },
                           ),
                         ),
+                        const SizedBox(height: AppDimens.margin16),
 
+// Ticketing Staff Role Card
+                        _buildRoleCard(
+                          context,
+                          role: 'Ticketing Staff',
+                          icon: Icons.confirmation_number_rounded,
+                          gradientColors: [
+                            const Color(0xFF00897B),
+                            const Color(0xFF26A69A),
+                          ],
+                          features: [
+                            '✓ View and manage all bookings',
+                            '✓ Process payments and confirm bookings',
+                            '✓ Issue tickets manually',
+                            '✓ Cancel bookings and process refunds',
+                            '✓ View trip schedules',
+                            '✓ Print tickets and receipts',
+                            '✓ Handle customer inquiries',
+                          ],
+                          onExplore: () => _showRoleInfoDialog(
+                            context,
+                            role: 'Ticketing Staff',
+                            description: 'As ticketing staff, you can manage bookings, process payments, issue tickets, and assist passengers with their travel needs.',
+                            demoCredentials: {
+                              'phone': '0955555555',
+                              'password': 'Ticketing@123',
+                            },
+                            onLogin: () {
+                              controller.phoneController.text = '955555555';
+                              controller.passwordController.text = 'Ticketing@123';
+                              controller.handleLogin();
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: AppDimens.margin16),
+
+// Cargo Staff Role Card
+                        _buildRoleCard(
+                          context,
+                          role: 'Cargo Staff',
+                          icon: Icons.inventory_2_rounded,
+                          gradientColors: [
+                            const Color(0xFFE65100),
+                            const Color(0xFFFF9800),
+                          ],
+                          features: [
+                            '✓ View all cargo shipments',
+                            '✓ Update cargo tracking status',
+                            '✓ Generate cargo receipts',
+                            '✓ Manage cargo loading/unloading',
+                            '✓ Track weight and dimensions',
+                            '✓ Handle fragile/perishable items',
+                            '✓ Communicate with shippers',
+                          ],
+                          onExplore: () => _showRoleInfoDialog(
+                            context,
+                            role: 'Cargo Staff',
+                            description: 'As cargo staff, you can manage all cargo shipments, update tracking status, generate receipts, and ensure timely delivery.',
+                            demoCredentials: {
+                              'phone': '0977777777',
+                              'password': 'Cargodemo@123',
+                            },
+                            onLogin: () {
+                              controller.phoneController.text = '977777777';
+                              controller.passwordController.text = 'Cargodemo@123';
+                              controller.handleLogin();
+                            },
+                          ),
+                        ),
                         const SizedBox(height: AppDimens.margin16),
 
                         // Guest Mode
                         const SizedBox(height: AppDimens.margin8),
-                        SecondaryButton(
-                          text: 'Continue as Guest',
-                          onPressed: () {
-                            AuthController.instance.enterGuestMode();
-
-                            Get.offAllNamed('/passenger/home');
-
-                            AppSnackbar.show(
-                              'Guest Mode',
-                              'Browsing only. Login required for booking.',
-                            );
-                          },
-                          icon: Icons.person_outline_rounded,
-                        ),
+                        // SecondaryButton(
+                        //   text: 'Continue as Guest',
+                        //   onPressed: () {
+                        //     AuthController.instance.enterGuestMode();
+                        //
+                        //     Get.offAllNamed('/passenger/home');
+                        //
+                        //     AppSnackbar.show(
+                        //       'Guest Mode',
+                        //       'Browsing only. Login required for booking.',
+                        //     );
+                        //   },
+                        //   icon: Icons.person_outline_rounded,
+                        // ),
                       ],
                     ),
                   ),

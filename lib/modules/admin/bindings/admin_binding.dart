@@ -3,6 +3,7 @@
 import 'package:get/get.dart';
 import 'package:menahariya/modules/admin/controllers/admin_support_controller.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../promotion/controllers/promotion_controller.dart';
 import '../controllers/admin_dashboard_controller.dart';
 import '../controllers/admin_profile_controller.dart';
 import '../controllers/admin_trip_controller.dart';
@@ -33,6 +34,7 @@ class AdminBinding extends Bindings {
     Get.lazyPut<AdminRouteController>(() => AdminRouteController(), fenix: true);
     Get.lazyPut<AdminVehicleController>(() => AdminVehicleController(), fenix: true);
     Get.lazyPut<AdminProfileController>(() => AdminProfileController(), fenix: true);
+    Get.lazyPut<PromotionController>(() => PromotionController(), fenix: true);
 
     // Finance & Reports
     Get.lazyPut<AdminPaymentController>(() => AdminPaymentController(), fenix: true);

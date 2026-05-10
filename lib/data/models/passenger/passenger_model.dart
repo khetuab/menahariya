@@ -15,6 +15,9 @@ class PassengerModel {
   final String? cargoId;
   final bool specialAssistance;
   final Map<String, dynamic>? metadata;
+  final String? tripOrigin;
+  final String? tripDestination;
+  final DateTime? departureTime;
 
   PassengerModel({
     required this.id,
@@ -29,6 +32,9 @@ class PassengerModel {
     this.cargoId,
     this.specialAssistance = false,
     this.metadata,
+    this.tripOrigin,
+    this.tripDestination,
+    this.departureTime,
   });
 
   // lib/data/models/passenger/passenger_model.dart
@@ -48,6 +54,11 @@ class PassengerModel {
       hasCargo: json['hasCargo'] ?? false,
       cargoId: json['cargoId']?.toString(),
       specialAssistance: json['specialAssistance'] ?? false,
+      tripOrigin: json['tripOrigin']?.toString(),
+      tripDestination: json['tripDestination']?.toString(),
+      departureTime: json['departureTime'] != null
+          ? DateTime.tryParse(json['departureTime'].toString())
+          : null,
       metadata: json['metadata'] is Map ? Map<String, dynamic>.from(json['metadata']) : null,
     );
   }
@@ -66,11 +77,15 @@ class PassengerModel {
       'cargoId': cargoId,
       'specialAssistance': specialAssistance,
       'metadata': metadata,
+      'tripOrigin': tripOrigin ,
+      'tripDestination': tripDestination ,
+      'departureTime': departureTime ,
     };
   }
 
   // Copy with method for immutability
   PassengerModel copyWith({
+
     String? name,
     String? phone,
     String? email,
@@ -81,6 +96,9 @@ class PassengerModel {
     bool? hasCargo,
     String? cargoId,
     bool? specialAssistance,
+    String? tripOrigin,
+    String? tripDestination,
+    DateTime? departureTime,
     Map<String, dynamic>? metadata,
   }) {
     return PassengerModel(
@@ -96,6 +114,9 @@ class PassengerModel {
       cargoId: cargoId ?? this.cargoId,
       specialAssistance: specialAssistance ?? this.specialAssistance,
       metadata: metadata ?? this.metadata,
+      tripOrigin: tripOrigin ?? this.tripOrigin,
+      tripDestination: tripDestination ?? this.tripDestination,
+      departureTime: departureTime ?? this.departureTime,
     );
   }
 

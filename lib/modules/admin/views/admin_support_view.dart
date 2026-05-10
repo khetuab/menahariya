@@ -299,7 +299,7 @@ class AdminSupportView extends GetView<AdminSupportController> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.support_agent_rounded, size: 80, color: isDark ? AppColors.textHintDark : AppColors.textHintLight),
+          Icon(Icons.headset_mic_outlined, size: 80, color: isDark ? AppColors.textHintDark : AppColors.textHintLight),
           const SizedBox(height: AppDimens.margin16),
           Text('No Support Tickets', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: AppFonts.semiBold)),
           const SizedBox(height: AppDimens.margin8),

@@ -209,7 +209,7 @@ class AdminCargoView extends GetView<AdminCargoController> {
           ),
           const SizedBox(width: AppDimens.margin8),
           Container(
-            width: 155,
+            width: 170,
             child: DropdownButtonFormField<String>(
               value: controller.statusFilter.isEmpty ? null : controller.statusFilter,
               decoration: InputDecoration(

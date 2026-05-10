@@ -7,7 +7,7 @@ class AppFonts {
 
   // Font Families
   static const String fontFamilyPrimary = 'Poppins';
-  static const String fontFamilySecondary = 'Roboto';
+  static const String fontFamilySecondary = 'Poppins';
   static const String fontFamilyAmharic = 'NotoSansEthiopic'; // For Amharic support
 
   // Font Weights

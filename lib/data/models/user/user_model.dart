@@ -14,6 +14,7 @@ class UserModel {
   final DateTime? dateOfBirth;
   final String? gender;
   final bool isActive;
+  final bool? isOnline;
   final bool isVerified;
   final DateTime createdAt;
   final DateTime? lastLogin;
@@ -45,6 +46,7 @@ class UserModel {
     this.dateOfBirth,
     this.gender,
     this.isActive = true,
+    this.isOnline = true,
     this.isVerified = false,
     required this.createdAt,
     this.updatedAt,
@@ -94,6 +96,7 @@ class UserModel {
           : null,
       gender: json['gender']?.toString(),
       isActive: json['isActive'] ?? true,
+      isOnline: json['isOnline'] ?? true,
       isVerified: json['isVerified'] ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'].toString())
@@ -140,6 +143,7 @@ class UserModel {
     if (rating != null) data['rating'] = rating;
     if (totalTrips != null) data['totalTrips'] = totalTrips;
     if (isAvailable != null) data['isAvailable'] = isAvailable;
+    if (isOnline != null) data['isOnline'] = isOnline;
     if (twoFactorEnabled != null) data['twoFactorEnabled'] = twoFactorEnabled;
 
     // Passenger fields
@@ -160,6 +164,7 @@ class UserModel {
     DateTime? dateOfBirth,
     String? gender,
     bool? isActive,
+    bool? isOnline,
     bool? isVerified,
     bool? twoFactorEnabled,
     Map<String, dynamic>? metadata,
@@ -188,6 +193,7 @@ class UserModel {
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       gender: gender ?? this.gender,
       isActive: isActive ?? this.isActive,
+      isOnline: isOnline ?? this.isOnline,
       isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt,
       lastLogin: lastLogin,

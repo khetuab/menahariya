@@ -128,7 +128,7 @@ class MySupportTicketsView extends GetView<SupportController> {
                   child: Row(
                     children: [
                       Icon(
-                        Icons.support_agent_rounded,
+                        Icons.headset_mic_outlined,
                         size: 16,
                         color: isDark ? AppColors.primaryGreenLight : AppColors.primaryGreen,
                       ),
